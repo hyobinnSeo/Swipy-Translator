@@ -229,24 +229,6 @@ const TranslatorApp = () => {
     }
   }, [modelInstructions, selectedModel]);
 
-  const handleTextToSpeech = useCallback(async () => {
-    if (!translatedText) return;
-    
-    try {
-      const utterance = new SpeechSynthesisUtterance(translatedText);
-      utterance.lang = 'en-US';
-      window.speechSynthesis.speak(utterance);
-    } catch (error) {
-      console.error('Text-to-speech error:', error);
-    }
-  }, [translatedText]);
-
-  const handleInputChange = useCallback((e) => {
-    const text = e.target.value;
-    setInputText(text);
-    setCharacterCount(text.length);
-  }, []);
-
   const handleTranslate = async () => {
     try {
       setIsLoading(true);
