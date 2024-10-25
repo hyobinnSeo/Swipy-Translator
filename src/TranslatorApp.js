@@ -1,47 +1,108 @@
-import React, { useState } from 'react';
-import { ArrowRightLeft, X, Clipboard, ClipboardCheck, ClipboardCopy, MenuIcon, Settings } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { ArrowRightLeft, X, Clipboard, ClipboardCheck, ClipboardCopy, MenuIcon, Settings, Volume2 } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Sidebar 컴포넌트 수정
-const Sidebar = ({ isOpen, onClose, onOpenInstructions }) => {
-  return (
-    <>
-      {/* Overlay */}
-      <div 
-        className={`fixed inset-0 bg-black bg-opacity-50 transition-opacity z-20 ${
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
-        onClick={onClose}
-      />
-      
-      {/* Sidebar - z-index 증가 */}
-      <div 
-        className={`fixed left-0 top-0 h-full w-64 bg-white shadow-lg transform transition-transform z-30 ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <div className="p-4">
-          <h2 className="text-xl font-semibold mb-4">Menu</h2>
-          <button
-            onClick={onOpenInstructions}
-            className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center"
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Instructions
-          </button>
-        </div>
-      </div>
-    </>
-  );
+// Constants to avoid magic strings
+const MODELS = {
+  GEMINI: 'gemini',
+  EURYALE: 'euryale',
+  COMMAND: 'command'
 };
 
-// Instructions Modal 컴포넌트 수정
+const DEFAULT_INSTRUCTIONS = {
+  [MODELS.GEMINI]: {
+    pre: `As an English translator, please translate the following Korean text. Your translation should be accurate and natural-sounding. Please provide three different versions.`,
+    post: `MAIN:\nALT1:\nALT2:`
+  },
+  [MODELS.EURYALE]: {
+    pre: `Hey! Help me translate this Korean text into casual, everyday English. Keep it natural and conversational - like how people really talk! I'd love to see three different ways to say this.`,
+    post: `Best version:\nAnother way to say it:\nOne more option:`
+  },
+  [MODELS.COMMAND]: {
+    pre: `Ready to make this Korean text shine in English! Give it some flair and personality - make it memorable. Show me three creative takes on this.`,
+    post: `Hot take:\nRemixed:\nWild card:`
+  }
+};
+
+const AVAILABLE_MODELS = [
+  { id: MODELS.GEMINI, name: 'Gemini 1.5', api: 'google' },
+  { id: MODELS.EURYALE, name: 'Llama 3.1 Euryale 70B', api: 'openrouter' },
+  { id: MODELS.COMMAND, name: 'Cohere Command R', api: 'openrouter' }
+];
+
+// Custom Alert Component
+const Alert = ({ children }) => (
+  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+    <span className="block sm:inline">{children}</span>
+  </div>
+);
+
+// Reusable TextArea component
+const TextArea = ({ value, onChange, placeholder, readOnly = false, className = '', onPaste }) => (
+  <div className="relative flex-1">
+    <textarea
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      readOnly={readOnly}
+      className={`w-full h-48 p-4 text-lg resize-none mt-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+        readOnly ? 'bg-gray-50' : ''
+      } ${className}`}
+    />
+    {!value && onPaste && (
+      <button
+        className="absolute top-8 right-4 px-3 py-1 text-sm text-gray-500 hover:text-gray-700 flex items-center"
+        onClick={onPaste}
+      >
+        <Clipboard className="h-4 w-4 mr-2" />
+        Paste
+      </button>
+    )}
+  </div>
+);
+
+// Sidebar Component
+const Sidebar = ({ isOpen, onClose, onOpenInstructions }) => (
+  <>
+    <div 
+      className={`fixed inset-0 bg-black bg-opacity-50 transition-opacity z-20 ${
+        isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+      }`}
+      onClick={onClose}
+    />
+    <div 
+      className={`fixed left-0 top-0 h-full w-64 bg-white shadow-lg transform transition-transform z-30 ${
+        isOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}
+    >
+      <div className="p-4">
+        <h2 className="text-xl font-semibold mb-4">Menu</h2>
+        <button
+          onClick={onOpenInstructions}
+          className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center"
+        >
+          <Settings className="h-4 w-4 mr-2" />
+          Instructions
+        </button>
+      </div>
+    </div>
+  </>
+);
+
+// Instructions Modal Component
 const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, setModelInstructions }) => {
   if (!isOpen) return null;
 
+  const handleReset = () => {
+    setModelInstructions({
+      ...modelInstructions,
+      [selectedModel]: DEFAULT_INSTRUCTIONS[selectedModel]
+    });
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg w-full max-w-2xl relative">
+      <div className="bg-white rounded-lg w-full max-w-2xl">
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Instructions Settings</h2>
@@ -85,7 +146,13 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
             </div>
           </div>
 
-          <div className="mt-6 flex justify-end">
+          <div className="mt-6 flex justify-end space-x-3">
+            <button
+              onClick={handleReset}
+              className="px-4 py-2 text-blue-500 hover:text-blue-600"
+            >
+              Reset to Default
+            </button>
             <button
               onClick={onClose}
               className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
@@ -107,38 +174,12 @@ const TranslatorApp = () => {
   const [error, setError] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('gemini');
-  
-  // 모델별 프롬프트 설정
-  const [modelInstructions, setModelInstructions] = useState({
-    gemini: {
-      pre: `As an English translator, please translate the following Korean text. Your translation should be accurate and natural-sounding. Please provide three different versions.`,
-      post: `MAIN:
-ALT1:
-ALT2:`
-    },
-    euryale: {
-      pre: `Hey! Help me translate this Korean text into casual, everyday English. Keep it natural and conversational - like how people really talk! I'd love to see three different ways to say this.`,
-      post: `Best version:
-Another way to say it:
-One more option:`
-    },
-    command: {
-      pre: `Ready to make this Korean text shine in English! Give it some flair and personality - make it memorable. Show me three creative takes on this.`,
-      post: `Hot take:
-Remixed:
-Wild card:`
-    }
-  });
+  const [selectedModel, setSelectedModel] = useState(MODELS.GEMINI);
+  const [modelInstructions, setModelInstructions] = useState(DEFAULT_INSTRUCTIONS);
+  const [characterCount, setCharacterCount] = useState(0);
 
-  const models = [
-    { id: 'gemini', name: 'Gemini 1.5', api: 'google' },
-    { id: 'euryale', name: 'Llama 3.1 Euryale 70B', api: 'openrouter' },
-    { id: 'command', name: 'Cohere Command R', api: 'openrouter' }
-  ];
-
-  const translateWithOpenRouter = async (text, modelId) => {
-    const modelUrl = modelId === 'euryale' 
+  const translateWithOpenRouter = useCallback(async (text, modelId) => {
+    const modelUrl = modelId === MODELS.EURYALE 
       ? 'sao10k/l3.1-euryale-70b'
       : 'cohere/command-r-08-2024';
       
@@ -161,53 +202,50 @@ Wild card:`
         })
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
-      
-      if (!data.choices || !data.choices[0]?.message?.content) {
-        throw new Error('Unexpected API response format');
-      }
-
-      return data.choices[0].message.content;
+      return data.choices[0]?.message?.content;
     } catch (error) {
-      console.error('OpenRouter API Error:', error);
-      throw new Error(
-        error.message === 'Unauthorized' 
-          ? 'API 키가 유효하지 않습니다. 환경 변수를 확인해주세요.'
-          : `번역 중 오류가 발생했습니다: ${error.message}`
-      );
+      throw new Error(error.message === 'Unauthorized' 
+        ? 'Invalid API key. Please check your environment variables.'
+        : `Translation error: ${error.message}`);
     }
-  };
+  }, [modelInstructions]);
 
-  const translateWithGemini = async (text) => {
+  const translateWithGemini = useCallback(async (text) => {
     try {
       const genAI = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      
-      const prompt = `${modelInstructions[selectedModel].pre}
-        
-        Input Text:
-        ${text}
-
-        ===
-
-        ${modelInstructions[selectedModel].post}`;
-
-      const result = await model.generateContent(prompt);
+      const result = await model.generateContent([
+        modelInstructions[selectedModel].pre,
+        `Input Text: ${text}`,
+        modelInstructions[selectedModel].post
+      ].join('\n\n'));
       return result.response.text();
     } catch (error) {
-      console.error('Gemini API Error:', error);
-      throw new Error(
-        error.message.includes('API key') 
-          ? 'Gemini API 키가 유효하지 않습니다. 환경 변수를 확인해주세요.'
-          : `번역 중 오류가 발생했습니다: ${error.message}`
-      );
+      throw new Error(error.message.includes('API key') 
+        ? 'Invalid Gemini API key. Please check your environment variables.'
+        : `Translation error: ${error.message}`);
     }
-  };
+  }, [modelInstructions, selectedModel]);
+
+  const handleTextToSpeech = useCallback(async () => {
+    if (!translatedText) return;
+    
+    try {
+      const utterance = new SpeechSynthesisUtterance(translatedText);
+      utterance.lang = 'en-US';
+      window.speechSynthesis.speak(utterance);
+    } catch (error) {
+      console.error('Text-to-speech error:', error);
+    }
+  }, [translatedText]);
+
+  const handleInputChange = useCallback((e) => {
+    const text = e.target.value;
+    setInputText(text);
+    setCharacterCount(text.length);
+  }, []);
 
   const handleTranslate = async () => {
     try {
@@ -215,60 +253,24 @@ Wild card:`
       setError('');
       
       let translatedResult;
-      if (selectedModel === 'gemini') {
+      if (selectedModel === MODELS.GEMINI) {
         translatedResult = await translateWithGemini(inputText);
       } else {
         translatedResult = await translateWithOpenRouter(inputText, selectedModel);
       }
       
-      if (!translatedResult) {
-        throw new Error('번역 결과가 없습니다.');
-      }
-      
+      if (!translatedResult) throw new Error('No translation result.');
       setTranslatedText(translatedResult);
     } catch (err) {
-      console.error('Translation error:', err);
-      setError(err.message || '번역에 실패했습니다. 다시 시도해주세요.');
+      setError(err.message);
     } finally {
       setIsLoading(false);
       setCopySuccess(false);
     }
   };
 
-  const handleClear = () => {
-    setInputText('');
-    setTranslatedText('');
-    setCopySuccess(false);
-    setError('');
-  };
-
-  const handlePaste = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      setInputText(text);
-    } catch (err) {
-      console.error('Failed to read clipboard:', err);
-    }
-  };
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(translatedText);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy text:', err);
-    }
-  };
-
-  const handleModelChange = (e) => {
-    setSelectedModel(e.target.value);
-    setTranslatedText('');
-  };
-
   return (
-    <div className="w-full max-w-4xl mx-auto p-4 sm:p-6">
-      {/* Sidebar */}
+    <div className="w-full max-w-4xl mx-auto p-6">
       <Sidebar 
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -278,7 +280,6 @@ Wild card:`
         }}
       />
 
-      {/* Instructions Modal */}
       <InstructionsModal 
         isOpen={isInstructionsOpen}
         onClose={() => setIsInstructionsOpen(false)}
@@ -288,7 +289,7 @@ Wild card:`
       />
 
       <div className="bg-white rounded-lg shadow-lg">
-        <div className="p-4 sm:p-6">
+        <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <button
               onClick={() => setIsSidebarOpen(true)}
@@ -299,10 +300,13 @@ Wild card:`
 
             <select
               value={selectedModel}
-              onChange={handleModelChange}
-              className="w-[180px] sm:w-[200px] text-sm sm:text-base p-1.5 sm:p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              onChange={(e) => {
+                setSelectedModel(e.target.value);
+                setTranslatedText('');
+              }}
+              className="w-[200px] p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
             >
-              {models.map((model) => (
+              {AVAILABLE_MODELS.map((model) => (
                 <option key={model.id} value={model.id}>
                   {model.name}
                 </option>
@@ -310,68 +314,90 @@ Wild card:`
             </select>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-4 sm:gap-6">
-            <div className="flex-1 relative">
-              <textarea
-                placeholder="Enter text to translate..."
-                className="w-full h-48 p-3 sm:p-4 text-base sm:text-lg resize-none mt-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-              />
-              {!inputText && (
-                <button
-                  className="absolute top-8 right-4 px-2 sm:px-3 py-1 text-sm text-gray-500 hover:text-gray-700 flex items-center"
-                  onClick={handlePaste}
-                >
-                  <Clipboard className="h-4 w-4 mr-1 sm:mr-2" />
-                  Paste
-                </button>
-              )}
-            </div>
+          <div className="flex flex-col md:flex-row gap-6">
+            <TextArea
+              value={inputText}
+              onChange={(e) => {
+                setInputText(e.target.value);
+                setCharacterCount(e.target.value.length);
+              }}
+              placeholder="Enter text to translate..."
+              onPaste={async () => {
+                try {
+                  const text = await navigator.clipboard.readText();
+                  setInputText(text);
+                  setCharacterCount(text.length);
+                } catch (err) {
+                  console.error('Failed to read clipboard:', err);
+                }
+              }}
+            />
 
-            <div className="flex-1">
-              <textarea
-                readOnly
-                placeholder="Translation will appear here..."
-                className="w-full h-48 p-3 sm:p-4 text-base sm:text-lg bg-gray-50 resize-none mt-4 border rounded-lg"
-                value={translatedText}
-              />
-            </div>
+            <TextArea
+              value={translatedText}
+              readOnly
+              placeholder="Translation will appear here..."
+            />
+          </div>
+
+          <div className="flex justify-between items-center mt-2">
+            <span className="text-sm text-gray-500">
+              Characters: {characterCount}
+            </span>
+            {translatedText && (
+              <button
+                onClick={() => {
+                  const utterance = new SpeechSynthesisUtterance(translatedText);
+                  utterance.lang = 'en-US';
+                  window.speechSynthesis.speak(utterance);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+                title="Text-to-speech"
+              >
+                <Volume2 className="h-5 w-5" />
+              </button>
+            )}
           </div>
 
           {error && (
-            <div className="text-red-500 text-center mt-4 text-sm sm:text-base">
-              {error}
-            </div>
+            <Alert>{error}</Alert>
           )}
 
-          <div className="flex justify-center gap-2 sm:gap-4 mt-6 sm:mt-8">
+          <div className="flex justify-center gap-4 mt-8">
             <button
               onClick={handleTranslate}
               disabled={!inputText || isLoading}
-              className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg flex items-center text-sm sm:text-base ${
+              className={`px-6 py-2 rounded-lg flex items-center ${
                 inputText && !isLoading
                   ? 'bg-blue-500 text-white hover:bg-blue-600' 
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
-              <ArrowRightLeft className={`mr-1 sm:mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <ArrowRightLeft className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               {isLoading ? 'Translating...' : 'Translate'}
             </button>
 
             {translatedText && (
               <button
-                onClick={handleCopy}
-                className="px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg flex items-center bg-gray-100 hover:bg-gray-200 text-sm sm:text-base"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(translatedText);
+                    setCopySuccess(true);
+                    setTimeout(() => setCopySuccess(false), 2000);
+                  } catch (err) {
+                    console.error('Failed to copy text:', err);
+                  }
+                }}
+                className="px-6 py-2 rounded-lg flex items-center bg-gray-100 hover:bg-gray-200"
               >
                 {copySuccess ? (
                   <>
-                    <ClipboardCheck className="mr-1 sm:mr-2 h-4 w-4 text-green-500" />
+                    <ClipboardCheck className="mr-2 h-4 w-4 text-green-500" />
                     Copied!
                   </>
                 ) : (
                   <>
-                    <ClipboardCopy className="mr-1 sm:mr-2 h-4 w-4" />
+                    <ClipboardCopy className="mr-2 h-4 w-4" />
                     Copy
                   </>
                 )}
@@ -379,15 +405,21 @@ Wild card:`
             )}
 
             <button
-              onClick={handleClear}
+              onClick={() => {
+                setInputText('');
+                setTranslatedText('');
+                setCopySuccess(false);
+                setError('');
+                setCharacterCount(0);
+              }}
               disabled={!inputText && !translatedText}
-              className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg flex items-center border text-sm sm:text-base ${
+              className={`px-6 py-2 rounded-lg flex items-center border ${
                 inputText || translatedText
                   ? 'border-gray-300 hover:bg-gray-100'
                   : 'border-gray-200 text-gray-400 cursor-not-allowed'
               }`}
             >
-              <X className="mr-1 sm:mr-2 h-4 w-4" />
+              <X className="mr-2 h-4 w-4" />
               Clear
             </button>
           </div>
