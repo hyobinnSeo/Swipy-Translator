@@ -40,7 +40,6 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
   if (!isOpen) return null;
 
   return (
-    // z-index를 가장 높게 설정
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg w-full max-w-2xl relative">
         <div className="p-6">
@@ -56,8 +55,7 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Pre-translation Instructions:
               </label>
-              <input
-                type="text"
+              <textarea
                 value={modelInstructions[selectedModel].pre}
                 onChange={(e) => setModelInstructions({
                   ...modelInstructions,
@@ -66,15 +64,14 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
                     pre: e.target.value
                   }
                 })}
-                className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+                className="w-full h-32 p-2 border rounded-md focus:ring-2 focus:ring-blue-500 resize-none"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Post-translation Requirements:
               </label>
-              <input
-                type="text"
+              <textarea
                 value={modelInstructions[selectedModel].post}
                 onChange={(e) => setModelInstructions({
                   ...modelInstructions,
@@ -83,7 +80,7 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
                     post: e.target.value
                   }
                 })}
-                className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+                className="w-full h-32 p-2 border rounded-md focus:ring-2 focus:ring-blue-500 resize-none"
               />
             </div>
           </div>
