@@ -60,18 +60,30 @@ const TextArea = ({
   className = '', 
   onPaste,
   showSpeaker = false,
-  maxLength = 5000 
+  maxLength = 5000,
+  isKorean = false // Add flag to determine language
 }) => {
   const textareaRef = React.useRef(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
+  const [voices, setVoices] = useState([]);
 
   useEffect(() => {
-    // Check if speech synthesis is supported
     if ('speechSynthesis' in window) {
       setSpeechSupported(true);
-      // Initialize speech synthesis
-      window.speechSynthesis.cancel(); // Cancel any ongoing speech
+      
+      const loadVoices = () => {
+        const availableVoices = window.speechSynthesis.getVoices();
+        setVoices(availableVoices);
+      };
+
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+      loadVoices();
+      
+      return () => {
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.onvoiceschanged = null;
+      };
     }
   }, []);
 
@@ -82,7 +94,7 @@ const TextArea = ({
     }
   }, [value]);
 
-  const handleSpeak = () => {
+  const handleSpeak = useCallback(() => {
     if (!speechSupported || !value) return;
 
     if (isSpeaking) {
@@ -91,29 +103,78 @@ const TextArea = ({
       return;
     }
 
+    window.speechSynthesis.cancel();
+
     const utterance = new SpeechSynthesisUtterance(value);
-    utterance.lang = 'en-US';
     
-    // Handle speech events
+    // Find appropriate voice based on the text type
+    const preferredVoice = voices.find(voice => {
+      if (isKorean) {
+        return voice.lang.startsWith('ko-') || voice.lang.startsWith('en-');
+      } else {
+        // For English translation, prioritize en-US or en-GB voices
+        return voice.lang === 'en-US' || voice.lang === 'en-GB';
+      }
+    });
+    
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+      utterance.lang = preferredVoice.lang;
+    } else {
+      // Fallback to default settings if no preferred voice is found
+      utterance.lang = isKorean ? 'ko-KR' : 'en-US';
+    }
+
+    // Optimize speech parameters for clarity
+    utterance.rate = 0.9;  // Slightly slower for better clarity
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => setIsSpeaking(false);
     utterance.onerror = (event) => {
       console.error('Speech synthesis error:', event);
       setIsSpeaking(false);
+    };
+
+    // Handle long text
+    if (value.length > 200) {
+      const sentences = value.match(/[^.!?]+[.!?]+/g) || [value];
+      let index = 0;
+
+      const speakNextSentence = () => {
+        if (index < sentences.length) {
+          const currentUtterance = new SpeechSynthesisUtterance(sentences[index]);
+          
+          if (preferredVoice) {
+            currentUtterance.voice = preferredVoice;
+            currentUtterance.lang = preferredVoice.lang;
+          } else {
+            currentUtterance.lang = isKorean ? 'ko-KR' : 'en-US';
+          }
+          
+          currentUtterance.rate = 0.9;
+          currentUtterance.pitch = 1.0;
+          currentUtterance.volume = 1.0;
+          
+          currentUtterance.onend = () => {
+            index++;
+            speakNextSentence();
+          };
+          currentUtterance.onerror = utterance.onerror;
+          window.speechSynthesis.speak(currentUtterance);
+        } else {
+          setIsSpeaking(false);
+        }
+      };
+
+      setIsSpeaking(true);
+      speakNextSentence();
+    } else {
+      window.speechSynthesis.speak(utterance);
     }
+  }, [value, speechSupported, isSpeaking, voices, isKorean]);
 
-    // Get available voices
-    const voices = window.speechSynthesis.getVoices();
-    // Try to find an English voice
-    const englishVoice = voices.find(voice => voice.lang.startsWith('en-'));
-    if (englishVoice) {
-      utterance.voice = englishVoice;
-    }
-
-    window.speechSynthesis.speak(utterance);
-  };
-
-  // Cleanup speech synthesis when component unmounts
   useEffect(() => {
     return () => {
       if (speechSupported && isSpeaking) {
