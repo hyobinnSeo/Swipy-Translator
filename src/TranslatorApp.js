@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from 'react';
-import { ArrowRightLeft, X, Clipboard, ClipboardCheck, ClipboardCopy, MenuIcon, Settings, Volume2 } from 'lucide-react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { ArrowRightLeft, X, Clipboard, ClipboardCheck, ClipboardCopy, MenuIcon, Settings, Volume2, History } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Constants to avoid magic strings
+// Constants
 const MODELS = {
   GEMINI: 'gemini',
   EURYALE: 'euryale',
@@ -30,38 +30,97 @@ const AVAILABLE_MODELS = [
   { id: MODELS.COMMAND, name: 'Cohere Command R', api: 'openrouter' }
 ];
 
-// Custom Alert Component
+// History Management
+const MAX_HISTORY_ITEMS = 10;
+
+const loadHistory = () => {
+  try {
+    return JSON.parse(localStorage.getItem('translationHistory')) || [];
+  } catch {
+    return [];
+  }
+};
+
+const saveHistory = (history) => {
+  localStorage.setItem('translationHistory', JSON.stringify(history));
+};
+
+// Components
 const Alert = ({ children }) => (
   <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
     <span className="block sm:inline">{children}</span>
   </div>
 );
 
-// Reusable TextArea component
-const TextArea = ({ value, onChange, placeholder, readOnly = false, className = '', onPaste }) => (
-  <div className="relative flex-1">
-    <textarea
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      readOnly={readOnly}
-      className={`w-full h-48 p-4 text-lg resize-none mt-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-        readOnly ? 'bg-gray-50' : ''
-      } ${className}`}
-    />
-    {!value && onPaste && (
-      <button
-        className="absolute top-8 right-4 px-3 py-1 text-sm text-gray-500 hover:text-gray-700 flex items-center"
-        onClick={onPaste}
-      >
-        <Clipboard className="h-4 w-4 mr-2" />
-        Paste
-      </button>
-    )}
-  </div>
-);
+const TextArea = ({ 
+  value, 
+  onChange, 
+  placeholder, 
+  readOnly = false, 
+  className = '', 
+  onPaste,
+  showSpeaker = false,
+  maxLength = 5000 
+}) => {
+  const textareaRef = React.useRef(null);
 
-// Sidebar Component
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [value]);
+
+  return (
+    <div className="relative flex-1" style={{ minWidth: 0 }}>
+      <div className="relative">
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => {
+            if (e.target.value.length <= maxLength) {
+              onChange(e);
+            }
+          }}
+          placeholder={placeholder}
+          readOnly={readOnly}
+          className={`w-full min-h-[12rem] p-4 text-lg resize-none mt-4 border rounded-lg 
+            focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all
+            ${readOnly ? 'bg-gray-50' : ''} ${className}`}
+        />
+        <div className="absolute bottom-2 right-2 text-sm text-gray-500 bg-white px-1">
+          {value.length}{!readOnly && `/${maxLength}`}
+        </div>
+      </div>
+      {!value && onPaste && (
+        <button
+          className="absolute top-8 right-4 px-3 py-1 text-sm text-gray-500 
+            hover:text-gray-700 flex items-center transition-colors"
+          onClick={onPaste}
+        >
+          <Clipboard className="h-4 w-4 mr-2" />
+          Paste
+        </button>
+      )}
+      {showSpeaker && value && (
+        <div className="flex justify-end mt-2">
+          <button
+            onClick={() => {
+              const utterance = new SpeechSynthesisUtterance(value);
+              utterance.lang = 'en-US';
+              window.speechSynthesis.speak(utterance);
+            }}
+            className="text-gray-500 hover:text-gray-700"
+            title="Text-to-speech"
+          >
+            <Volume2 className="h-5 w-5" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Sidebar = ({ isOpen, onClose, onOpenInstructions }) => (
   <>
     <div 
@@ -71,9 +130,8 @@ const Sidebar = ({ isOpen, onClose, onOpenInstructions }) => (
       onClick={onClose}
     />
     <div 
-      className={`fixed left-0 top-0 h-full w-64 bg-white shadow-lg transform transition-transform z-30 ${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}
+      className={`fixed left-0 top-0 h-full w-64 bg-white shadow-lg transform 
+        transition-transform z-30 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
     >
       <div className="p-4">
         <h2 className="text-xl font-semibold mb-4">Menu</h2>
@@ -89,7 +147,50 @@ const Sidebar = ({ isOpen, onClose, onOpenInstructions }) => (
   </>
 );
 
-// Instructions Modal Component
+const HistoryPanel = ({ isOpen, onClose, history, onSelectHistory }) => (
+  <>
+    <div 
+      className={`fixed inset-0 bg-black bg-opacity-50 transition-opacity z-20 ${
+        isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+      }`}
+      onClick={onClose}
+    />
+    <div 
+      className={`fixed right-0 top-0 h-full w-80 bg-white shadow-lg transform 
+        transition-transform z-30 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+    >
+      <div className="p-4">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Translation History</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        
+        <div className="space-y-4">
+          {history.map((item, index) => (
+            <div
+              key={index}
+              className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+              onClick={() => onSelectHistory(item)}
+            >
+              <div className="text-sm font-medium text-gray-600 mb-1">
+                {new Date(item.timestamp).toLocaleString()}
+              </div>
+              <div className="text-sm text-gray-500 truncate">{item.inputText}</div>
+            </div>
+          ))}
+          {history.length === 0 && (
+            <div className="text-center text-gray-500 py-4">
+              No translation history yet
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  </>
+);
+
 const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, setModelInstructions }) => {
   if (!isOpen) return null;
 
@@ -173,10 +274,16 @@ const TranslatorApp = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState(MODELS.GEMINI);
   const [modelInstructions, setModelInstructions] = useState(DEFAULT_INSTRUCTIONS);
   const [characterCount, setCharacterCount] = useState(0);
+  const [history, setHistory] = useState([]);
+
+  useEffect(() => {
+    setHistory(loadHistory());
+  }, []);
 
   const translateWithOpenRouter = useCallback(async (text, modelId) => {
     const modelUrl = modelId === MODELS.EURYALE 
@@ -243,6 +350,20 @@ const TranslatorApp = () => {
       
       if (!translatedResult) throw new Error('No translation result.');
       setTranslatedText(translatedResult);
+
+      // Add to history
+      const newHistory = [
+        {
+          inputText,
+          translatedText: translatedResult,
+          model: selectedModel,
+          timestamp: new Date().toISOString()
+        },
+        ...history
+      ].slice(0, MAX_HISTORY_ITEMS);
+      
+      setHistory(newHistory);
+      saveHistory(newHistory);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -262,6 +383,18 @@ const TranslatorApp = () => {
         }}
       />
 
+      <HistoryPanel 
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        history={history}
+        onSelectHistory={(item) => {
+          setInputText(item.inputText);
+          setTranslatedText(item.translatedText);
+          setSelectedModel(item.model);
+          setIsHistoryOpen(false);
+        }}
+      />
+
       <InstructionsModal 
         isOpen={isInstructionsOpen}
         onClose={() => setIsInstructionsOpen(false)}
@@ -273,12 +406,23 @@ const TranslatorApp = () => {
       <div className="bg-white rounded-lg shadow-lg">
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
-            <button
-              onClick={() => setIsSidebarOpen(true)}
-              className="flex items-center text-gray-600 hover:text-gray-800"
-            >
-              <MenuIcon className="h-6 w-6" />
-            </button>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="text-gray-600 hover:text-gray-800 transition-colors"
+                title="Menu"
+              >
+                <MenuIcon className="h-6 w-6" />
+              </button>
+              
+              <button
+                onClick={() => setIsHistoryOpen(true)}
+                className="text-gray-600 hover:text-gray-800 transition-colors"
+                title="Translation History"
+              >
+                <History className="h-6 w-6" />
+              </button>
+            </div>
 
             <select
               value={selectedModel}
@@ -304,6 +448,7 @@ const TranslatorApp = () => {
                 setCharacterCount(e.target.value.length);
               }}
               placeholder="Enter text to translate..."
+              showSpeaker={true}
               onPaste={async () => {
                 try {
                   const text = await navigator.clipboard.readText();
@@ -319,31 +464,11 @@ const TranslatorApp = () => {
               value={translatedText}
               readOnly
               placeholder="Translation will appear here..."
+              showSpeaker={true}
             />
           </div>
 
-          <div className="flex justify-between items-center mt-2">
-            <span className="text-sm text-gray-500">
-              Characters: {characterCount}
-            </span>
-            {translatedText && (
-              <button
-                onClick={() => {
-                  const utterance = new SpeechSynthesisUtterance(translatedText);
-                  utterance.lang = 'en-US';
-                  window.speechSynthesis.speak(utterance);
-                }}
-                className="text-gray-500 hover:text-gray-700"
-                title="Text-to-speech"
-              >
-                <Volume2 className="h-5 w-5" />
-              </button>
-            )}
-          </div>
-
-          {error && (
-            <Alert>{error}</Alert>
-          )}
+          {error && <Alert>{error}</Alert>}
 
           <div className="flex justify-center gap-4 mt-8">
             <button
@@ -370,7 +495,7 @@ const TranslatorApp = () => {
                     console.error('Failed to copy text:', err);
                   }
                 }}
-                className="px-6 py-2 rounded-lg flex items-center bg-gray-100 hover:bg-gray-200"
+                className="px-6 py-2 rounded-lg flex items-center bg-gray-100 hover:bg-gray-200 transition-colors"
               >
                 {copySuccess ? (
                   <>
@@ -395,7 +520,7 @@ const TranslatorApp = () => {
                 setCharacterCount(0);
               }}
               disabled={!inputText && !translatedText}
-              className={`px-6 py-2 rounded-lg flex items-center border ${
+              className={`px-6 py-2 rounded-lg flex items-center border transition-colors ${
                 inputText || translatedText
                   ? 'border-gray-300 hover:bg-gray-100'
                   : 'border-gray-200 text-gray-400 cursor-not-allowed'
