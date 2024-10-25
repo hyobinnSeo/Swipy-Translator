@@ -63,6 +63,17 @@ const TextArea = ({
   maxLength = 5000 
 }) => {
   const textareaRef = React.useRef(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+
+  useEffect(() => {
+    // Check if speech synthesis is supported
+    if ('speechSynthesis' in window) {
+      setSpeechSupported(true);
+      // Initialize speech synthesis
+      window.speechSynthesis.cancel(); // Cancel any ongoing speech
+    }
+  }, []);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -70,6 +81,46 @@ const TextArea = ({
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
   }, [value]);
+
+  const handleSpeak = () => {
+    if (!speechSupported || !value) return;
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(value);
+    utterance.lang = 'en-US';
+    
+    // Handle speech events
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = (event) => {
+      console.error('Speech synthesis error:', event);
+      setIsSpeaking(false);
+    }
+
+    // Get available voices
+    const voices = window.speechSynthesis.getVoices();
+    // Try to find an English voice
+    const englishVoice = voices.find(voice => voice.lang.startsWith('en-'));
+    if (englishVoice) {
+      utterance.voice = englishVoice;
+    }
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Cleanup speech synthesis when component unmounts
+  useEffect(() => {
+    return () => {
+      if (speechSupported && isSpeaking) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [speechSupported, isSpeaking]);
 
   return (
     <div className="relative flex-1" style={{ minWidth: 0 }}>
@@ -102,18 +153,14 @@ const TextArea = ({
           Paste
         </button>
       )}
-      {showSpeaker && value && (
+      {showSpeaker && speechSupported && value && (
         <div className="flex justify-end mt-2">
           <button
-            onClick={() => {
-              const utterance = new SpeechSynthesisUtterance(value);
-              utterance.lang = 'en-US';
-              window.speechSynthesis.speak(utterance);
-            }}
-            className="text-gray-500 hover:text-gray-700"
-            title="Text-to-speech"
+            onClick={handleSpeak}
+            className={`text-gray-500 hover:text-gray-700 ${isSpeaking ? 'text-blue-500' : ''}`}
+            title={isSpeaking ? "Stop speaking" : "Text-to-speech"}
           >
-            <Volume2 className="h-5 w-5" />
+            <Volume2 className={`h-5 w-5 ${isSpeaking ? 'animate-pulse' : ''}`} />
           </button>
         </div>
       )}
