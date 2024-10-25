@@ -154,22 +154,6 @@ const Sidebar = ({ isOpen, onClose, onOpenInstructions }) => (
             <Settings className="h-4 w-4 mr-2" />
             Instructions
           </button>
-          
-          {/* Example additional menu items */}
-          <button className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center">
-            <Volume2 className="h-4 w-4 mr-2" />
-            Text-to-Speech Settings
-          </button>
-          
-          <button className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center">
-            <ArrowRightLeft className="h-4 w-4 mr-2" />
-            Translation Settings
-          </button>
-          
-          <button className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center">
-            <ClipboardCopy className="h-4 w-4 mr-2" />
-            Copy Settings
-          </button>
         </div>
       </div>
     </div>
