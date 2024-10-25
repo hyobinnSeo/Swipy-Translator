@@ -131,17 +131,46 @@ const Sidebar = ({ isOpen, onClose, onOpenInstructions }) => (
     />
     <div 
       className={`fixed left-0 top-0 h-full w-64 bg-white shadow-lg transform 
-        transition-transform z-30 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        transition-transform z-30 ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        flex flex-col`}
     >
-      <div className="p-4">
-        <h2 className="text-xl font-semibold mb-4">Menu</h2>
-        <button
-          onClick={onOpenInstructions}
-          className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center"
-        >
-          <Settings className="h-4 w-4 mr-2" />
-          Instructions
-        </button>
+      {/* Header - fixed at top */}
+      <div className="p-4 border-b">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-semibold">Menu</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Menu items - scrollable */}
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="space-y-2">
+          <button
+            onClick={onOpenInstructions}
+            className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center"
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Instructions
+          </button>
+          
+          {/* Example additional menu items */}
+          <button className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center">
+            <Volume2 className="h-4 w-4 mr-2" />
+            Text-to-Speech Settings
+          </button>
+          
+          <button className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center">
+            <ArrowRightLeft className="h-4 w-4 mr-2" />
+            Translation Settings
+          </button>
+          
+          <button className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center">
+            <ClipboardCopy className="h-4 w-4 mr-2" />
+            Copy Settings
+          </button>
+        </div>
       </div>
     </div>
   </>
@@ -157,16 +186,21 @@ const HistoryPanel = ({ isOpen, onClose, history, onSelectHistory }) => (
     />
     <div 
       className={`fixed right-0 top-0 h-full w-80 bg-white shadow-lg transform 
-        transition-transform z-30 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        transition-transform z-30 ${isOpen ? 'translate-x-0' : 'translate-x-full'}
+        flex flex-col`} // Added flex flex-col
     >
-      <div className="p-4">
-        <div className="flex justify-between items-center mb-4">
+      {/* Header - fixed at top */}
+      <div className="p-4 border-b">
+        <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold">Translation History</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <X className="h-5 w-5" />
           </button>
         </div>
-        
+      </div>
+
+      {/* History items - scrollable */}
+      <div className="flex-1 overflow-y-auto p-4">
         <div className="space-y-4">
           {history.map((item, index) => (
             <div
@@ -278,6 +312,7 @@ const TranslatorApp = () => {
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState(MODELS.GEMINI);
   const [modelInstructions, setModelInstructions] = useState(DEFAULT_INSTRUCTIONS);
+  const [characterCount, setCharacterCount] = useState(0);
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
@@ -444,6 +479,7 @@ const TranslatorApp = () => {
               value={inputText}
               onChange={(e) => {
                 setInputText(e.target.value);
+                setCharacterCount(e.target.value.length);
               }}
               placeholder="Enter text to translate..."
               showSpeaker={true}
@@ -451,6 +487,7 @@ const TranslatorApp = () => {
                 try {
                   const text = await navigator.clipboard.readText();
                   setInputText(text);
+                  setCharacterCount(text.length);
                 } catch (err) {
                   console.error('Failed to read clipboard:', err);
                 }
@@ -514,6 +551,7 @@ const TranslatorApp = () => {
                 setTranslatedText('');
                 setCopySuccess(false);
                 setError('');
+                setCharacterCount(0);
               }}
               disabled={!inputText && !translatedText}
               className={`px-6 py-2 rounded-lg flex items-center border transition-colors ${
