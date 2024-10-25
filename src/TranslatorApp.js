@@ -14,16 +14,22 @@ const TranslatorApp = () => {
   // 모델별 프롬프트 설정
   const [modelInstructions, setModelInstructions] = useState({
     gemini: {
-      pre: '[System] You are a Korean to English translator. Please follow these instructions 1. Take user input and translate it into English. 2. Use natural, colloquial language. 3. Include two additional alternatives. [/System] User Input:',
-      post: '[System] Don\'t include anything in your answer other than the results of your translation. [/System] [Format] 번역 결과: (Insert) \n\n 대안1: (Insert) \n\n 대안2: [/Format]'
+      pre: `As an English translator, please translate the following Korean text. Your translation should be accurate and natural-sounding. Please provide three different versions.`,
+      post: `MAIN:
+ALT1:
+ALT2:`
     },
     euryale: {
-      pre: 'You are a Korean to English translator. Translate the following Korean text to natural, colloquial English. Provide one main translation and two alternatives.',
-      post: 'Format your response as:\nMain: [translation]\nAlt 1: [alternative 1]\nAlt 2: [alternative 2]'
+      pre: `Hey! Help me translate this Korean text into casual, everyday English. Keep it natural and conversational - like how people really talk! I'd love to see three different ways to say this.`,
+      post: `Best version:
+Another way to say it:
+One more option:`
     },
     command: {
-      pre: 'You are a professional Korean to English translator. Your task is to translate the following text from Korean to English, maintaining natural expression. Provide a main translation and two alternative versions.',
-      post: 'Format:\n1. Main translation:\n2. Alternative 1:\n3. Alternative 2:'
+      pre: `Ready to make this Korean text shine in English! Give it some flair and personality - make it memorable. Show me three creative takes on this.`,
+      post: `Hot take:
+Remixed:
+Wild card:`
     }
   });
 
@@ -93,11 +99,14 @@ const TranslatorApp = () => {
       const genAI = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       
-      const prompt = `
-        Instructions: ${modelInstructions.gemini.pre}
-        Text to translate: ${text}
-        Additional requirements: ${modelInstructions.gemini.post}
-      `;
+      const prompt = `${modelInstructions[selectedModel].pre}
+        
+        Input Text:
+        ${text}
+
+        ===
+
+        ${modelInstructions[selectedModel].post}`;
 
       const result = await model.generateContent(prompt);
       return result.response.text();
