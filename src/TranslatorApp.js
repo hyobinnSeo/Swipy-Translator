@@ -278,7 +278,6 @@ const TranslatorApp = () => {
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState(MODELS.GEMINI);
   const [modelInstructions, setModelInstructions] = useState(DEFAULT_INSTRUCTIONS);
-  const [characterCount, setCharacterCount] = useState(0);
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
@@ -445,7 +444,6 @@ const TranslatorApp = () => {
               value={inputText}
               onChange={(e) => {
                 setInputText(e.target.value);
-                setCharacterCount(e.target.value.length);
               }}
               placeholder="Enter text to translate..."
               showSpeaker={true}
@@ -453,7 +451,6 @@ const TranslatorApp = () => {
                 try {
                   const text = await navigator.clipboard.readText();
                   setInputText(text);
-                  setCharacterCount(text.length);
                 } catch (err) {
                   console.error('Failed to read clipboard:', err);
                 }
@@ -517,7 +514,6 @@ const TranslatorApp = () => {
                 setTranslatedText('');
                 setCopySuccess(false);
                 setError('');
-                setCharacterCount(0);
               }}
               disabled={!inputText && !translatedText}
               className={`px-6 py-2 rounded-lg flex items-center border transition-colors ${
