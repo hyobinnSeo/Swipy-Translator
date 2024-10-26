@@ -1026,26 +1026,6 @@ const TranslatorApp = () => {
                         {translatedText && (
                             <>
                                 <button
-                                    onClick={handleSaveTranslation}
-                                    className={`px-6 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto transition-all duration-300 ${saveSuccess
-                                        ? 'bg-green-500 text-white'
-                                        : 'bg-gray-100 hover:bg-gray-200'
-                                        }`}
-                                >
-                                    {saveSuccess ? (
-                                        <>
-                                            <Check className="mr-2 h-4 w-4" />
-                                            Saved!
-                                        </>
-                                    ) : (
-                                        <>
-                                            <BookmarkIcon className="mr-2 h-4 w-4" />
-                                            Save
-                                        </>
-                                    )}
-                                </button>
-
-                                <button
                                     onClick={async () => {
                                         try {
                                             await navigator.clipboard.writeText(translatedText);
@@ -1066,6 +1046,26 @@ const TranslatorApp = () => {
                                         <>
                                             <ClipboardCopy className="mr-2 h-4 w-4" />
                                             Copy
+                                        </>
+                                    )}
+                                </button>
+
+                                <button
+                                    onClick={handleSaveTranslation}
+                                    className={`px-6 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto transition-all duration-300 ${saveSuccess
+                                        ? 'bg-green-500 text-white'
+                                        : 'bg-gray-100 hover:bg-gray-200'
+                                        }`}
+                                >
+                                    {saveSuccess ? (
+                                        <>
+                                            <Check className="mr-2 h-4 w-4" />
+                                            Saved!
+                                        </>
+                                    ) : (
+                                        <>
+                                            <BookmarkIcon className="mr-2 h-4 w-4" />
+                                            Save
                                         </>
                                     )}
                                 </button>
