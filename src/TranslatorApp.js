@@ -68,6 +68,30 @@ const TextArea = ({
     const [speechSupported, setSpeechSupported] = useState(false);
     const [voices, setVoices] = useState([]);
 
+    // Auto-resize logic
+    const adjustHeight = useCallback(() => {
+        if (textareaRef.current) {
+            // Reset height to auto first to get the correct scrollHeight
+            textareaRef.current.style.height = 'auto';
+            // Set new height based on scrollHeight with a minimum of 12rem (192px)
+            const newHeight = Math.max(192, textareaRef.current.scrollHeight);
+            textareaRef.current.style.height = `${newHeight}px`;
+            // Remove scrollbar if content fits
+            textareaRef.current.style.overflowY = textareaRef.current.scrollHeight <= newHeight ? 'hidden' : 'auto';
+        }
+    }, []);
+
+    // Adjust height whenever value changes
+    useEffect(() => {
+        adjustHeight();
+        // Add resize observer to handle window resizing
+        const resizeObserver = new ResizeObserver(adjustHeight);
+        if (textareaRef.current) {
+            resizeObserver.observe(textareaRef.current);
+        }
+        return () => resizeObserver.disconnect();
+    }, [value, adjustHeight]);
+
     useEffect(() => {
         if ('speechSynthesis' in window) {
             setSpeechSupported(true);
@@ -191,9 +215,13 @@ const TextArea = ({
                     }}
                     placeholder={placeholder}
                     readOnly={readOnly}
-                    className={`w-full min-h-[12rem] p-4 text-lg resize-none mt-4 border rounded-lg 
-            focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all
-            ${readOnly ? 'bg-gray-50' : ''} ${className}`}
+                    className={`w-full p-4 text-lg resize-none mt-4 border rounded-lg 
+                        focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all
+                        ${readOnly ? 'bg-gray-50' : ''} ${className}`}
+                    style={{
+                        minHeight: '12rem',
+                        overflowY: 'hidden' // Start with hidden overflow
+                    }}
                 />
                 <div className="absolute bottom-2 right-2 text-sm text-gray-500 bg-white px-1">
                     {value.length}{!readOnly && `/${maxLength}`}
@@ -232,93 +260,121 @@ const TextArea = ({
         </div>
     );
 };
-const Sidebar = ({ isOpen, onClose, onOpenInstructions }) => (
-  <>
-    <div 
-      className={`fixed inset-0 bg-black bg-opacity-50 transition-opacity z-20 ${
-        isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-      }`}
-      onClick={onClose}
-    />
-    <div 
-      className={`fixed left-0 top-0 h-full w-64 bg-white shadow-lg transform 
-        transition-transform z-30 ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        flex flex-col`}
-    >
-      {/* Header - fixed at top */}
-      <div className="p-4 border-b">
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Menu</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
+const Sidebar = ({ isOpen, onClose, onOpenInstructions }) => {
+    // Prevent main body scroll when sidebar is open
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [isOpen]);
 
-      {/* Menu items - scrollable */}
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="space-y-2">
-          <button
-            onClick={onOpenInstructions}
-            className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center"
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Instructions
-          </button>
-        </div>
-      </div>
-    </div>
-  </>
-);
-
-const HistoryPanel = ({ isOpen, onClose, history, onSelectHistory }) => (
-  <>
-    <div 
-      className={`fixed inset-0 bg-black bg-opacity-50 transition-opacity z-20 ${
-        isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-      }`}
-      onClick={onClose}
-    />
-    <div 
-      className={`fixed right-0 top-0 h-full w-80 bg-white shadow-lg transform 
-        transition-transform z-30 ${isOpen ? 'translate-x-0' : 'translate-x-full'}
-        flex flex-col`} // Added flex flex-col
-    >
-      {/* Header - fixed at top */}
-      <div className="p-4 border-b">
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Translation History</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
-
-      {/* History items - scrollable */}
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="space-y-4">
-          {history.map((item, index) => (
+    return (
+        <>
             <div
-              key={index}
-              className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
-              onClick={() => onSelectHistory(item)}
+                className={`fixed inset-0 bg-black bg-opacity-50 transition-opacity z-20 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                    }`}
+                onClick={onClose}
+            />
+            <div
+                className={`fixed left-0 top-0 h-full w-64 bg-white shadow-lg transform 
+          transition-transform z-30 ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+          flex flex-col overflow-hidden`} // Added overflow-hidden
+                onClick={(e) => e.stopPropagation()}
             >
-              <div className="text-sm font-medium text-gray-600 mb-1">
-                {new Date(item.timestamp).toLocaleString()}
-              </div>
-              <div className="text-sm text-gray-500 truncate">{item.inputText}</div>
+                {/* Header - fixed at top */}
+                <div className="p-4 border-b flex-shrink-0"> {/* Added flex-shrink-0 */}
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-xl font-semibold">Menu</h2>
+                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                            <X className="h-5 w-5" />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Menu items - scrollable */}
+                <div className="flex-1 overflow-y-auto overscroll-contain p-4"> {/* Added overscroll-contain */}
+                    <div className="space-y-2">
+                        <button
+                            onClick={onOpenInstructions}
+                            className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center"
+                        >
+                            <Settings className="h-4 w-4 mr-2" />
+                            Instructions
+                        </button>
+                    </div>
+                </div>
             </div>
-          ))}
-          {history.length === 0 && (
-            <div className="text-center text-gray-500 py-4">
-              No translation history yet
+        </>
+    );
+};
+
+const HistoryPanel = ({ isOpen, onClose, history, onSelectHistory }) => {
+    // Prevent main body scroll when history panel is open
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [isOpen]);
+
+    return (
+        <>
+            <div
+                className={`fixed inset-0 bg-black bg-opacity-50 transition-opacity z-20 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                    }`}
+                onClick={onClose}
+            />
+            <div
+                className={`fixed right-0 top-0 h-full w-80 bg-white shadow-lg transform 
+          transition-transform z-30 ${isOpen ? 'translate-x-0' : 'translate-x-full'}
+          flex flex-col overflow-hidden`} // Added overflow-hidden
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Header - fixed at top */}
+                <div className="p-4 border-b flex-shrink-0"> {/* Added flex-shrink-0 */}
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-xl font-semibold">Translation History</h2>
+                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                            <X className="h-5 w-5" />
+                        </button>
+                    </div>
+                </div>
+
+                {/* History items - scrollable */}
+                <div className="flex-1 overflow-y-auto overscroll-contain p-4"> {/* Added overscroll-contain */}
+                    <div className="space-y-4">
+                        {history.map((item, index) => (
+                            <div
+                                key={index}
+                                className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                                onClick={() => onSelectHistory(item)}
+                            >
+                                <div className="text-sm font-medium text-gray-600 mb-1">
+                                    {new Date(item.timestamp).toLocaleString()}
+                                </div>
+                                <div className="text-sm text-gray-500 truncate">{item.inputText}</div>
+                            </div>
+                        ))}
+                        {history.length === 0 && (
+                            <div className="text-center text-gray-500 py-4">
+                                No translation history yet
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
-          )}
-        </div>
-      </div>
-    </div>
-  </>
-);
+        </>
+    );
+};
 
 const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, setModelInstructions }) => {
   if (!isOpen) return null;
