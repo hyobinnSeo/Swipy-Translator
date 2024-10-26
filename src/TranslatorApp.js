@@ -13,7 +13,9 @@ import {
     BookmarkIcon,
     Search,
     Folder,
-    Check
+    Check,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -81,116 +83,109 @@ const Alert = ({ children }) => (
 );
 
 const TextArea = ({
-    value,
-    onChange,
-    placeholder,
-    readOnly = false,
-    className = '',
-    onPaste,
-    showSpeaker = false,
-    maxLength = 5000,
-    onClear
+    value, // 텍스트 영역의 현재 값
+    onChange, // 텍스트 값 변경 시 호출되는 함수
+    placeholder, // 텍스트 영역의 플레이스홀더 텍스트
+    readOnly = false, // 텍스트 영역이 읽기 전용인지 여부 (기본값은 false)
+    className = '', // 추가로 지정할 CSS 클래스
+    onPaste, // 붙여넣기 버튼 클릭 시 호출되는 함수
+    showSpeaker = false, // 스피커 아이콘 표시 여부
+    maxLength = 5000, // 입력 가능한 최대 문자 수
+    onClear, // 텍스트 영역 초기화 함수
+    onTouchStart, // 터치 시작 이벤트 핸들러
+    onTouchMove, // 터치 이동 이벤트 핸들러
+    onTouchEnd, // 터치 종료 이벤트 핸들러
+    translations = [],
+    currentIndex = 0,
+    onPrevious,
+    onNext
 }) => {
-    const textareaRef = React.useRef(null);
-    const [isSpeaking, setIsSpeaking] = useState(false);
-    const [speechSupported, setSpeechSupported] = useState(false);
-    const [voices, setVoices] = useState([]);
+    const textareaRef = React.useRef(null); // 텍스트 영역 요소를 참조하기 위한 ref
+    const [voices, setVoices] = useState([]); // 사용 가능한 음성 리스트 상태
+    const [isSpeaking, setIsSpeaking] = useState(false); // 음성 재생 상태 (재생 중인지 여부)
+    const [speechSupported, setSpeechSupported] = useState(false); // 음성 합성 지원 여부
 
-    // Auto-resize logic
+    // 텍스트 영역의 높이를 자동으로 조절하는 함수
     const adjustHeight = useCallback(() => {
         if (textareaRef.current) {
-            // Reset height to auto first to get the correct scrollHeight
-            textareaRef.current.style.height = 'auto';
-            // Set new height based on scrollHeight with a minimum of 12rem (192px)
-            const newHeight = Math.max(192, textareaRef.current.scrollHeight);
-            textareaRef.current.style.height = `${newHeight}px`;
-            // Remove scrollbar if content fits
-            textareaRef.current.style.overflowY = textareaRef.current.scrollHeight <= newHeight ? 'hidden' : 'auto';
+            textareaRef.current.style.height = 'auto'; // 높이를 자동으로 초기화
+            const newHeight = Math.max(192, textareaRef.current.scrollHeight); // 스크롤 높이를 기준으로 새로운 높이 계산
+            textareaRef.current.style.height = `${newHeight}px`; // 계산된 높이로 설정
+            textareaRef.current.style.overflowY = textareaRef.current.scrollHeight <= newHeight ? 'hidden' : 'auto'; // 스크롤 필요 여부에 따른 overflow 설정
         }
     }, []);
 
-    // Adjust height whenever value changes
+    // 컴포넌트가 마운트될 때와 value 변경 시 높이 조절
     useEffect(() => {
-        adjustHeight();
-        // Add resize observer to handle window resizing
-        const resizeObserver = new ResizeObserver(adjustHeight);
+        adjustHeight(); // 초기 높이 설정
+        const resizeObserver = new ResizeObserver(adjustHeight); // 요소 크기 변경 감지
         if (textareaRef.current) {
-            resizeObserver.observe(textareaRef.current);
+            resizeObserver.observe(textareaRef.current); // ref가 할당된 요소를 감시
         }
-        return () => resizeObserver.disconnect();
+        return () => resizeObserver.disconnect(); // 컴포넌트가 언마운트될 때 감시 종료
     }, [value, adjustHeight]);
 
+    // 음성 합성 지원 여부를 확인하고 음성 리스트를 로드
     useEffect(() => {
-        if ('speechSynthesis' in window) {
-            setSpeechSupported(true);
-
+        if ('speechSynthesis' in window) { // 음성 합성을 지원하는 경우
+            setSpeechSupported(true); // 음성 합성 가능 여부를 true로 설정
             const loadVoices = () => {
-                const availableVoices = window.speechSynthesis.getVoices();
-                setVoices(availableVoices);
+                setVoices(window.speechSynthesis.getVoices()); // 사용 가능한 음성 리스트 설정
             };
-
-            window.speechSynthesis.onvoiceschanged = loadVoices;
-            loadVoices();
-
+            window.speechSynthesis.onvoiceschanged = loadVoices; // 음성 리스트가 변경될 때 호출
+            loadVoices(); // 초기 음성 리스트 로드
             return () => {
-                window.speechSynthesis.cancel();
-                window.speechSynthesis.onvoiceschanged = null;
+                window.speechSynthesis.cancel(); // 컴포넌트 언마운트 시 음성 재생 중지
+                window.speechSynthesis.onvoiceschanged = null; // 이벤트 핸들러 해제
             };
         }
     }, []);
 
-    useEffect(() => {
-        if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-        }
-    }, [value]);
-
+    // 텍스트를 음성으로 읽는 함수
     const handleSpeak = useCallback(() => {
-        if (!speechSupported || !value) return;
+        if (!speechSupported || !value) return; // 음성 합성 지원이 없거나 텍스트가 없으면 종료
 
-        if (isSpeaking) {
-            window.speechSynthesis.cancel();
-            setIsSpeaking(false);
+        if (isSpeaking) { // 이미 재생 중이라면
+            window.speechSynthesis.cancel(); // 음성 재생 중지
+            setIsSpeaking(false); // 재생 상태 false로 설정
             return;
         }
 
-        window.speechSynthesis.cancel();
+        window.speechSynthesis.cancel(); // 재생 전 기존 음성 중지
 
-        const utterance = new SpeechSynthesisUtterance(value);
+        const utterance = new SpeechSynthesisUtterance(value); // 음성 합성 인스턴스 생성
 
-        // Only use English voices, preferably US or GB
+        // English 음성을 우선적으로 설정 (US 또는 GB)
         const englishVoice = voices.find(voice =>
             voice.lang === 'en-US' || voice.lang === 'en-GB'
         );
 
         if (englishVoice) {
-            utterance.voice = englishVoice;
+            utterance.voice = englishVoice; // 선택한 English 음성 적용
             utterance.lang = englishVoice.lang;
         } else {
-            // Fallback to default US English
-            utterance.lang = 'en-US';
+            utterance.lang = 'en-US'; // 기본 English 설정
         }
 
-        // Optimize speech parameters
+        // 음성 설정 (속도, 톤, 볼륨)
         utterance.rate = 0.9;
         utterance.pitch = 1.0;
         utterance.volume = 1.0;
 
-        utterance.onstart = () => setIsSpeaking(true);
-        utterance.onend = () => setIsSpeaking(false);
-        utterance.onerror = (event) => {
+        utterance.onstart = () => setIsSpeaking(true); // 시작 시 상태 설정
+        utterance.onend = () => setIsSpeaking(false); // 종료 시 상태 해제
+        utterance.onerror = (event) => { // 오류 발생 시 로그 출력
             console.error('Speech synthesis error:', event);
             setIsSpeaking(false);
         };
 
-        // Handle long text by splitting into sentences
+        // 텍스트가 길 경우 문장 단위로 분할하여 읽기
         if (value.length > 200) {
-            const sentences = value.match(/[^.!?]+[.!?]+/g) || [value];
+            const sentences = value.match(/[^.!?]+[.!?]+/g) || [value]; // 문장으로 분할
             let index = 0;
 
             const speakNextSentence = () => {
-                if (index < sentences.length) {
+                if (index < sentences.length) { // 문장이 남아있는 경우
                     const currentUtterance = new SpeechSynthesisUtterance(sentences[index]);
 
                     if (englishVoice) {
@@ -204,24 +199,25 @@ const TextArea = ({
                     currentUtterance.pitch = 1.0;
                     currentUtterance.volume = 1.0;
 
-                    currentUtterance.onend = () => {
+                    currentUtterance.onend = () => { // 문장 종료 시 다음 문장 읽기
                         index++;
                         speakNextSentence();
                     };
-                    currentUtterance.onerror = utterance.onerror;
-                    window.speechSynthesis.speak(currentUtterance);
+                    currentUtterance.onerror = utterance.onerror; // 오류 핸들러 재사용
+                    window.speechSynthesis.speak(currentUtterance); // 현재 문장 읽기 시작
                 } else {
-                    setIsSpeaking(false);
+                    setIsSpeaking(false); // 모든 문장이 종료되면 상태 해제
                 }
             };
 
             setIsSpeaking(true);
-            speakNextSentence();
+            speakNextSentence(); // 첫 문장 읽기 시작
         } else {
-            window.speechSynthesis.speak(utterance);
+            window.speechSynthesis.speak(utterance); // 텍스트 길이가 짧으면 한 번에 읽기
         }
     }, [value, speechSupported, isSpeaking, voices]);
 
+    // 컴포넌트 언마운트 시 음성 재생 중지
     useEffect(() => {
         return () => {
             if (speechSupported && isSpeaking) {
@@ -244,50 +240,79 @@ const TextArea = ({
                     placeholder={placeholder}
                     readOnly={readOnly}
                     className={`w-full p-4 text-lg resize-none mt-4 border rounded-lg 
-                        focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all
-                        ${readOnly ? 'bg-gray-50' : ''} ${className}`}
+                focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all
+                ${readOnly ? 'bg-gray-50' : ''} ${className}`}
                     style={{
                         minHeight: '12rem',
+                        paddingBottom: readOnly ? '5.5rem' : '2.5rem',
                         overflowY: 'hidden'
                     }}
+                    onTouchStart={onTouchStart}
+                    onTouchMove={onTouchMove}
+                    onTouchEnd={onTouchEnd}
                 />
-                <div className={`absolute bottom-2 right-2 text-sm text-gray-500 ${readOnly ? 'bg-gray-50' : 'bg-white'} px-1`}>
-                    {value.length}{!readOnly && `/${maxLength}`}
+
+                {/* 스피커와 글자수 카운터를 같은 높이로 배치 */}
+                <div className="absolute -bottom-6 w-full flex justify-between items-center px-1">
+                    {/* 스피커 아이콘 */}
+                    {showSpeaker && speechSupported && value && (
+                        <button
+                            onClick={handleSpeak}
+                            className={`text-gray-500 hover:text-gray-700 ${isSpeaking ? 'text-blue-500' : ''}`}
+                            title={isSpeaking ? "Stop speaking" : "Text-to-speech"}
+                        >
+                            <Volume2 className={`h-5 w-5 ${isSpeaking ? 'animate-pulse' : ''}`} />
+                        </button>
+                    )}
+
+                    {/* 글자수 카운터 */}
+                    <div className="text-sm text-gray-500">
+                        {value.length}{!readOnly && `/${maxLength}`}
+                    </div>
                 </div>
-                {!readOnly && value && onClear && (
+
+                {/* 네비게이션 버튼 - 글자수 카운터 위에 배치 */}
+                {readOnly && translations.length > 0 && (
+                    <div className="absolute bottom-4 left-0 w-full flex justify-between items-center px-2">
+                        <button
+                            onClick={onPrevious}
+                            className={`p-1.5 rounded-full hover:bg-gray-100 
+                                ${currentIndex > 0 ? 'text-gray-500 hover:text-gray-700' : 'text-gray-300'}`}
+                            disabled={currentIndex === 0}
+                        >
+                            <ChevronLeft className="h-5 w-5" />
+                        </button>
+
+                        <div className="text-sm text-gray-500">
+                            {currentIndex + 1}/{translations.length}
+                        </div>
+
+                        <button
+                            onClick={onNext}
+                            className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+                        >
+                            <ChevronRight className="h-5 w-5" />
+                        </button>
+                    </div>
+                )}
+
+                {/* 붙여넣기 버튼: 값이 없을 때만 표시 */}
+                {!value && onPaste && (
                     <button
-                        onClick={onClear}
-                        className="absolute top-6 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-                        title="Clear text"
+                        className="absolute top-8 right-4 px-3 py-1 text-sm text-gray-500 
+                        hover:text-gray-700 flex items-center transition-colors" // 붙여넣기 버튼 스타일 설정
+                        onClick={onPaste} // onPaste 함수 호출
                     >
-                        <X className="h-5 w-5" />
+                        <Clipboard className="h-4 w-4 mr-2" /> {/* 클립보드 아이콘 */}
+                        Paste
                     </button>
                 )}
             </div>
-            {!value && onPaste && (
-                <button
-                    className="absolute top-8 right-4 px-3 py-1 text-sm text-gray-500 
-            hover:text-gray-700 flex items-center transition-colors"
-                    onClick={onPaste}
-                >
-                    <Clipboard className="h-4 w-4 mr-2" />
-                    Paste
-                </button>
-            )}
-            {showSpeaker && speechSupported && value && (
-                <div className="flex justify-end mt-2">
-                    <button
-                        onClick={handleSpeak}
-                        className={`text-gray-500 hover:text-gray-700 ${isSpeaking ? 'text-blue-500' : ''}`}
-                        title={isSpeaking ? "Stop speaking" : "Text-to-speech"}
-                    >
-                        <Volume2 className={`h-5 w-5 ${isSpeaking ? 'animate-pulse' : ''}`} />
-                    </button>
-                </div>
-            )}
         </div>
     );
 };
+
+
 
 const Sidebar = ({ isOpen, onClose, onOpenInstructions, onOpenSaved }) => {
     useEffect(() => {
@@ -736,7 +761,8 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
 
 const TranslatorApp = () => {
     const [inputText, setInputText] = useState('');
-    const [translatedText, setTranslatedText] = useState('');
+    const [translations, setTranslations] = useState([]); // Array of translations
+    const [currentIndex, setCurrentIndex] = useState(0);
     const [copySuccess, setCopySuccess] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -749,6 +775,8 @@ const TranslatorApp = () => {
     const [savedTranslations, setSavedTranslations] = useState([]);
     const [isSavedOpen, setIsSavedOpen] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
+    const [touchStart, setTouchStart] = useState(null);
+    const [touchEnd, setTouchEnd] = useState(null);
 
     useEffect(() => {
         setHistory(loadHistory());
@@ -806,49 +834,6 @@ const TranslatorApp = () => {
         }
     }, [modelInstructions, selectedModel]);
 
-    const handleTranslate = async () => {
-        try {
-            setIsLoading(true);
-            setError('');
-
-            let translatedResult;
-            if (selectedModel === MODELS.GEMINI) {
-                translatedResult = await translateWithGemini(inputText);
-            } else {
-                translatedResult = await translateWithOpenRouter(inputText, selectedModel);
-            }
-
-            if (!translatedResult) throw new Error('No translation result.');
-            setTranslatedText(translatedResult);
-
-            // Add to history
-            const newHistory = [
-                {
-                    inputText,
-                    translatedText: translatedResult,
-                    model: selectedModel,
-                    timestamp: new Date().toISOString()
-                },
-                ...history
-            ].slice(0, MAX_HISTORY_ITEMS);
-
-            setHistory(newHistory);
-            saveHistory(newHistory);
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setIsLoading(false);
-            setCopySuccess(false);
-        }
-    };
-
-    const handleClear = () => {
-        setInputText('');
-        setTranslatedText('');
-        setCopySuccess(false);
-        setError('');
-    };
-
     const deleteHistoryItem = (index) => {
         const newHistory = [...history];
         newHistory.splice(index, 1);
@@ -896,8 +881,110 @@ const TranslatorApp = () => {
         saveSavedTranslations([]);
     };
 
+    // Get current translation text
+    const translatedText = translations[currentIndex]?.text || '';
+
+    // Handle translation navigation
+    const handlePrevious = () => {
+        if (currentIndex > 0) {
+            setCurrentIndex(currentIndex - 1);
+        }
+    };
+
+    const handleNext = async () => {
+        if (currentIndex < translations.length - 1) {
+            setCurrentIndex(currentIndex + 1);
+        } else {
+            // Request new translation when at the end
+            await handleTranslate(true);
+        }
+    };
+
+    // Modified translation function to handle additional translations
+    const handleTranslate = async (isAdditional = false) => {
+        try {
+            setIsLoading(true);
+            setError('');
+
+            let translatedResult;
+            if (selectedModel === MODELS.GEMINI) {
+                translatedResult = await translateWithGemini(inputText);
+            } else {
+                translatedResult = await translateWithOpenRouter(inputText, selectedModel);
+            }
+
+            if (!translatedResult) throw new Error('No translation result.');
+
+            if (isAdditional) {
+                // Add new translation to the array
+                setTranslations(prev => [...prev, { text: translatedResult, timestamp: new Date() }]);
+                setCurrentIndex(translations.length);
+            } else {
+                // Reset translations with new first translation
+                setTranslations([{ text: translatedResult, timestamp: new Date() }]);
+                setCurrentIndex(0);
+            }
+
+            // Add to history
+            const newHistory = [
+                {
+                    inputText,
+                    translatedText: translatedResult,
+                    model: selectedModel,
+                    timestamp: new Date().toISOString()
+                },
+                ...history
+            ].slice(0, MAX_HISTORY_ITEMS);
+
+            setHistory(newHistory);
+            saveHistory(newHistory);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+            setCopySuccess(false);
+        }
+    };
+
+    // Handle touch events for swipe
+    const minSwipeDistance = 50;
+
+    const onTouchStart = (e) => {
+        setTouchEnd(null);
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const onTouchMove = (e) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+    };
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+
+        if (isLeftSwipe) {
+            handleNext();
+        }
+        if (isRightSwipe) {
+            handlePrevious();
+        }
+    };
+
+    // Handle clear
+    const handleClear = () => {
+        setInputText('');
+        setTranslations([]);
+        setCurrentIndex(0);
+        setCopySuccess(false);
+        setError('');
+    };
+
     return (
         <div className="w-full max-w-4xl mx-auto p-6">
+            {/* Sidebar, SavedTranslationsDialog, HistoryPanel, and InstructionsModal remain the same */}
             <Sidebar
                 isOpen={isSidebarOpen}
                 onClose={() => setIsSidebarOpen(false)}
@@ -914,8 +1001,8 @@ const TranslatorApp = () => {
                 savedTranslations={savedTranslations}
                 onSelectSaved={(item) => {
                     setInputText(item.inputText);
-                    setTranslatedText(item.translatedText);
-                    setSelectedModel(item.model);
+                    setTranslations([{ text: item.translatedText, timestamp: new Date() }]);
+                    setCurrentIndex(0);
                 }}
                 onDeleteSaved={deleteSavedTranslation}
                 onClearAll={clearAllSavedTranslations}
@@ -927,8 +1014,8 @@ const TranslatorApp = () => {
                 history={history}
                 onSelectHistory={(item) => {
                     setInputText(item.inputText);
-                    setTranslatedText(item.translatedText);
-                    setSelectedModel(item.model);
+                    setTranslations([{ text: item.translatedText, timestamp: new Date() }]);
+                    setCurrentIndex(0);
                     setIsHistoryOpen(false);
                 }}
                 onDeleteHistory={deleteHistoryItem}
@@ -943,9 +1030,11 @@ const TranslatorApp = () => {
                 setModelInstructions={setModelInstructions}
             />
 
+            {/* Main content container */}
             <div className="bg-white rounded-lg shadow-lg">
-                <div className="p-6">
-                    <div className="flex justify-between items-center mb-4">
+                <div className="p-6 space-y-8"> {/* Added space-y-8 for consistent vertical spacing */}
+                    {/* Top menu and model selector */}
+                    <div className="flex justify-between items-center">
                         <div className="flex items-center space-x-4">
                             <button
                                 onClick={() => setIsSidebarOpen(true)}
@@ -968,7 +1057,8 @@ const TranslatorApp = () => {
                             value={selectedModel}
                             onChange={(e) => {
                                 setSelectedModel(e.target.value);
-                                setTranslatedText('');
+                                setTranslations([]);
+                                setCurrentIndex(0);
                             }}
                             className="w-[200px] p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
                         >
@@ -980,12 +1070,12 @@ const TranslatorApp = () => {
                         </select>
                     </div>
 
-                    <div className="flex flex-col md:flex-row gap-6">
+                    {/* Text areas container with increased bottom margin */}
+                    <div className="flex flex-col md:flex-row gap-6 mb-8"> {/* Added mb-8 for more space before buttons */}
+                        {/* Input text area */}
                         <TextArea
                             value={inputText}
-                            onChange={(e) => {
-                                setInputText(e.target.value);
-                            }}
+                            onChange={(e) => setInputText(e.target.value)}
                             placeholder="Enter text..."
                             showSpeaker={true}
                             onPaste={async () => {
@@ -999,20 +1089,31 @@ const TranslatorApp = () => {
                             onClear={handleClear}
                         />
 
-                        <TextArea
-                            value={translatedText}
-                            readOnly
-                            placeholder="Translation will appear here..."
-                            showSpeaker={true}
-                        />
+                        {/* Translation text area */}
+                        <div className="relative flex-1" style={{ minWidth: 0 }}>
+                            <TextArea
+                                value={translatedText}
+                                readOnly
+                                placeholder="Translation will appear here..."
+                                showSpeaker={true}
+                                onTouchStart={onTouchStart}
+                                onTouchMove={onTouchMove}
+                                onTouchEnd={onTouchEnd}
+                                translations={translations}
+                                currentIndex={currentIndex}
+                                onPrevious={handlePrevious}
+                                onNext={handleNext}
+                            />
+                        </div>
                     </div>
 
+                    {/* Error message */}
                     {error && <Alert>{error}</Alert>}
 
-                    {/* Updated responsive buttons section */}
-                    <div className="flex flex-col sm:flex-row justify-center gap-3 mt-8">
+                    {/* Action buttons with increased top margin */}
+                    <div className="flex flex-col sm:flex-row justify-center gap-3 pt-4"> {/* Added pt-4 for extra padding top */}
                         <button
-                            onClick={handleTranslate}
+                            onClick={() => handleTranslate(false)}
                             disabled={!inputText || isLoading}
                             className={`px-6 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto ${inputText && !isLoading
                                 ? 'bg-blue-500 text-white hover:bg-blue-600'
@@ -1072,20 +1173,6 @@ const TranslatorApp = () => {
                             </>
                         )}
                     </div>
-
-                    <SavedTranslationsDialog
-                        isOpen={isSavedOpen}
-                        onClose={() => setIsSavedOpen(false)}
-                        savedTranslations={savedTranslations}
-                        onSelectSaved={(item) => {
-                            setInputText(item.inputText);
-                            setTranslatedText(item.translatedText);
-                            setSelectedModel(item.model);
-                            setIsSavedOpen(false); // Close dialog after selecting
-                        }}
-                        onDeleteSaved={deleteSavedTranslation}
-                        onClearAll={clearAllSavedTranslations}
-                    />
                 </div>
             </div>
         </div>
