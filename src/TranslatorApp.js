@@ -78,27 +78,27 @@ const Alert = ({ children }) => (
 );
 
 const TextArea = ({
-    value, // 텍스트 영역의 현재 값
-    onChange, // 텍스트 값 변경 시 호출되는 함수
-    placeholder, // 텍스트 영역의 플레이스홀더 텍스트
-    readOnly = false, // 텍스트 영역이 읽기 전용인지 여부 (기본값은 false)
-    className = '', // 추가로 지정할 CSS 클래스
-    onPaste, // 붙여넣기 버튼 클릭 시 호출되는 함수
-    showSpeaker = false, // 스피커 아이콘 표시 여부
-    maxLength = 5000, // 입력 가능한 최대 문자 수
-    onClear, // 텍스트 영역 초기화 함수
-    onTouchStart, // 터치 시작 이벤트 핸들러
-    onTouchMove, // 터치 이동 이벤트 핸들러
-    onTouchEnd, // 터치 종료 이벤트 핸들러
+    value,
+    onChange,
+    placeholder,
+    readOnly = false,
+    className = '',
+    onPaste,
+    showSpeaker = false,
+    maxLength = 5000,
+    onClear, // New prop for handling clear action
+    onTouchStart,
+    onTouchMove,
+    onTouchEnd,
     translations = [],
     currentIndex = 0,
     onPrevious,
     onNext
 }) => {
-    const textareaRef = React.useRef(null); // 텍스트 영역 요소를 참조하기 위한 ref
-    const [voices, setVoices] = useState([]); // 사용 가능한 음성 리스트 상태
-    const [isSpeaking, setIsSpeaking] = useState(false); // 음성 재생 상태 (재생 중인지 여부)
-    const [speechSupported, setSpeechSupported] = useState(false); // 음성 합성 지원 여부
+    const textareaRef = React.useRef(null);
+    const [voices, setVoices] = useState([]);
+    const [isSpeaking, setIsSpeaking] = useState(false);
+    const [speechSupported, setSpeechSupported] = useState(false);
 
     // 텍스트 영역의 높이를 자동으로 조절하는 함수
     const adjustHeight = useCallback(() => {
@@ -224,6 +224,18 @@ const TextArea = ({
     return (
         <div className="relative flex-1" style={{ minWidth: 0 }}>
             <div className="relative">
+                {/* Add clear button when there's text and not readonly */}
+                {!readOnly && value && (
+                    <button
+                        onClick={onClear}
+                        className="absolute top-7 right-4 p-1.5 text-gray-400 hover:text-gray-600 
+                        hover:bg-gray-100 rounded-full transition-colors z-10"
+                        title="Clear text"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                )}
+
                 <textarea
                     ref={textareaRef}
                     value={value}
@@ -240,6 +252,7 @@ const TextArea = ({
                     style={{
                         minHeight: '12rem',
                         paddingBottom: readOnly ? '2.5rem' : '1.5rem',
+                        paddingRight: !readOnly && value ? '3rem' : '1rem', // Add space for clear button
                         overflowY: 'hidden'
                     }}
                     onTouchStart={onTouchStart}
@@ -247,7 +260,7 @@ const TextArea = ({
                     onTouchEnd={onTouchEnd}
                 />
 
-                {/* Paste 버튼을 textarea 내부로 이동 */}
+                {/* Keep the existing paste button logic */}
                 {!value && onPaste && (
                     <button
                         className="absolute top-7 right-2 px-3 py-1 text-sm text-gray-500 
@@ -259,9 +272,8 @@ const TextArea = ({
                     </button>
                 )}
 
-                {/* 하단 컨트롤 영역 */}
+                {/* Keep the existing bottom controls */}
                 <div className="absolute -bottom-7 w-full flex justify-between items-center px-2">
-                    {/* 왼쪽: 스피커 아이콘 */}
                     <div className="flex-1">
                         {showSpeaker && speechSupported && value && (
                             <button
@@ -274,13 +286,12 @@ const TextArea = ({
                         )}
                     </div>
 
-                    {/* 오른쪽: 글자수 카운터 */}
                     <div className="flex-1 text-right text-sm text-gray-500">
                         {value.length}{!readOnly && `/${maxLength}`}
                     </div>
                 </div>
 
-                {/* 네비게이션 버튼 */}
+                {/* Keep the existing navigation buttons */}
                 {readOnly && translations.length > 0 && (
                     <div className="absolute bottom-4 left-0 w-full flex justify-between items-center px-2">
                         <button
@@ -308,7 +319,6 @@ const TextArea = ({
         </div>
     );
 };
-
 
 
 const Sidebar = ({ isOpen, onClose, onOpenInstructions, onOpenSaved, onOpenRequestLog }) => {
