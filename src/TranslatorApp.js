@@ -23,28 +23,22 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 // Constants
 const MODELS = {
     GEMINI: 'gemini',
-    EURYALE: 'euryale',
     COMMAND: 'command'
 };
 
 const DEFAULT_INSTRUCTIONS = {
     [MODELS.GEMINI]: {
-        pre: `As an English translator, please translate the following Korean text. Your translation should be accurate and natural-sounding. Please provide three different versions.`,
-        post: `MAIN:\nALT1:\nALT2:`
-    },
-    [MODELS.EURYALE]: {
-        pre: `Hey! Help me translate this Korean text into casual, everyday English. Keep it natural and conversational - like how people really talk! I'd love to see three different ways to say this.`,
-        post: `Best version:\nAnother way to say it:\nOne more option:`
+        'pre-instruction': "You're a skilled translator specializing in converting Korean text into idiomatic English. Your task involves accurately conveying the meaning and nuances of the original Korean content while maintaining a natural and fluent English style.",
+        'post-instruction': "Note: Please use only text. No quotes or emojis.\nNote: Do not write anything other than the sentence to be translated."
     },
     [MODELS.COMMAND]: {
-        pre: `Ready to make this Korean text shine in English! Give it some flair and personality - make it memorable. Show me three creative takes on this.`,
-        post: `Hot take:\nRemixed:\nWild card:`
+        'pre-instruction': "You're a skilled translator specializing in converting Korean text into idiomatic English. Your task involves accurately conveying the meaning and nuances of the original Korean content while maintaining a natural and fluent English style.",
+        'post-instruction': "Ready to make this Korean text shine in English! Give it some flair and personality - make it memorable. Don't hold back! Swear words and slang are totally welcome.\n\nNote: Don't use any emojis or quotes. Text only.\nNote: Do not write anything other than the sentence to be translated."
     }
 };
 
 const AVAILABLE_MODELS = [
     { id: MODELS.GEMINI, name: 'Gemini 1.5', api: 'google' },
-    { id: MODELS.EURYALE, name: 'Llama 3.1 Euryale 70B', api: 'openrouter' },
     { id: MODELS.COMMAND, name: 'Cohere Command R', api: 'openrouter' }
 ];
 
@@ -723,12 +717,12 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
                                 Pre-translation Instructions:
                             </label>
                             <textarea
-                                value={modelInstructions[selectedModel].pre}
+                                value={modelInstructions[selectedModel]['pre-instruction']}
                                 onChange={(e) => setModelInstructions({
                                     ...modelInstructions,
                                     [selectedModel]: {
                                         ...modelInstructions[selectedModel],
-                                        pre: e.target.value
+                                        'pre-instruction': e.target.value
                                     }
                                 })}
                                 className="w-full h-32 p-2 border rounded-md focus:ring-2 focus:ring-blue-500 resize-none"
@@ -736,15 +730,15 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Post-translation Requirements:
+                                Post-translation Instructions:
                             </label>
                             <textarea
-                                value={modelInstructions[selectedModel].post}
+                                value={modelInstructions[selectedModel]['post-instruction']}
                                 onChange={(e) => setModelInstructions({
                                     ...modelInstructions,
                                     [selectedModel]: {
                                         ...modelInstructions[selectedModel],
-                                        post: e.target.value
+                                        'post-instruction': e.target.value
                                     }
                                 })}
                                 className="w-full h-32 p-2 border rounded-md focus:ring-2 focus:ring-blue-500 resize-none"
@@ -831,20 +825,73 @@ const TranslatorApp = () => {
         setSavedTranslations(loadSavedTranslations());
     }, []);
 
-    const translateWithOpenRouter = useCallback(async (text, modelId, previousTranslations = []) => {
-        const modelUrl = modelId === MODELS.EURYALE
-            ? 'sao10k/l3.1-euryale-70b'
-            : 'cohere/command-r-08-2024';
+    const translateWithGemini = useCallback(async (text, previousTranslations = []) => {
+        try {
+            const genAI = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        // Create the system message for translation context
-        let systemMessage1 = "You're a skilled translator specializing in converting Korean text into idiomatic English. Your task involves accurately conveying the meaning and nuances of the original Korean content while maintaining a natural and fluent English style.\n\n";
-        let systemMessage2 = "Ready to make this Korean text shine in English! Give it some flair and personality - make it memorable. Don't hold back! Swear words and slang are totally welcome.\n\n Note: Don't use any emojis or quotes. Text only.\nNote: Do not write anything other than the sentence to be translated.\n\n";
+            // Get base instructions from the current model settings
+            const basePreInstruction = modelInstructions[selectedModel]['pre-instruction'];
+            const postInstruction = modelInstructions[selectedModel]['post-instruction'];
+
+            // Create the complete pre-instruction with optional additional context
+            let completePreInstruction = basePreInstruction + "\n\n";
+            if (previousTranslations.length > 0) {
+                completePreInstruction += "For each translation: - Use diverse vocabulary and expressions - Vary sentence structures - Consider different cultural contexts and idioms - Maintain the original tone while exploring different ways to express the same meaning - Aim for natural, conversational English that captures both literal and contextual meaning\n\n";
+            }
+
+            // Create the user message with translation history and final instruction
+            let userPrompt = "Text to be translated: " + text + "\n\n";
+
+            if (previousTranslations.length > 0) {
+                userPrompt += "Previous translations to avoid repeating:\n";
+                previousTranslations.forEach((trans, index) => {
+                    userPrompt += `${index + 1}: ${trans.text}\n`;
+                });
+                userPrompt += "Note: Provide a fresh translation different from the above versions.\n\n";
+            }
+
+            // Set request log
+            const requestBody = {
+                model: "gemini-1.5-flash",
+                messages: [
+                    { content: `${completePreInstruction}${userPrompt}${postInstruction}\n\n` }
+                ],
+                endpoint: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+            };
+            setRequestLog(requestBody);
+
+            // For Gemini, combine all messages since it doesn't support separate roles
+            const fullPrompt = `${completePreInstruction}${userPrompt}${postInstruction}\n\n`;
+            const result = await model.generateContent(fullPrompt);
+            return result.response.text();
+        } catch (error) {
+            throw new Error(error.message.includes('API key')
+                ? 'Invalid Gemini API key. Please check your environment variables.'
+                : `Translation error: ${error.message}`);
+        }
+    }, [selectedModel, modelInstructions]);
+
+    const translateWithOpenRouter = useCallback(async (text, modelId, previousTranslations = []) => {
+        const modelUrl = 'cohere/command-r-08-2024';
+
+        // Get base instructions from the current model settings
+        const basePreInstruction = modelInstructions[selectedModel]['pre-instruction'];
+        const postInstruction = modelInstructions[selectedModel]['post-instruction'];
+
+        // Create the complete pre-instruction with optional additional context
+        let completePreInstruction = basePreInstruction + "\n\n";
+        if (previousTranslations.length > 0) {
+            completePreInstruction += "For each translation: - Use diverse vocabulary and expressions - Vary sentence structures - Consider different cultural contexts and idioms - Maintain the original tone while exploring different ways to express the same meaning - Aim for natural, conversational English that captures both literal and contextual meaning\n\n";
+        }
 
         // Create the user message with translation history and final instruction
         let userPrompt = "Text to be translated: " + text + "\n\n";
 
         if (previousTranslations.length > 0) {
-            systemMessage1 += "For each translation: - Use diverse vocabulary and expressions - Vary sentence structures - Consider different cultural contexts and idioms - Maintain the original tone while exploring different ways to express the same meaning - Aim for natural, conversational English that captures both literal and contextual meaning\n\n";
             userPrompt += "Previous translations to avoid repeating:\n";
             previousTranslations.forEach((trans, index) => {
                 userPrompt += `${index + 1}: ${trans.text}\n`;
@@ -855,9 +902,9 @@ const TranslatorApp = () => {
         const requestBody = {
             model: modelUrl,
             messages: [
-                { role: "system", content: systemMessage1 },
+                { role: "system", content: completePreInstruction },
                 { role: "user", content: userPrompt },
-                { role: "system", content: systemMessage2 }
+                { role: "system", content: postInstruction }
             ],
             endpoint: "https://openrouter.ai/api/v1/chat/completions",
             headers: {
@@ -880,9 +927,9 @@ const TranslatorApp = () => {
                 body: JSON.stringify({
                     model: modelUrl,
                     messages: [
-                        { role: "system", content: systemMessage1 },
+                        { role: "system", content: completePreInstruction },
                         { role: "user", content: userPrompt },
-                        { role: "system", content: systemMessage2 }
+                        { role: "system", content: postInstruction }
                     ]
                 })
             });
@@ -895,52 +942,7 @@ const TranslatorApp = () => {
                 ? 'Invalid API key. Please check your environment variables.'
                 : `Translation error: ${error.message}`);
         }
-    }, []);
-
-    const translateWithGemini = useCallback(async (text, previousTranslations = []) => {
-        try {
-            const genAI = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-            // Create the system message for translation context
-            let systemMessage1 = "You're a skilled translator specializing in converting Korean text into idiomatic English. Your task involves accurately conveying the meaning and nuances of the original Korean content while maintaining a natural and fluent English style.\n\n";
-            let systemMessage2 = "Note: Please use only text. No quotes or emojis.\nNote: Do not write anything other than the sentence to be translated.\n\n";
-
-            // Create the user message with translation history and final instruction
-            let userPrompt = "Text to be translated: " + text + "\n\n";
-
-            if (previousTranslations.length > 0) {
-                systemMessage1 += "For each translation: - Use diverse vocabulary and expressions - Vary sentence structures - Consider different cultural contexts and idioms - Maintain the original tone while exploring different ways to express the same meaning - Aim for natural, conversational English that captures both literal and contextual meaning\n\n";
-                userPrompt += "Previous translations to avoid repeating:\n";
-                previousTranslations.forEach((trans, index) => {
-                    userPrompt += `${index + 1}: ${trans.text}\n`;
-                });
-                userPrompt += "Note: Provide a fresh translation different from the above versions.\n\n";
-            }
-
-            // Set request log
-            const requestBody = {
-                model: "gemini-1.5-flash",
-                messages: [
-                    { content: `${systemMessage1}${userPrompt}${systemMessage2}` }
-                ],
-                endpoint: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash",
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-            };
-            setRequestLog(requestBody);
-
-            // For Gemini, combine system and user messages since it doesn't support separate roles
-            const fullPrompt = `${systemMessage1}${userPrompt}${systemMessage2}`;
-            const result = await model.generateContent(fullPrompt);
-            return result.response.text();
-        } catch (error) {
-            throw new Error(error.message.includes('API key')
-                ? 'Invalid Gemini API key. Please check your environment variables.'
-                : `Translation error: ${error.message}`);
-        }
-    }, []);
+    }, [selectedModel, modelInstructions]);
 
     const deleteHistoryItem = (index) => {
         const newHistory = [...history];
