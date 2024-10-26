@@ -52,181 +52,175 @@ const Alert = ({ children }) => (
   </div>
 );
 
-const TextArea = ({ 
-  value, 
-  onChange, 
-  placeholder, 
-  readOnly = false, 
-  className = '', 
-  onPaste,
-  showSpeaker = false,
-  maxLength = 5000,
-  isKorean = false // Add flag to determine language
+const TextArea = ({
+    value,
+    onChange,
+    placeholder,
+    readOnly = false,
+    className = '',
+    onPaste,
+    showSpeaker = false,
+    maxLength = 5000
 }) => {
-  const textareaRef = React.useRef(null);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [speechSupported, setSpeechSupported] = useState(false);
-  const [voices, setVoices] = useState([]);
+    const textareaRef = React.useRef(null);
+    const [isSpeaking, setIsSpeaking] = useState(false);
+    const [speechSupported, setSpeechSupported] = useState(false);
+    const [voices, setVoices] = useState([]);
 
-  useEffect(() => {
-    if ('speechSynthesis' in window) {
-      setSpeechSupported(true);
-      
-      const loadVoices = () => {
-        const availableVoices = window.speechSynthesis.getVoices();
-        setVoices(availableVoices);
-      };
+    useEffect(() => {
+        if ('speechSynthesis' in window) {
+            setSpeechSupported(true);
 
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-      loadVoices();
-      
-      return () => {
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.onvoiceschanged = null;
-      };
-    }
-  }, []);
+            const loadVoices = () => {
+                const availableVoices = window.speechSynthesis.getVoices();
+                setVoices(availableVoices);
+            };
 
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
-  }, [value]);
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+            loadVoices();
 
-  const handleSpeak = useCallback(() => {
-    if (!speechSupported || !value) return;
-
-    if (isSpeaking) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-      return;
-    }
-
-    window.speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(value);
-    
-    // Find appropriate voice based on the text type
-    const preferredVoice = voices.find(voice => {
-      if (isKorean) {
-        return voice.lang.startsWith('ko-') || voice.lang.startsWith('en-');
-      } else {
-        // For English translation, prioritize en-US or en-GB voices
-        return voice.lang === 'en-US' || voice.lang === 'en-GB';
-      }
-    });
-    
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
-      utterance.lang = preferredVoice.lang;
-    } else {
-      // Fallback to default settings if no preferred voice is found
-      utterance.lang = isKorean ? 'ko-KR' : 'en-US';
-    }
-
-    // Optimize speech parameters for clarity
-    utterance.rate = 0.9;  // Slightly slower for better clarity
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
-
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = (event) => {
-      console.error('Speech synthesis error:', event);
-      setIsSpeaking(false);
-    };
-
-    // Handle long text
-    if (value.length > 200) {
-      const sentences = value.match(/[^.!?]+[.!?]+/g) || [value];
-      let index = 0;
-
-      const speakNextSentence = () => {
-        if (index < sentences.length) {
-          const currentUtterance = new SpeechSynthesisUtterance(sentences[index]);
-          
-          if (preferredVoice) {
-            currentUtterance.voice = preferredVoice;
-            currentUtterance.lang = preferredVoice.lang;
-          } else {
-            currentUtterance.lang = isKorean ? 'ko-KR' : 'en-US';
-          }
-          
-          currentUtterance.rate = 0.9;
-          currentUtterance.pitch = 1.0;
-          currentUtterance.volume = 1.0;
-          
-          currentUtterance.onend = () => {
-            index++;
-            speakNextSentence();
-          };
-          currentUtterance.onerror = utterance.onerror;
-          window.speechSynthesis.speak(currentUtterance);
-        } else {
-          setIsSpeaking(false);
+            return () => {
+                window.speechSynthesis.cancel();
+                window.speechSynthesis.onvoiceschanged = null;
+            };
         }
-      };
+    }, []);
 
-      setIsSpeaking(true);
-      speakNextSentence();
-    } else {
-      window.speechSynthesis.speak(utterance);
-    }
-  }, [value, speechSupported, isSpeaking, voices, isKorean]);
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+        }
+    }, [value]);
 
-  useEffect(() => {
-    return () => {
-      if (speechSupported && isSpeaking) {
+    const handleSpeak = useCallback(() => {
+        if (!speechSupported || !value) return;
+
+        if (isSpeaking) {
+            window.speechSynthesis.cancel();
+            setIsSpeaking(false);
+            return;
+        }
+
         window.speechSynthesis.cancel();
-      }
-    };
-  }, [speechSupported, isSpeaking]);
 
-  return (
-    <div className="relative flex-1" style={{ minWidth: 0 }}>
-      <div className="relative">
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => {
-            if (e.target.value.length <= maxLength) {
-              onChange(e);
+        const utterance = new SpeechSynthesisUtterance(value);
+
+        // Only use English voices, preferably US or GB
+        const englishVoice = voices.find(voice =>
+            voice.lang === 'en-US' || voice.lang === 'en-GB'
+        );
+
+        if (englishVoice) {
+            utterance.voice = englishVoice;
+            utterance.lang = englishVoice.lang;
+        } else {
+            // Fallback to default US English
+            utterance.lang = 'en-US';
+        }
+
+        // Optimize speech parameters
+        utterance.rate = 0.9;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        utterance.onstart = () => setIsSpeaking(true);
+        utterance.onend = () => setIsSpeaking(false);
+        utterance.onerror = (event) => {
+            console.error('Speech synthesis error:', event);
+            setIsSpeaking(false);
+        };
+
+        // Handle long text by splitting into sentences
+        if (value.length > 200) {
+            const sentences = value.match(/[^.!?]+[.!?]+/g) || [value];
+            let index = 0;
+
+            const speakNextSentence = () => {
+                if (index < sentences.length) {
+                    const currentUtterance = new SpeechSynthesisUtterance(sentences[index]);
+
+                    if (englishVoice) {
+                        currentUtterance.voice = englishVoice;
+                        currentUtterance.lang = englishVoice.lang;
+                    } else {
+                        currentUtterance.lang = 'en-US';
+                    }
+
+                    currentUtterance.rate = 0.9;
+                    currentUtterance.pitch = 1.0;
+                    currentUtterance.volume = 1.0;
+
+                    currentUtterance.onend = () => {
+                        index++;
+                        speakNextSentence();
+                    };
+                    currentUtterance.onerror = utterance.onerror;
+                    window.speechSynthesis.speak(currentUtterance);
+                } else {
+                    setIsSpeaking(false);
+                }
+            };
+
+            setIsSpeaking(true);
+            speakNextSentence();
+        } else {
+            window.speechSynthesis.speak(utterance);
+        }
+    }, [value, speechSupported, isSpeaking, voices]);
+
+    useEffect(() => {
+        return () => {
+            if (speechSupported && isSpeaking) {
+                window.speechSynthesis.cancel();
             }
-          }}
-          placeholder={placeholder}
-          readOnly={readOnly}
-          className={`w-full min-h-[12rem] p-4 text-lg resize-none mt-4 border rounded-lg 
+        };
+    }, [speechSupported, isSpeaking]);
+
+    return (
+        <div className="relative flex-1" style={{ minWidth: 0 }}>
+            <div className="relative">
+                <textarea
+                    ref={textareaRef}
+                    value={value}
+                    onChange={(e) => {
+                        if (e.target.value.length <= maxLength) {
+                            onChange(e);
+                        }
+                    }}
+                    placeholder={placeholder}
+                    readOnly={readOnly}
+                    className={`w-full min-h-[12rem] p-4 text-lg resize-none mt-4 border rounded-lg 
             focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all
             ${readOnly ? 'bg-gray-50' : ''} ${className}`}
-        />
-        <div className="absolute bottom-2 right-2 text-sm text-gray-500 bg-white px-1">
-          {value.length}{!readOnly && `/${maxLength}`}
-        </div>
-      </div>
-      {!value && onPaste && (
-        <button
-          className="absolute top-8 right-4 px-3 py-1 text-sm text-gray-500 
+                />
+                <div className="absolute bottom-2 right-2 text-sm text-gray-500 bg-white px-1">
+                    {value.length}{!readOnly && `/${maxLength}`}
+                </div>
+            </div>
+            {!value && onPaste && (
+                <button
+                    className="absolute top-8 right-4 px-3 py-1 text-sm text-gray-500 
             hover:text-gray-700 flex items-center transition-colors"
-          onClick={onPaste}
-        >
-          <Clipboard className="h-4 w-4 mr-2" />
-          Paste
-        </button>
-      )}
-      {showSpeaker && speechSupported && value && (
-        <div className="flex justify-end mt-2">
-          <button
-            onClick={handleSpeak}
-            className={`text-gray-500 hover:text-gray-700 ${isSpeaking ? 'text-blue-500' : ''}`}
-            title={isSpeaking ? "Stop speaking" : "Text-to-speech"}
-          >
-            <Volume2 className={`h-5 w-5 ${isSpeaking ? 'animate-pulse' : ''}`} />
-          </button>
+                    onClick={onPaste}
+                >
+                    <Clipboard className="h-4 w-4 mr-2" />
+                    Paste
+                </button>
+            )}
+            {showSpeaker && speechSupported && value && (
+                <div className="flex justify-end mt-2">
+                    <button
+                        onClick={handleSpeak}
+                        className={`text-gray-500 hover:text-gray-700 ${isSpeaking ? 'text-blue-500' : ''}`}
+                        title={isSpeaking ? "Stop speaking" : "Text-to-speech"}
+                    >
+                        <Volume2 className={`h-5 w-5 ${isSpeaking ? 'animate-pulse' : ''}`} />
+                    </button>
+                </div>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 };
 
 const Sidebar = ({ isOpen, onClose, onOpenInstructions }) => (
