@@ -60,7 +60,8 @@ const TextArea = ({
     className = '',
     onPaste,
     showSpeaker = false,
-    maxLength = 5000
+    maxLength = 5000,
+    onClear
 }) => {
     const textareaRef = React.useRef(null);
     const [isSpeaking, setIsSpeaking] = useState(false);
@@ -197,6 +198,15 @@ const TextArea = ({
                 <div className="absolute bottom-2 right-2 text-sm text-gray-500 bg-white px-1">
                     {value.length}{!readOnly && `/${maxLength}`}
                 </div>
+                {!readOnly && value && onClear && (
+                    <button
+                        onClick={onClear}
+                        className="absolute top-6 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Clear text"
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
+                )}
             </div>
             {!value && onPaste && (
                 <button
@@ -222,7 +232,6 @@ const TextArea = ({
         </div>
     );
 };
-
 const Sidebar = ({ isOpen, onClose, onOpenInstructions }) => (
   <>
     <div 
@@ -489,7 +498,15 @@ const TranslatorApp = () => {
       setIsLoading(false);
       setCopySuccess(false);
     }
-  };
+    };
+
+    const handleClear = () => {
+        setInputText('');
+        setTranslatedText('');
+        setCopySuccess(false);
+        setError('');
+    };
+
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6">
@@ -575,6 +592,7 @@ const TranslatorApp = () => {
                   console.error('Failed to read clipboard:', err);
                 }
               }}
+              onClear={handleClear}
             />
 
             <TextArea
@@ -627,24 +645,6 @@ const TranslatorApp = () => {
                 )}
               </button>
             )}
-
-            <button
-              onClick={() => {
-                setInputText('');
-                setTranslatedText('');
-                setCopySuccess(false);
-                setError('');
-              }}
-              disabled={!inputText && !translatedText}
-              className={`px-6 py-2 rounded-lg flex items-center border transition-colors ${
-                inputText || translatedText
-                  ? 'border-gray-300 hover:bg-gray-100'
-                  : 'border-gray-200 text-gray-400 cursor-not-allowed'
-              }`}
-            >
-              <X className="mr-2 h-4 w-4" />
-              Clear
-            </button>
           </div>
         </div>
       </div>
