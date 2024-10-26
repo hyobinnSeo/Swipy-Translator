@@ -240,11 +240,11 @@ const TextArea = ({
                     placeholder={placeholder}
                     readOnly={readOnly}
                     className={`w-full p-4 text-lg resize-none mt-4 border rounded-lg 
-                focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all
-                ${readOnly ? 'bg-gray-50' : ''} ${className}`}
+                    focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all
+                    ${readOnly ? 'bg-gray-50' : ''} ${className}`}
                     style={{
                         minHeight: '12rem',
-                        paddingBottom: readOnly ? '5.5rem' : '2.5rem',
+                        paddingBottom: readOnly ? '2.5rem' : '1.5rem',
                         overflowY: 'hidden'
                     }}
                     onTouchStart={onTouchStart}
@@ -252,26 +252,40 @@ const TextArea = ({
                     onTouchEnd={onTouchEnd}
                 />
 
-                {/* 스피커와 글자수 카운터를 같은 높이로 배치 */}
-                <div className="absolute -bottom-6 w-full flex justify-between items-center px-1">
-                    {/* 스피커 아이콘 */}
-                    {showSpeaker && speechSupported && value && (
-                        <button
-                            onClick={handleSpeak}
-                            className={`text-gray-500 hover:text-gray-700 ${isSpeaking ? 'text-blue-500' : ''}`}
-                            title={isSpeaking ? "Stop speaking" : "Text-to-speech"}
-                        >
-                            <Volume2 className={`h-5 w-5 ${isSpeaking ? 'animate-pulse' : ''}`} />
-                        </button>
-                    )}
+                {/* Paste 버튼을 textarea 내부로 이동 */}
+                {!value && onPaste && (
+                    <button
+                        className="absolute top-7 right-2 px-3 py-1 text-sm text-gray-500 
+                        hover:text-gray-700 flex items-center transition-colors bg-white"
+                        onClick={onPaste}
+                    >
+                        <Clipboard className="h-4 w-4 mr-2" />
+                        Paste
+                    </button>
+                )}
 
-                    {/* 글자수 카운터 */}
-                    <div className="text-sm text-gray-500">
+                {/* 하단 컨트롤 영역 */}
+                <div className="absolute -bottom-7 w-full flex justify-between items-center px-2">
+                    {/* 왼쪽: 스피커 아이콘 */}
+                    <div className="flex-1">
+                        {showSpeaker && speechSupported && value && (
+                            <button
+                                onClick={handleSpeak}
+                                className={`text-gray-500 hover:text-gray-700 ${isSpeaking ? 'text-blue-500' : ''}`}
+                                title={isSpeaking ? "Stop speaking" : "Text-to-speech"}
+                            >
+                                <Volume2 className={`h-5 w-5 ${isSpeaking ? 'animate-pulse' : ''}`} />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* 오른쪽: 글자수 카운터 */}
+                    <div className="flex-1 text-right text-sm text-gray-500">
                         {value.length}{!readOnly && `/${maxLength}`}
                     </div>
                 </div>
 
-                {/* 네비게이션 버튼 - 글자수 카운터 위에 배치 */}
+                {/* 네비게이션 버튼 */}
                 {readOnly && translations.length > 0 && (
                     <div className="absolute bottom-4 left-0 w-full flex justify-between items-center px-2">
                         <button
@@ -294,18 +308,6 @@ const TextArea = ({
                             <ChevronRight className="h-5 w-5" />
                         </button>
                     </div>
-                )}
-
-                {/* 붙여넣기 버튼: 값이 없을 때만 표시 */}
-                {!value && onPaste && (
-                    <button
-                        className="absolute top-8 right-4 px-3 py-1 text-sm text-gray-500 
-                        hover:text-gray-700 flex items-center transition-colors" // 붙여넣기 버튼 스타일 설정
-                        onClick={onPaste} // onPaste 함수 호출
-                    >
-                        <Clipboard className="h-4 w-4 mr-2" /> {/* 클립보드 아이콘 */}
-                        Paste
-                    </button>
                 )}
             </div>
         </div>
