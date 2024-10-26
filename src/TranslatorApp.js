@@ -1009,13 +1009,14 @@ const TranslatorApp = () => {
 
                     {error && <Alert>{error}</Alert>}
 
-                    <div className="flex justify-center gap-4 mt-8">
+                    {/* Updated responsive buttons section */}
+                    <div className="flex flex-col sm:flex-row justify-center gap-3 mt-8">
                         <button
                             onClick={handleTranslate}
                             disabled={!inputText || isLoading}
-                            className={`px-6 py-2 rounded-lg flex items-center ${inputText && !isLoading
-                                    ? 'bg-blue-500 text-white hover:bg-blue-600'
-                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            className={`px-6 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto ${inputText && !isLoading
+                                ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                 }`}
                         >
                             <ArrowRightLeft className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -1026,9 +1027,9 @@ const TranslatorApp = () => {
                             <>
                                 <button
                                     onClick={handleSaveTranslation}
-                                    className={`px-6 py-2 rounded-lg flex items-center transition-all duration-300 ${saveSuccess
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-gray-100 hover:bg-gray-200'
+                                    className={`px-6 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto transition-all duration-300 ${saveSuccess
+                                        ? 'bg-green-500 text-white'
+                                        : 'bg-gray-100 hover:bg-gray-200'
                                         }`}
                                 >
                                     {saveSuccess ? (
@@ -1054,7 +1055,7 @@ const TranslatorApp = () => {
                                             console.error('Failed to copy text:', err);
                                         }
                                     }}
-                                    className="px-6 py-2 rounded-lg flex items-center bg-gray-100 hover:bg-gray-200 transition-colors"
+                                    className="px-6 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto bg-gray-100 hover:bg-gray-200 transition-colors"
                                 >
                                     {copySuccess ? (
                                         <>
