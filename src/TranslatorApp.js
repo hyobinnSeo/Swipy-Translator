@@ -1,5 +1,20 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { ArrowRightLeft, X, Clipboard, ClipboardCheck, ClipboardCopy, MenuIcon, Settings, Volume2, History, Trash2 } from 'lucide-react';
+import {
+    ArrowRightLeft,
+    X,
+    Clipboard,
+    ClipboardCheck,
+    ClipboardCopy,
+    MenuIcon,
+    Settings,
+    Volume2,
+    History,
+    Trash2,
+    BookmarkIcon,
+    Search,
+    Folder,
+    Check
+} from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Constants
@@ -30,7 +45,6 @@ const AVAILABLE_MODELS = [
     { id: MODELS.COMMAND, name: 'Cohere Command R', api: 'openrouter' }
 ];
 
-// History Management
 const MAX_HISTORY_ITEMS = 10;
 
 const loadHistory = () => {
@@ -43,6 +57,20 @@ const loadHistory = () => {
 
 const saveHistory = (history) => {
     localStorage.setItem('translationHistory', JSON.stringify(history));
+};
+
+const MAX_SAVED_TRANSLATIONS = 50;
+
+const loadSavedTranslations = () => {
+    try {
+        return JSON.parse(localStorage.getItem('savedTranslations')) || [];
+    } catch {
+        return [];
+    }
+};
+
+const saveSavedTranslations = (translations) => {
+    localStorage.setItem('savedTranslations', JSON.stringify(translations));
 };
 
 // Components
@@ -260,8 +288,8 @@ const TextArea = ({
         </div>
     );
 };
-const Sidebar = ({ isOpen, onClose, onOpenInstructions }) => {
-    // Prevent main body scroll when sidebar is open
+
+const Sidebar = ({ isOpen, onClose, onOpenInstructions, onOpenSaved }) => {
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
@@ -276,18 +304,16 @@ const Sidebar = ({ isOpen, onClose, onOpenInstructions }) => {
     return (
         <>
             <div
-                className={`fixed inset-0 bg-black bg-opacity-50 transition-opacity z-20 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                    }`}
+                className={`fixed inset-0 bg-black bg-opacity-50 transition-opacity z-20 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 onClick={onClose}
             />
             <div
                 className={`fixed left-0 top-0 h-full w-64 bg-white shadow-lg transform 
-          transition-transform z-30 ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-          flex flex-col overflow-hidden`} // Added overflow-hidden
+                transition-transform z-30 ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+                flex flex-col overflow-hidden`}
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Header - fixed at top */}
-                <div className="p-4 border-b flex-shrink-0"> {/* Added flex-shrink-0 */}
+                <div className="p-4 border-b flex-shrink-0">
                     <div className="flex justify-between items-center">
                         <h2 className="text-xl font-semibold">Menu</h2>
                         <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
@@ -296,9 +322,18 @@ const Sidebar = ({ isOpen, onClose, onOpenInstructions }) => {
                     </div>
                 </div>
 
-                {/* Menu items - scrollable */}
-                <div className="flex-1 overflow-y-auto overscroll-contain p-4"> {/* Added overscroll-contain */}
+                <div className="flex-1 overflow-y-auto overscroll-contain p-4">
                     <div className="space-y-2">
+                        <button
+                            onClick={() => {
+                                onOpenSaved();
+                                onClose();
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center"
+                        >
+                            <BookmarkIcon className="h-4 w-4 mr-2" />
+                            Saved Translations
+                        </button>
                         <button
                             onClick={onOpenInstructions}
                             className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center"
@@ -339,6 +374,177 @@ const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message }) => {
                     </button>
                 </div>
             </div>
+        </div>
+    );
+};
+
+const SavedTranslationsDialog = ({ isOpen, onClose, savedTranslations, onSelectSaved, onDeleteSaved, onClearAll }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState(null);
+
+    // Reset search when dialog is opened
+    useEffect(() => {
+        if (isOpen) {
+            setSearchTerm('');
+        }
+    }, [isOpen]);
+
+    if (!isOpen) return null;
+
+    const handleClose = () => {
+        setSearchTerm('');
+        setShowConfirmDialog(false);
+        setItemToDelete(null);
+        onClose();
+    };
+
+    const filteredTranslations = savedTranslations.filter(item =>
+        item.inputText.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.translatedText.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+        <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            onClick={handleClose}
+        >
+            <div
+                className="bg-white rounded-lg w-full max-w-3xl max-h-[80vh] flex flex-col"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="p-4 border-b flex items-center justify-between">
+                    <h2 className="text-xl font-semibold">Saved Translations</h2>
+                    <button
+                        onClick={handleClose}
+                        className="text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
+
+                <div className="p-4 border-b">
+                    <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="Search translations..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4">
+                    {savedTranslations.length === 0 ? (
+                        <div className="text-center text-gray-500 py-8">
+                            <Folder className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                            <p>No saved translations yet</p>
+                        </div>
+                    ) : filteredTranslations.length === 0 ? (
+                        <div className="text-center text-gray-500 py-8">
+                            <p>No translations match your search</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {filteredTranslations.map((item, index) => (
+                                <div
+                                    key={index}
+                                    className="border rounded-lg p-4 hover:bg-gray-50 transition-colors group relative"
+                                >
+                                    <div className="mb-2 flex justify-between items-start">
+                                        <span className="text-sm text-gray-500">
+                                            {new Date(item.timestamp).toLocaleString()}
+                                        </span>
+                                        <button
+                                            onClick={() => {
+                                                setItemToDelete(index);
+                                                setShowConfirmDialog(true);
+                                            }}
+                                            className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div>
+                                            <div className="text-xs font-medium text-gray-500 mb-1">Original:</div>
+                                            <div className="text-sm">{item.inputText}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-xs font-medium text-gray-500 mb-1">Translation:</div>
+                                            <div className="text-sm">{item.translatedText}</div>
+                                        </div>
+                                    </div>
+                                    <div className="mt-3 flex justify-end">
+                                        <button
+                                            onClick={() => {
+                                                onSelectSaved(item);
+                                                onClose();
+                                            }}
+                                            className="text-sm text-blue-500 hover:text-blue-600"
+                                        >
+                                            Load translation
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {savedTranslations.length > 0 && (
+                    <div className="p-4 border-t">
+                        <button
+                            onClick={() => setShowConfirmDialog(true)}
+                            className="text-red-500 hover:text-red-600 text-sm"
+                        >
+                            Clear all saved translations
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {showConfirmDialog && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                        <h3 className="text-lg font-semibold mb-2">
+                            {itemToDelete !== null ? "Delete Translation" : "Clear All Translations"}
+                        </h3>
+                        <p className="text-gray-600 mb-6">
+                            {itemToDelete !== null
+                                ? "Are you sure you want to delete this translation?"
+                                : "Are you sure you want to clear all saved translations? This action cannot be undone."}
+                        </p>
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                onClick={() => {
+                                    setShowConfirmDialog(false);
+                                    setItemToDelete(null);
+                                }}
+                                className="px-4 py-2 text-gray-500 hover:text-gray-700"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (itemToDelete !== null) {
+                                        onDeleteSaved(itemToDelete);
+                                    } else {
+                                        onClearAll();
+                                    }
+                                    setShowConfirmDialog(false);
+                                    setItemToDelete(null);
+                                }}
+                                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                            >
+                                Confirm
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -540,9 +746,13 @@ const TranslatorApp = () => {
     const [selectedModel, setSelectedModel] = useState(MODELS.GEMINI);
     const [modelInstructions, setModelInstructions] = useState(DEFAULT_INSTRUCTIONS);
     const [history, setHistory] = useState([]);
+    const [savedTranslations, setSavedTranslations] = useState([]);
+    const [isSavedOpen, setIsSavedOpen] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
 
     useEffect(() => {
         setHistory(loadHistory());
+        setSavedTranslations(loadSavedTranslations());
     }, []);
 
     const translateWithOpenRouter = useCallback(async (text, modelId) => {
@@ -651,7 +861,40 @@ const TranslatorApp = () => {
         saveHistory([]);
     };
 
+    const handleSaveTranslation = () => {
+        if (!inputText || !translatedText) return;
 
+        const newSavedTranslation = {
+            inputText,
+            translatedText,
+            model: selectedModel,
+            timestamp: new Date().toISOString()
+        };
+
+        const updatedSavedTranslations = [
+            newSavedTranslation,
+            ...savedTranslations
+        ].slice(0, MAX_SAVED_TRANSLATIONS);
+
+        setSavedTranslations(updatedSavedTranslations);
+        saveSavedTranslations(updatedSavedTranslations);
+
+        // Show success feedback
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 2000);
+    };
+
+    const deleteSavedTranslation = (index) => {
+        const newSavedTranslations = [...savedTranslations];
+        newSavedTranslations.splice(index, 1);
+        setSavedTranslations(newSavedTranslations);
+        saveSavedTranslations(newSavedTranslations);
+    };
+
+    const clearAllSavedTranslations = () => {
+        setSavedTranslations([]);
+        saveSavedTranslations([]);
+    };
 
     return (
         <div className="w-full max-w-4xl mx-auto p-6">
@@ -662,6 +905,20 @@ const TranslatorApp = () => {
                     setIsInstructionsOpen(true);
                     setIsSidebarOpen(false);
                 }}
+                onOpenSaved={() => setIsSavedOpen(true)}
+            />
+
+            <SavedTranslationsDialog
+                isOpen={isSavedOpen}
+                onClose={() => setIsSavedOpen(false)}
+                savedTranslations={savedTranslations}
+                onSelectSaved={(item) => {
+                    setInputText(item.inputText);
+                    setTranslatedText(item.translatedText);
+                    setSelectedModel(item.model);
+                }}
+                onDeleteSaved={deleteSavedTranslation}
+                onClearAll={clearAllSavedTranslations}
             />
 
             <HistoryPanel
@@ -757,8 +1014,8 @@ const TranslatorApp = () => {
                             onClick={handleTranslate}
                             disabled={!inputText || isLoading}
                             className={`px-6 py-2 rounded-lg flex items-center ${inputText && !isLoading
-                                ? 'bg-blue-500 text-white hover:bg-blue-600'
-                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                 }`}
                         >
                             <ArrowRightLeft className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -766,32 +1023,68 @@ const TranslatorApp = () => {
                         </button>
 
                         {translatedText && (
-                            <button
-                                onClick={async () => {
-                                    try {
-                                        await navigator.clipboard.writeText(translatedText);
-                                        setCopySuccess(true);
-                                        setTimeout(() => setCopySuccess(false), 2000);
-                                    } catch (err) {
-                                        console.error('Failed to copy text:', err);
-                                    }
-                                }}
-                                className="px-6 py-2 rounded-lg flex items-center bg-gray-100 hover:bg-gray-200 transition-colors"
-                            >
-                                {copySuccess ? (
-                                    <>
-                                        <ClipboardCheck className="mr-2 h-4 w-4 text-green-500" />
-                                        Copied!
-                                    </>
-                                ) : (
-                                    <>
-                                        <ClipboardCopy className="mr-2 h-4 w-4" />
-                                        Copy
-                                    </>
-                                )}
-                            </button>
+                            <>
+                                <button
+                                    onClick={handleSaveTranslation}
+                                    className={`px-6 py-2 rounded-lg flex items-center transition-all duration-300 ${saveSuccess
+                                            ? 'bg-green-500 text-white'
+                                            : 'bg-gray-100 hover:bg-gray-200'
+                                        }`}
+                                >
+                                    {saveSuccess ? (
+                                        <>
+                                            <Check className="mr-2 h-4 w-4" />
+                                            Saved!
+                                        </>
+                                    ) : (
+                                        <>
+                                            <BookmarkIcon className="mr-2 h-4 w-4" />
+                                            Save
+                                        </>
+                                    )}
+                                </button>
+
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            await navigator.clipboard.writeText(translatedText);
+                                            setCopySuccess(true);
+                                            setTimeout(() => setCopySuccess(false), 2000);
+                                        } catch (err) {
+                                            console.error('Failed to copy text:', err);
+                                        }
+                                    }}
+                                    className="px-6 py-2 rounded-lg flex items-center bg-gray-100 hover:bg-gray-200 transition-colors"
+                                >
+                                    {copySuccess ? (
+                                        <>
+                                            <ClipboardCheck className="mr-2 h-4 w-4 text-green-500" />
+                                            Copied!
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ClipboardCopy className="mr-2 h-4 w-4" />
+                                            Copy
+                                        </>
+                                    )}
+                                </button>
+                            </>
                         )}
                     </div>
+
+                    <SavedTranslationsDialog
+                        isOpen={isSavedOpen}
+                        onClose={() => setIsSavedOpen(false)}
+                        savedTranslations={savedTranslations}
+                        onSelectSaved={(item) => {
+                            setInputText(item.inputText);
+                            setTranslatedText(item.translatedText);
+                            setSelectedModel(item.model);
+                            setIsSavedOpen(false); // Close dialog after selecting
+                        }}
+                        onDeleteSaved={deleteSavedTranslation}
+                        onClearAll={clearAllSavedTranslations}
+                    />
                 </div>
             </div>
         </div>
