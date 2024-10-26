@@ -785,10 +785,25 @@ const TranslatorApp = () => {
         setSavedTranslations(loadSavedTranslations());
     }, []);
 
-    const translateWithOpenRouter = useCallback(async (text, modelId) => {
+    // Modify the translateWithOpenRouter function
+    const translateWithOpenRouter = useCallback(async (text, modelId, previousTranslations = []) => {
         const modelUrl = modelId === MODELS.EURYALE
             ? 'sao10k/l3.1-euryale-70b'
             : 'cohere/command-r-08-2024';
+
+        // Build the prompt with translation history if available
+        let prompt = "You need to translate the following Korean text into English. The translation should be accurate and sound natural.\n\n";
+        prompt += `Input Text: ${text}\n\n`;
+
+        if (previousTranslations.length > 0) {
+            prompt += "Below is a list of your previously written translated texts. You must paraphrase the text freshly without reusing these previous translations.\n";
+            prompt += "Translation History:\n";
+            previousTranslations.forEach((trans, index) => {
+                prompt += `${index + 1}: ${trans.text}\n`;
+            });
+        }
+
+        prompt += "\nNote: Do not write anything other than the translated text.";
 
         try {
             const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -802,9 +817,8 @@ const TranslatorApp = () => {
                 body: JSON.stringify({
                     model: modelUrl,
                     messages: [
-                        { role: "system", content: modelInstructions[modelId].pre },
-                        { role: "user", content: text },
-                        { role: "system", content: modelInstructions[modelId].post }
+                        { role: "system", content: prompt },
+                        { role: "user", content: text }
                     ]
                 })
             });
@@ -817,24 +831,36 @@ const TranslatorApp = () => {
                 ? 'Invalid API key. Please check your environment variables.'
                 : `Translation error: ${error.message}`);
         }
-    }, [modelInstructions]);
+    }, []);
 
-    const translateWithGemini = useCallback(async (text) => {
+    // Modify the translateWithGemini function
+    const translateWithGemini = useCallback(async (text, previousTranslations = []) => {
         try {
             const genAI = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
             const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-            const result = await model.generateContent([
-                modelInstructions[selectedModel].pre,
-                `Input Text: ${text}`,
-                modelInstructions[selectedModel].post
-            ].join('\n\n'));
+
+            // Build the prompt with translation history if available
+            let prompt = "You need to translate the following Korean text into English. The translation should be accurate and sound natural.\n\n";
+            prompt += `Input Text: ${text}\n\n`;
+
+            if (previousTranslations.length > 0) {
+                prompt += "Below is a list of your previously written translated texts. You must paraphrase the text freshly without reusing these previous translations.\n";
+                prompt += "Translation History:\n";
+                previousTranslations.forEach((trans, index) => {
+                    prompt += `${index + 1}: ${trans.text}\n`;
+                });
+            }
+
+            prompt += "\nNote: Do not write anything other than the translated text.";
+
+            const result = await model.generateContent(prompt);
             return result.response.text();
         } catch (error) {
             throw new Error(error.message.includes('API key')
                 ? 'Invalid Gemini API key. Please check your environment variables.'
                 : `Translation error: ${error.message}`);
         }
-    }, [modelInstructions, selectedModel]);
+    }, []);
 
     const deleteHistoryItem = (index) => {
         const newHistory = [...history];
@@ -909,10 +935,20 @@ const TranslatorApp = () => {
             setError('');
 
             let translatedResult;
-            if (selectedModel === MODELS.GEMINI) {
-                translatedResult = await translateWithGemini(inputText);
+            if (isAdditional) {
+                // When swiping for a new translation, pass the current translations
+                if (selectedModel === MODELS.GEMINI) {
+                    translatedResult = await translateWithGemini(inputText, translations);
+                } else {
+                    translatedResult = await translateWithOpenRouter(inputText, selectedModel, translations);
+                }
             } else {
-                translatedResult = await translateWithOpenRouter(inputText, selectedModel);
+                // Regular translation button click - no previous translations needed
+                if (selectedModel === MODELS.GEMINI) {
+                    translatedResult = await translateWithGemini(inputText);
+                } else {
+                    translatedResult = await translateWithOpenRouter(inputText, selectedModel);
+                }
             }
 
             if (!translatedResult) throw new Error('No translation result.');
