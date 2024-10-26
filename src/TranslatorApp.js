@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import {
     ArrowRightLeft,
     X,
+    FileText,
     Clipboard,
     ClipboardCheck,
     ClipboardCopy,
@@ -316,7 +317,7 @@ const TextArea = ({
 
 
 
-const Sidebar = ({ isOpen, onClose, onOpenInstructions, onOpenSaved }) => {
+const Sidebar = ({ isOpen, onClose, onOpenInstructions, onOpenSaved, onOpenRequestLog }) => {
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
@@ -367,6 +368,16 @@ const Sidebar = ({ isOpen, onClose, onOpenInstructions, onOpenSaved }) => {
                         >
                             <Settings className="h-4 w-4 mr-2" />
                             Instructions
+                        </button>
+                        <button
+                            onClick={() => {
+                                onOpenRequestLog();
+                                onClose();
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center"
+                        >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Last API Request
                         </button>
                     </div>
                 </div>
@@ -761,6 +772,39 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
     );
 };
 
+const RequestLogViewer = ({ isOpen, onClose, requestLog }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg w-full max-w-2xl max-h-[80vh] flex flex-col">
+                <div className="p-4 border-b flex items-center justify-between">
+                    <h2 className="text-xl font-semibold">Last API Request</h2>
+                    <button
+                        onClick={onClose}
+                        className="text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4">
+                    {requestLog ? (
+                        <pre className="whitespace-pre-wrap bg-gray-50 p-4 rounded-lg text-sm font-mono">
+                            {JSON.stringify(requestLog, null, 2)}
+                        </pre>
+                    ) : (
+                        <div className="text-center text-gray-500 py-8">
+                            <FileText className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                            <p>No request log available</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const TranslatorApp = () => {
     const [inputText, setInputText] = useState('');
     const [translations, setTranslations] = useState([]); // Array of translations
@@ -779,31 +823,50 @@ const TranslatorApp = () => {
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [touchStart, setTouchStart] = useState(null);
     const [touchEnd, setTouchEnd] = useState(null);
+    const [requestLog, setRequestLog] = useState(null);
+    const [isRequestLogOpen, setIsRequestLogOpen] = useState(false);
 
     useEffect(() => {
         setHistory(loadHistory());
         setSavedTranslations(loadSavedTranslations());
     }, []);
 
-    // Modify the translateWithOpenRouter function
     const translateWithOpenRouter = useCallback(async (text, modelId, previousTranslations = []) => {
         const modelUrl = modelId === MODELS.EURYALE
             ? 'sao10k/l3.1-euryale-70b'
             : 'cohere/command-r-08-2024';
 
-        // Build the prompt with translation history if available
-        let prompt = "You need to translate the following Korean text into English. The translation should be accurate and sound natural.\n\n";
-        prompt += `Input Text: ${text}\n\n`;
+        // Create the system message for translation context
+        let systemMessage1 = "You're a skilled translator specializing in converting Korean text into idiomatic English. Your task involves accurately conveying the meaning and nuances of the original Korean content while maintaining a natural and fluent English style.\n\n";
+        let systemMessage2 = "Ready to make this Korean text shine in English! Give it some flair and personality - make it memorable. Don't hold back! Swear words and slang are totally welcome.\n\n Note: Don't use any emojis or quotes. Text only.\nNote: Do not write anything other than the sentence to be translated.\n\n";
+
+        // Create the user message with translation history and final instruction
+        let userPrompt = "Text to be translated: " + text + "\n\n";
 
         if (previousTranslations.length > 0) {
-            prompt += "Below is a list of your previously written translated texts. You must paraphrase the text freshly without reusing these previous translations.\n";
-            prompt += "Translation History:\n";
+            systemMessage1 += "For each translation: - Use diverse vocabulary and expressions - Vary sentence structures - Consider different cultural contexts and idioms - Maintain the original tone while exploring different ways to express the same meaning - Aim for natural, conversational English that captures both literal and contextual meaning\n\n";
+            userPrompt += "Previous translations to avoid repeating:\n";
             previousTranslations.forEach((trans, index) => {
-                prompt += `${index + 1}: ${trans.text}\n`;
+                userPrompt += `${index + 1}: ${trans.text}\n`;
             });
+            userPrompt += "Note: Provide a fresh translation different from the above versions. Show me your remixed wild card version!\n\n";
         }
 
-        prompt += "\nNote: Do not write anything other than the translated text.";
+        const requestBody = {
+            model: modelUrl,
+            messages: [
+                { role: "system", content: systemMessage1 },
+                { role: "user", content: userPrompt },
+                { role: "system", content: systemMessage2 }
+            ],
+            endpoint: "https://openrouter.ai/api/v1/chat/completions",
+            headers: {
+                'Content-Type': 'application/json',
+                'HTTP-Referer': window.location.origin,
+                'X-Title': 'Translator App'
+            },
+        };
+        setRequestLog(requestBody);
 
         try {
             const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -817,8 +880,9 @@ const TranslatorApp = () => {
                 body: JSON.stringify({
                     model: modelUrl,
                     messages: [
-                        { role: "system", content: prompt },
-                        { role: "user", content: text }
+                        { role: "system", content: systemMessage1 },
+                        { role: "user", content: userPrompt },
+                        { role: "system", content: systemMessage2 }
                     ]
                 })
             });
@@ -833,27 +897,43 @@ const TranslatorApp = () => {
         }
     }, []);
 
-    // Modify the translateWithGemini function
     const translateWithGemini = useCallback(async (text, previousTranslations = []) => {
         try {
             const genAI = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
             const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-            // Build the prompt with translation history if available
-            let prompt = "You need to translate the following Korean text into English. The translation should be accurate and sound natural.\n\n";
-            prompt += `Input Text: ${text}\n\n`;
+            // Create the system message for translation context
+            let systemMessage1 = "You're a skilled translator specializing in converting Korean text into idiomatic English. Your task involves accurately conveying the meaning and nuances of the original Korean content while maintaining a natural and fluent English style.\n\n";
+            let systemMessage2 = "Note: Please use only text. No quotes or emojis.\nNote: Do not write anything other than the sentence to be translated.\n\n";
+
+            // Create the user message with translation history and final instruction
+            let userPrompt = "Text to be translated: " + text + "\n\n";
 
             if (previousTranslations.length > 0) {
-                prompt += "Below is a list of your previously written translated texts. You must paraphrase the text freshly without reusing these previous translations.\n";
-                prompt += "Translation History:\n";
+                systemMessage1 += "For each translation: - Use diverse vocabulary and expressions - Vary sentence structures - Consider different cultural contexts and idioms - Maintain the original tone while exploring different ways to express the same meaning - Aim for natural, conversational English that captures both literal and contextual meaning\n\n";
+                userPrompt += "Previous translations to avoid repeating:\n";
                 previousTranslations.forEach((trans, index) => {
-                    prompt += `${index + 1}: ${trans.text}\n`;
+                    userPrompt += `${index + 1}: ${trans.text}\n`;
                 });
+                userPrompt += "Note: Provide a fresh translation different from the above versions.\n\n";
             }
 
-            prompt += "\nNote: Do not write anything other than the translated text.";
+            // Set request log
+            const requestBody = {
+                model: "gemini-1.5-flash",
+                messages: [
+                    { content: `${systemMessage1}${userPrompt}${systemMessage2}` }
+                ],
+                endpoint: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+            };
+            setRequestLog(requestBody);
 
-            const result = await model.generateContent(prompt);
+            // For Gemini, combine system and user messages since it doesn't support separate roles
+            const fullPrompt = `${systemMessage1}${userPrompt}${systemMessage2}`;
+            const result = await model.generateContent(fullPrompt);
             return result.response.text();
         } catch (error) {
             throw new Error(error.message.includes('API key')
@@ -1031,6 +1111,7 @@ const TranslatorApp = () => {
                     setIsSidebarOpen(false);
                 }}
                 onOpenSaved={() => setIsSavedOpen(true)}
+                onOpenRequestLog={() => setIsRequestLogOpen(true)}
             />
 
             <SavedTranslationsDialog
@@ -1066,6 +1147,12 @@ const TranslatorApp = () => {
                 modelInstructions={modelInstructions}
                 selectedModel={selectedModel}
                 setModelInstructions={setModelInstructions}
+            />
+
+            <RequestLogViewer
+                isOpen={isRequestLogOpen}
+                onClose={() => setIsRequestLogOpen(false)}
+                requestLog={requestLog}
             />
 
             {/* Main content container */}
