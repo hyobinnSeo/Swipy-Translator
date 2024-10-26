@@ -248,10 +248,10 @@ const TextArea = ({
                         ${readOnly ? 'bg-gray-50' : ''} ${className}`}
                     style={{
                         minHeight: '12rem',
-                        overflowY: 'hidden' // Start with hidden overflow
+                        overflowY: 'hidden'
                     }}
                 />
-                <div className="absolute bottom-2 right-2 text-sm text-gray-500 bg-white px-1">
+                <div className={`absolute bottom-2 right-2 text-sm text-gray-500 ${readOnly ? 'bg-gray-50' : 'bg-white'} px-1`}>
                     {value.length}{!readOnly && `/${maxLength}`}
                 </div>
                 {!readOnly && value && onClear && (
@@ -986,7 +986,7 @@ const TranslatorApp = () => {
                             onChange={(e) => {
                                 setInputText(e.target.value);
                             }}
-                            placeholder="Enter text to translate..."
+                            placeholder="Enter text..."
                             showSpeaker={true}
                             onPaste={async () => {
                                 try {
