@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
     X,
     FileText,
@@ -42,15 +42,103 @@ const LANGUAGE_NAMES = {
     'ar': 'Arabic / العربية'
 };
 
+const TONES = [
+    {
+        id: 'standard',
+        name: '표준 / Standard',
+        description: '일반적인 번역 / Regular translation'
+    },
+    {
+        id: 'casual',
+        name: '캐주얼 / Casual',
+        description: '친근하고 편안한 말투 / Friendly and relaxed tone'
+    },
+    {
+        id: 'formal',
+        name: '격식체 / Formal',
+        description: '공식적이고 예의 바른 말투 / Professional and polite tone'
+    },
+    {
+        id: 'business',
+        name: '비즈니스 / Business',
+        description: '업무용 전문적인 말투 / Business-oriented tone'
+    }
+];
+
 const DEFAULT_INSTRUCTIONS = {
     [MODELS.GEMINI]: {
-        'pre-instruction': "You're a skilled professional translator specializing in accurate and natural translations between different languages. Your task involves faithfully conveying the meaning, nuances, and cultural context of the source text while maintaining a natural and fluent style in the target language.",
-        'post-instruction': "Note: Please use only text. No quotes or emojis.\nNote: Do not write anything other than the sentence to be translated."
+        'pre-instruction': "You are a professional translator who specializes in providing accurate and natural translations. Your task is to create translations that convey the complete meaning, nuances, and cultural context of the source text while maintaining the linguistic features of the target language.",
+        'post-instruction': "Note: Provide only the translated text. Do not include quotes, emojis, explanations or any additional comments.",
+        'tone-instructions': {
+            'standard': `Tone and Style:
+- Maintain a neutral and clear tone
+- Use standard language conventions
+- Focus on accurate meaning transmission
+- Keep formal and informal elements balanced
+- Ensure natural flow in the target language`,
+            'casual': `Tone and Style:
+- Use everyday conversational language
+- Incorporate common colloquialisms when appropriate
+- Keep the tone friendly and approachable
+- Use contractions where natural
+- Maintain an informal yet respectful tone
+- Adapt idioms to target language equivalents`,
+            'formal': `Tone and Style:
+- Use formal language throughout
+- Maintain professional terminology
+- Avoid contractions and colloquialisms
+- Use proper honorifics where applicable
+- Keep a respectful and courteous tone
+- Prioritize precise and elegant expression`,
+            'business': `Tone and Style:
+- Use professional business language
+- Incorporate industry-standard terminology
+- Maintain clear and concise expression
+- Use appropriate business formalities
+- Keep a professional yet accessible tone
+- Focus on clarity and efficiency in communication`
+        }
     },
     [MODELS.COMMAND]: {
-        'pre-instruction': "You're a skilled professional translator specializing in accurate and natural translations between different languages. Your task involves faithfully conveying the meaning, nuances, and cultural context of the source text while maintaining a natural and fluent style in the target language.",
-        'post-instruction': "Ready to translate with flair and personality - make it memorable. Don't hold back! Swear words and slang are totally welcome.\n\nNote: Don't use any emojis or quotes. Text only.\nNote: Do not write anything other than the sentence to be translated."
+        'pre-instruction': "You are a professional translator who specializes in providing accurate and natural translations. Your task is to create translations that convey the complete meaning, nuances, and cultural context of the source text while maintaining the linguistic features of the target language.",
+        'post-instruction': "Note: Provide only the translated text. Do not include quotes, emojis, explanations or any additional comments.",
+        'tone-instructions': {
+            'standard': `Tone and Style:
+- Maintain a neutral and clear tone
+- Use standard language conventions
+- Focus on accurate meaning transmission
+- Keep formal and informal elements balanced
+- Ensure natural flow in the target language`,
+            'casual': `Tone and Style:
+- Use everyday conversational language
+- Incorporate common colloquialisms when appropriate
+- Keep the tone friendly and approachable
+- Use contractions where natural
+- Maintain an informal yet respectful tone
+- Adapt idioms to target language equivalents`,
+            'formal': `Tone and Style:
+- Use formal language throughout
+- Maintain professional terminology
+- Avoid contractions and colloquialisms
+- Use proper honorifics where applicable
+- Keep a respectful and courteous tone
+- Prioritize precise and elegant expression`,
+            'business': `Tone and Style:
+- Use professional business language
+- Incorporate industry-standard terminology
+- Maintain clear and concise expression
+- Use appropriate business formalities
+- Keep a professional yet accessible tone
+- Focus on clarity and efficiency in communication`
+        }
     }
+};
+
+const getToneInstructions = (tone, modelInstructions, selectedModel) => {
+    const toneInstructions = modelInstructions[selectedModel]['tone-instructions'];
+    return {
+        instruction: toneInstructions[tone] || toneInstructions['standard']
+    };
 };
 
 const AVAILABLE_MODELS = [
@@ -177,6 +265,54 @@ const LanguageSelector = ({
                     ))}
                 </select>
             </div>
+        </div>
+    );
+};
+
+const ToneSelector = ({ selectedTone, onToneChange }) => {
+    const [showToneSelector, setShowToneSelector] = useState(false);
+    const containerRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (containerRef.current && !containerRef.current.contains(event.target)) {
+                setShowToneSelector(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    return (
+        <div className="relative" ref={containerRef}>
+            <button
+                onClick={() => setShowToneSelector(!showToneSelector)}
+                className="flex items-center gap-2 px-2 py-2 text-gray-600 hover:text-gray-800 
+                   hover:bg-gray-50 rounded-lg transition-colors"
+            >
+                <Settings className="w-4 h-4" />
+                <span>번역 톤: {TONES.find(t => t.id === selectedTone)?.name}</span>
+            </button>
+
+            {showToneSelector && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10">
+                    {TONES.map((tone) => (
+                        <button
+                            key={tone.id}
+                            onClick={() => {
+                                onToneChange(tone.id);
+                                setShowToneSelector(false);
+                            }}
+                            className={`w-full px-4 py-2 text-left hover:bg-gray-50 ${selectedTone === tone.id ? 'bg-gray-50' : ''
+                                }`}
+                        >
+                            <div className="font-medium">{tone.name}</div>
+                            <div className="text-sm text-gray-500">{tone.description}</div>
+                        </button>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };
@@ -452,8 +588,9 @@ const DialogWrapper = ({ isOpen, onClose, children, className = '' }) => {
     );
 };
 
-// Updated Instructions Modal
 const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, setModelInstructions }) => {
+    const [selectedTone, setSelectedTone] = useState('standard');
+
     const handleReset = () => {
         setModelInstructions({
             ...modelInstructions,
@@ -462,15 +599,17 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
     };
 
     return (
-        <DialogWrapper isOpen={isOpen} onClose={onClose} className="w-full max-w-2xl">
-            <div className="p-6">
-                <div className="flex justify-between items-center mb-4">
+        <DialogWrapper isOpen={isOpen} onClose={onClose} className="w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="flex-shrink-0 p-6 border-b">
+                <div className="flex justify-between items-center">
                     <h2 className="text-xl font-semibold">Instructions Settings</h2>
                     <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
                         <X className="h-5 w-5" />
                     </button>
                 </div>
+            </div>
 
+            <div className="flex-1 overflow-y-auto p-6">
                 <div className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -488,6 +627,7 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
                             className="w-full h-32 p-2 border rounded-md focus:ring-2 focus:ring-blue-500 resize-none"
                         />
                     </div>
+
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             Post-translation Instructions:
@@ -504,9 +644,42 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
                             className="w-full h-32 p-2 border rounded-md focus:ring-2 focus:ring-blue-500 resize-none"
                         />
                     </div>
-                </div>
 
-                <div className="mt-6 flex justify-end space-x-3">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Tone Instructions:
+                        </label>
+                        <select
+                            value={selectedTone}
+                            onChange={(e) => setSelectedTone(e.target.value)}
+                            className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 mb-2"
+                        >
+                            {TONES.map(tone => (
+                                <option key={tone.id} value={tone.id}>
+                                    {tone.name}
+                                </option>
+                            ))}
+                        </select>
+                        <textarea
+                            value={modelInstructions[selectedModel]['tone-instructions'][selectedTone]}
+                            onChange={(e) => setModelInstructions({
+                                ...modelInstructions,
+                                [selectedModel]: {
+                                    ...modelInstructions[selectedModel],
+                                    'tone-instructions': {
+                                        ...modelInstructions[selectedModel]['tone-instructions'],
+                                        [selectedTone]: e.target.value
+                                    }
+                                }
+                            })}
+                            className="w-full h-32 p-2 border rounded-md focus:ring-2 focus:ring-blue-500 resize-none"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex-shrink-0 p-6 border-t bg-white">
+                <div className="flex justify-end space-x-3">
                     <button
                         onClick={handleReset}
                         className="px-4 py-2 text-blue-500 hover:text-blue-600"
@@ -525,7 +698,6 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
     );
 };
 
-// Updated Request Log Viewer
 const RequestLogViewer = ({ isOpen, onClose, requestLog }) => {
     return (
         <DialogWrapper isOpen={isOpen} onClose={onClose} className="w-full max-w-2xl max-h-[80vh] flex flex-col">
@@ -992,6 +1164,7 @@ const TranslatorApp = () => {
     const [sourceLang, setSourceLang] = useState('auto');
     const [targetLang, setTargetLang] = useState('en');
     const [showSafetyWarning, setShowSafetyWarning] = useState(false);
+    const [selectedTone, setSelectedTone] = useState('standard');
 
     useEffect(() => {
         setHistory(loadHistory());
@@ -1003,42 +1176,48 @@ const TranslatorApp = () => {
             const genAI = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
             const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
+            // Get base instructions
             const basePreInstruction = modelInstructions[selectedModel]['pre-instruction'];
             const postInstruction = modelInstructions[selectedModel]['post-instruction'];
 
-            let completePreInstruction = basePreInstruction + "\n\n";
-
-            // Improved language instruction - use LANGUAGE_NAMES for full language names
+            // Get language settings
             const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
             const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
+            const toneInstructions = getToneInstructions(selectedTone, modelInstructions, selectedModel);
 
+            // Construct the prompt
+            let prompt = `Instructions:\n${basePreInstruction}\n\n`;
+
+            // Add Language settings
+            prompt += `Language:\n`;
             if (sourceLang === 'auto') {
-                completePreInstruction += `Please detect the source language and translate the text to ${targetLanguage}.\n\n`;
+                prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
             } else {
-                completePreInstruction += `Translate from ${sourceLanguage} to ${targetLanguage}.\n\n`;
+                prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
             }
 
-            if (previousTranslations.length > 0) {
-                completePreInstruction += "For each translation: - Use diverse vocabulary and expressions - Vary sentence structures - Consider different cultural contexts and idioms - Maintain the original tone while exploring different ways to express the same meaning - Aim for natural, conversational language that captures both literal and contextual meaning\n\n";
-            }
+            // Add Tone settings
+            prompt += `Tone:\n${toneInstructions.instruction}\n\n`;
 
-            // Create the user message with translation history and final instruction
-            let userPrompt = "Text to be translated: " + text + "\n\n";
+            // Add text to translate
+            prompt += `Text to be translated:\n${text}\n\n`;
 
+            // Add previous translations if any
             if (previousTranslations.length > 0) {
-                userPrompt += "Previous translations to avoid repeating:\n";
+                prompt += "Previous translations to avoid repeating:\n";
                 previousTranslations.forEach((trans, index) => {
-                    userPrompt += `${index + 1}: ${trans.text}\n`;
+                    prompt += `${index + 1}: ${trans.text}\n`;
                 });
-                userPrompt += "Note: Provide a fresh translation different from the above versions.\n\n";
+                prompt += "\nNote: Provide a fresh translation different from the above versions.\n\n";
             }
+
+            // Add post instructions
+            prompt += postInstruction;
 
             // Set request log
             const requestBody = {
                 model: "gemini-1.5-flash",
-                messages: [
-                    { content: `${completePreInstruction}${userPrompt}${postInstruction}\n\n` }
-                ],
+                messages: [{ content: prompt }],
                 endpoint: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash",
                 headers: {
                     'Content-Type': 'application/json'
@@ -1046,8 +1225,7 @@ const TranslatorApp = () => {
             };
             setRequestLog(requestBody);
 
-            const fullPrompt = `${completePreInstruction}${userPrompt}${postInstruction}\n\n`;
-            const result = await model.generateContent(fullPrompt);
+            const result = await model.generateContent(prompt);
             return result.response.text();
         } catch (error) {
             throw new Error(error.message.includes('API key')
@@ -1059,43 +1237,45 @@ const TranslatorApp = () => {
     const translateWithOpenRouter = async (text, modelId, previousTranslations = []) => {
         const modelUrl = 'cohere/command-r-08-2024';
 
-        // Get base instructions from the current model settings
+        // Get base instructions
         const basePreInstruction = modelInstructions[selectedModel]['pre-instruction'];
         const postInstruction = modelInstructions[selectedModel]['post-instruction'];
+        const toneInstructions = getToneInstructions(selectedTone, modelInstructions, selectedModel);
 
-        // Create the complete pre-instruction with optional additional context
-        let completePreInstruction = basePreInstruction + "\n\n";
-
-        // Improved language instruction using LANGUAGE_NAMES
+        // Get language settings
         const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
         const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
 
+        // Construct the prompt for system message
+        let prompt = `Instructions:\n${basePreInstruction}\n\n`;
+
+        // Add Language settings
+        prompt += `Language:\n`;
         if (sourceLang === 'auto') {
-            completePreInstruction += `Please detect the source language and translate the text to ${targetLanguage}.\n\n`;
+            prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
         } else {
-            completePreInstruction += `Translate from ${sourceLanguage} to ${targetLanguage}.\n\n`;
+            prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
         }
 
-        if (previousTranslations.length > 0) {
-            completePreInstruction += "For each translation: - Use diverse vocabulary and expressions - Vary sentence structures - Consider different cultural contexts and idioms - Maintain the original tone while exploring different ways to express the same meaning - Aim for natural, conversational language that captures both literal and contextual meaning\n\n";
-        }
+        // Add Tone settings
+        prompt += `Tone:\n${toneInstructions.instruction}\n\n`;
 
-        // Create the user message with translation history and final instruction
-        let userPrompt = "Text to be translated: " + text + "\n\n";
+        // Create user message with the text to translate
+        prompt += `Text to be translated:\n${text}\n\n`;
 
+        // Add previous translations if any
         if (previousTranslations.length > 0) {
-            userPrompt += "Previous translations to avoid repeating:\n";
+            prompt += "Previous translations to avoid repeating:\n";
             previousTranslations.forEach((trans, index) => {
-                userPrompt += `${index + 1}: ${trans.text}\n`;
+                prompt += `${index + 1}: ${trans.text}\n`;
             });
-            userPrompt += "Note: Provide a fresh translation different from the above versions. Show me your remixed wild card version!\n\n";
+            prompt += "\nNote: Provide a fresh translation different from the above versions.\n\n";
         }
 
         const requestBody = {
             model: modelUrl,
             messages: [
-                { role: "system", content: completePreInstruction },
-                { role: "user", content: userPrompt },
+                { role: "system", content: prompt },
                 { role: "system", content: postInstruction }
             ],
             endpoint: "https://openrouter.ai/api/v1/chat/completions",
@@ -1119,8 +1299,7 @@ const TranslatorApp = () => {
                 body: JSON.stringify({
                     model: modelUrl,
                     messages: [
-                        { role: "system", content: completePreInstruction },
-                        { role: "user", content: userPrompt },
+                        { role: "system", content: prompt },
                         { role: "system", content: postInstruction }
                     ]
                 })
@@ -1214,7 +1393,6 @@ const TranslatorApp = () => {
         }
     };
 
-    // Modified translation function to handle additional translations
     const handleTranslate = async (isAdditional = false) => {
         try {
             setIsLoading(true);
@@ -1223,14 +1401,12 @@ const TranslatorApp = () => {
 
             let translatedResult;
             if (isAdditional) {
-                // When swiping for a new translation, pass the current translations
                 if (selectedModel === MODELS.GEMINI) {
                     translatedResult = await translateWithGemini(inputText, translations);
                 } else {
                     translatedResult = await translateWithOpenRouter(inputText, selectedModel, translations);
                 }
             } else {
-                // Regular translation button click - no previous translations needed
                 if (selectedModel === MODELS.GEMINI) {
                     translatedResult = await translateWithGemini(inputText);
                 } else {
@@ -1422,6 +1598,11 @@ const TranslatorApp = () => {
                             setTranslations([]);
                             setCurrentIndex(0);
                         }}
+                    />
+
+                    <ToneSelector
+                        selectedTone={selectedTone}
+                        onToneChange={setSelectedTone}
                     />
 
                     {/* Text areas container with increased bottom margin */}
