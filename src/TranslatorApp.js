@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
-    ArrowRightLeft,
     X,
     FileText,
     Clipboard,
@@ -16,7 +15,9 @@ import {
     Folder,
     Check,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    ArrowLeftRight,
+    ArrowRightLeft
 } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -26,14 +27,28 @@ const MODELS = {
     COMMAND: 'command'
 };
 
+const LANGUAGE_NAMES = {
+    'auto': 'Auto Detect',
+    'en': 'English',
+    'fr': 'French / Fran√ßais',
+    'es': 'Spanish / Espa√±ol',
+    'it': 'Italian / Italiano',
+    'de': 'German / Deutsch',
+    'pt': 'Brazilian Portuguese / Portugu√™s',
+    'ja': 'Japanese / Êó•Êú¨Ë™û',
+    'ko': 'Korean / ÌïúÍµ≠Ïñ¥',
+    'zh': 'Simplified Chinese / ÁÆÄ‰Ωì‰∏≠Êñá',
+    'ar': 'Arabic / ÿßŸÑÿπÿ±ÿ®Ÿäÿ©'
+};
+
 const DEFAULT_INSTRUCTIONS = {
     [MODELS.GEMINI]: {
-        'pre-instruction': "You're a skilled translator specializing in converting Korean text into idiomatic English. Your task involves accurately conveying the meaning and nuances of the original Korean content while maintaining a natural and fluent English style.",
+        'pre-instruction': "You're a skilled professional translator specializing in accurate and natural translations between different languages. Your task involves faithfully conveying the meaning, nuances, and cultural context of the source text while maintaining a natural and fluent style in the target language.",
         'post-instruction': "Note: Please use only text. No quotes or emojis.\nNote: Do not write anything other than the sentence to be translated."
     },
     [MODELS.COMMAND]: {
-        'pre-instruction': "You're a skilled translator specializing in converting Korean text into idiomatic English. Your task involves accurately conveying the meaning and nuances of the original Korean content while maintaining a natural and fluent English style.",
-        'post-instruction': "Ready to make this Korean text shine in English! Give it some flair and personality - make it memorable. Don't hold back! Swear words and slang are totally welcome.\n\nNote: Don't use any emojis or quotes. Text only.\nNote: Do not write anything other than the sentence to be translated."
+        'pre-instruction': "You're a skilled professional translator specializing in accurate and natural translations between different languages. Your task involves faithfully conveying the meaning, nuances, and cultural context of the source text while maintaining a natural and fluent style in the target language.",
+        'post-instruction': "Ready to translate with flair and personality - make it memorable. Don't hold back! Swear words and slang are totally welcome.\n\nNote: Don't use any emojis or quotes. Text only.\nNote: Do not write anything other than the sentence to be translated."
     }
 };
 
@@ -77,6 +92,94 @@ const Alert = ({ children }) => (
     </div>
 );
 
+// Add LanguageSelector component definition here
+const LanguageSelector = ({
+    sourceLang,
+    targetLang,
+    onSourceChange,
+    onTargetChange,
+    inputText,
+    translatedText,
+    onInputTextChange,
+    onTranslatedTextChange,
+    onResetTranslations
+}) => {
+    const languages = [
+        { code: 'auto', name: 'Auto Detect / ÏûêÎèô Í∞êÏßÄ' },
+        { code: 'en', name: 'English' },
+        { code: 'fr', name: 'French / Fran√ßais' },
+        { code: 'es', name: 'Spanish / Espa√±ol' },
+        { code: 'it', name: 'Italian / Italiano' },
+        { code: 'de', name: 'German / Deutsch' },
+        { code: 'pt', name: 'Brazilian Portuguese / Portugu√™s' },
+        { code: 'ja', name: 'Japanese / Êó•Êú¨Ë™û' },
+        { code: 'ko', name: 'Korean / ÌïúÍµ≠Ïñ¥' },
+        { code: 'zh', name: 'Simplified Chinese / ÁÆÄ‰Ωì‰∏≠Êñá' },
+        { code: 'ar', name: 'Arabic / ÿßŸÑÿπÿ±ÿ®Ÿäÿ©' }
+    ];
+
+    const switchLanguages = () => {
+        // Ïñ∏Ïñ¥ Ïä§Ïôë
+        if (sourceLang === 'auto') {
+            onSourceChange(targetLang);
+            onTargetChange('en');
+        } else {
+            onSourceChange(targetLang);
+            onTargetChange(sourceLang);
+        }
+
+        // ÌÖçÏä§Ìä∏ ÎÇ¥Ïö© Ïä§Ïôë
+        const tempText = inputText;
+        onInputTextChange(translatedText);
+        onTranslatedTextChange(tempText);
+
+        // Î≤àÏó≠ Î¶¨Ïä§Ìä∏ Î¶¨ÏÖã
+        onResetTranslations();
+    };
+
+    return (
+        <div className="flex items-center justify-between gap-2 mt-4 mb-2">
+            <div className="flex-1">
+                <select
+                    value={sourceLang}
+                    onChange={(e) => onSourceChange(e.target.value)}
+                    className="w-full p-2 border rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                    dir={sourceLang === 'ar' ? 'rtl' : 'ltr'}
+                >
+                    {languages.map(lang => (
+                        <option key={lang.code} value={lang.code}>
+                            {lang.name}
+                        </option>
+                    ))}
+                </select>
+            </div>
+
+            <button
+                onClick={switchLanguages}
+                className="p-2 rounded-full hover:bg-gray-100"
+                title="Switch languages"
+            >
+                <ArrowLeftRight className="w-5 h-5" />
+            </button>
+
+            <div className="flex-1">
+                <select
+                    value={targetLang}
+                    onChange={(e) => onTargetChange(e.target.value)}
+                    className="w-full p-2 border rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                    dir={targetLang === 'ar' ? 'rtl' : 'ltr'}
+                >
+                    {languages.filter(lang => lang.code !== 'auto').map(lang => (
+                        <option key={lang.code} value={lang.code}>
+                            {lang.name}
+                        </option>
+                    ))}
+                </select>
+            </div>
+        </div>
+    );
+};
+
 const TextArea = ({
     value,
     onChange,
@@ -85,102 +188,103 @@ const TextArea = ({
     className = '',
     onPaste,
     showSpeaker = false,
-    maxLength = 5000,
-    onClear, // New prop for handling clear action
+    maxLength,  // optional now
+    onClear,
     onTouchStart,
     onTouchMove,
     onTouchEnd,
     translations = [],
     currentIndex = 0,
     onPrevious,
-    onNext
+    onNext,
+    isOutput = false  // Ï∂úÎ†• ÌïÑÎìú Ïó¨Î∂ÄÎ•º ÌôïÏù∏ÌïòÎäî ÏÉàÎ°úÏö¥ prop
 }) => {
     const textareaRef = React.useRef(null);
     const [voices, setVoices] = useState([]);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [speechSupported, setSpeechSupported] = useState(false);
 
-    // ≈ÿΩ∫∆Æ øµø™¿« ≥Ù¿Ã∏¶ ¿⁄µø¿∏∑Œ ¡∂¿˝«œ¥¬ «‘ºˆ
+    // ÌÖçÏä§Ìä∏ ÏòÅÏó≠Ïùò ÎÜíÏù¥Î•º ÏûêÎèôÏúºÎ°ú Ï°∞Ï†àÌïòÎäî Ìï®Ïàò
     const adjustHeight = useCallback(() => {
         if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto'; // ≥Ù¿Ã∏¶ ¿⁄µø¿∏∑Œ √ ±‚»≠
-            const newHeight = Math.max(192, textareaRef.current.scrollHeight); // Ω∫≈©∑— ≥Ù¿Ã∏¶ ±‚¡ÿ¿∏∑Œ ªı∑ŒøÓ ≥Ù¿Ã ∞ËªÍ
-            textareaRef.current.style.height = `${newHeight}px`; // ∞ËªÍµ» ≥Ù¿Ã∑Œ º≥¡§
-            textareaRef.current.style.overflowY = textareaRef.current.scrollHeight <= newHeight ? 'hidden' : 'auto'; // Ω∫≈©∑— « ø‰ ø©∫Œø° µ˚∏• overflow º≥¡§
+            textareaRef.current.style.height = 'auto'; // ÎÜíÏù¥Î•º ÏûêÎèôÏúºÎ°ú Ï¥àÍ∏∞Ìôî
+            const newHeight = Math.max(192, textareaRef.current.scrollHeight); // Ïä§ÌÅ¨Î°§ ÎÜíÏù¥Î•º Í∏∞Ï§ÄÏúºÎ°ú ÏÉàÎ°úÏö¥ ÎÜíÏù¥ Í≥ÑÏÇ∞
+            textareaRef.current.style.height = `${newHeight}px`; // Í≥ÑÏÇ∞Îêú ÎÜíÏù¥Î°ú ÏÑ§Ï†ï
+            textareaRef.current.style.overflowY = textareaRef.current.scrollHeight <= newHeight ? 'hidden' : 'auto'; // Ïä§ÌÅ¨Î°§ ÌïÑÏöî Ïó¨Î∂ÄÏóê Îî∞Î•∏ overflow ÏÑ§Ï†ï
         }
     }, []);
 
-    // ƒƒ∆˜≥Õ∆Æ∞° ∏∂øÓ∆Æµ… ∂ßøÕ value ∫Ø∞Ê Ω√ ≥Ù¿Ã ¡∂¿˝
+    // Ïª¥Ìè¨ÎÑåÌä∏Í∞Ä ÎßàÏö¥Ìä∏Îê† ÎïåÏôÄ value Î≥ÄÍ≤Ω Ïãú ÎÜíÏù¥ Ï°∞Ï†à
     useEffect(() => {
-        adjustHeight(); // √ ±‚ ≥Ù¿Ã º≥¡§
-        const resizeObserver = new ResizeObserver(adjustHeight); // ø‰º“ ≈©±‚ ∫Ø∞Ê ∞®¡ˆ
+        adjustHeight(); // Ï¥àÍ∏∞ ÎÜíÏù¥ ÏÑ§Ï†ï
+        const resizeObserver = new ResizeObserver(adjustHeight); // ÏöîÏÜå ÌÅ¨Í∏∞ Î≥ÄÍ≤Ω Í∞êÏßÄ
         if (textareaRef.current) {
-            resizeObserver.observe(textareaRef.current); // ref∞° «“¥Áµ» ø‰º“∏¶ ∞®Ω√
+            resizeObserver.observe(textareaRef.current); // refÍ∞Ä Ìï†ÎãπÎêú ÏöîÏÜåÎ•º Í∞êÏãú
         }
-        return () => resizeObserver.disconnect(); // ƒƒ∆˜≥Õ∆Æ∞° æ∏∂øÓ∆Æµ… ∂ß ∞®Ω√ ¡æ∑·
+        return () => resizeObserver.disconnect(); // Ïª¥Ìè¨ÎÑåÌä∏Í∞Ä Ïñ∏ÎßàÏö¥Ìä∏Îê† Îïå Í∞êÏãú Ï¢ÖÎ£å
     }, [value, adjustHeight]);
 
-    // ¿Ωº∫ «’º∫ ¡ˆø¯ ø©∫Œ∏¶ »Æ¿Œ«œ∞Ì ¿Ωº∫ ∏ÆΩ∫∆Æ∏¶ ∑ŒµÂ
+    // ÏùåÏÑ± Ìï©ÏÑ± ÏßÄÏõê Ïó¨Î∂ÄÎ•º ÌôïÏù∏ÌïòÍ≥† ÏùåÏÑ± Î¶¨Ïä§Ìä∏Î•º Î°úÎìú
     useEffect(() => {
-        if ('speechSynthesis' in window) { // ¿Ωº∫ «’º∫¿ª ¡ˆø¯«œ¥¬ ∞ÊøÏ
-            setSpeechSupported(true); // ¿Ωº∫ «’º∫ ∞°¥… ø©∫Œ∏¶ true∑Œ º≥¡§
+        if ('speechSynthesis' in window) { // ÏùåÏÑ± Ìï©ÏÑ±ÏùÑ ÏßÄÏõêÌïòÎäî Í≤ΩÏö∞
+            setSpeechSupported(true); // ÏùåÏÑ± Ìï©ÏÑ± Í∞ÄÎä• Ïó¨Î∂ÄÎ•º trueÎ°ú ÏÑ§Ï†ï
             const loadVoices = () => {
-                setVoices(window.speechSynthesis.getVoices()); // ªÁøÎ ∞°¥…«— ¿Ωº∫ ∏ÆΩ∫∆Æ º≥¡§
+                setVoices(window.speechSynthesis.getVoices()); // ÏÇ¨Ïö© Í∞ÄÎä•Ìïú ÏùåÏÑ± Î¶¨Ïä§Ìä∏ ÏÑ§Ï†ï
             };
-            window.speechSynthesis.onvoiceschanged = loadVoices; // ¿Ωº∫ ∏ÆΩ∫∆Æ∞° ∫Ø∞Êµ… ∂ß »£√‚
-            loadVoices(); // √ ±‚ ¿Ωº∫ ∏ÆΩ∫∆Æ ∑ŒµÂ
+            window.speechSynthesis.onvoiceschanged = loadVoices; // ÏùåÏÑ± Î¶¨Ïä§Ìä∏Í∞Ä Î≥ÄÍ≤ΩÎê† Îïå Ìò∏Ï∂ú
+            loadVoices(); // Ï¥àÍ∏∞ ÏùåÏÑ± Î¶¨Ïä§Ìä∏ Î°úÎìú
             return () => {
-                window.speechSynthesis.cancel(); // ƒƒ∆˜≥Õ∆Æ æ∏∂øÓ∆Æ Ω√ ¿Ωº∫ ¿Áª˝ ¡ﬂ¡ˆ
-                window.speechSynthesis.onvoiceschanged = null; // ¿Ã∫•∆Æ «⁄µÈ∑Ø «ÿ¡¶
+                window.speechSynthesis.cancel(); // Ïª¥Ìè¨ÎÑåÌä∏ Ïñ∏ÎßàÏö¥Ìä∏ Ïãú ÏùåÏÑ± Ïû¨ÏÉù Ï§ëÏßÄ
+                window.speechSynthesis.onvoiceschanged = null; // Ïù¥Î≤§Ìä∏ Ìï∏Îì§Îü¨ Ìï¥Ï†ú
             };
         }
     }, []);
 
-    // ≈ÿΩ∫∆Æ∏¶ ¿Ωº∫¿∏∑Œ ¿–¥¬ «‘ºˆ
+    // ÌÖçÏä§Ìä∏Î•º ÏùåÏÑ±ÏúºÎ°ú ÏùΩÎäî Ìï®Ïàò
     const handleSpeak = useCallback(() => {
-        if (!speechSupported || !value) return; // ¿Ωº∫ «’º∫ ¡ˆø¯¿Ã æ¯∞≈≥™ ≈ÿΩ∫∆Æ∞° æ¯¿∏∏È ¡æ∑·
+        if (!speechSupported || !value) return; // ÏùåÏÑ± Ìï©ÏÑ± ÏßÄÏõêÏù¥ ÏóÜÍ±∞ÎÇò ÌÖçÏä§Ìä∏Í∞Ä ÏóÜÏúºÎ©¥ Ï¢ÖÎ£å
 
-        if (isSpeaking) { // ¿ÃπÃ ¿Áª˝ ¡ﬂ¿Ã∂Û∏È
-            window.speechSynthesis.cancel(); // ¿Ωº∫ ¿Áª˝ ¡ﬂ¡ˆ
-            setIsSpeaking(false); // ¿Áª˝ ªÛ≈¬ false∑Œ º≥¡§
+        if (isSpeaking) { // Ïù¥ÎØ∏ Ïû¨ÏÉù Ï§ëÏù¥ÎùºÎ©¥
+            window.speechSynthesis.cancel(); // ÏùåÏÑ± Ïû¨ÏÉù Ï§ëÏßÄ
+            setIsSpeaking(false); // Ïû¨ÏÉù ÏÉÅÌÉú falseÎ°ú ÏÑ§Ï†ï
             return;
         }
 
-        window.speechSynthesis.cancel(); // ¿Áª˝ ¿¸ ±‚¡∏ ¿Ωº∫ ¡ﬂ¡ˆ
+        window.speechSynthesis.cancel(); // Ïû¨ÏÉù Ï†Ñ Í∏∞Ï°¥ ÏùåÏÑ± Ï§ëÏßÄ
 
-        const utterance = new SpeechSynthesisUtterance(value); // ¿Ωº∫ «’º∫ ¿ŒΩ∫≈œΩ∫ ª˝º∫
+        const utterance = new SpeechSynthesisUtterance(value); // ÏùåÏÑ± Ìï©ÏÑ± Ïù∏Ïä§ÌÑ¥Ïä§ ÏÉùÏÑ±
 
-        // English ¿Ωº∫¿ª øÏº±¿˚¿∏∑Œ º≥¡§ (US ∂«¥¬ GB)
+        // English ÏùåÏÑ±ÏùÑ Ïö∞ÏÑ†Ï†ÅÏúºÎ°ú ÏÑ§Ï†ï (US ÎòêÎäî GB)
         const englishVoice = voices.find(voice =>
             voice.lang === 'en-US' || voice.lang === 'en-GB'
         );
 
         if (englishVoice) {
-            utterance.voice = englishVoice; // º±≈√«— English ¿Ωº∫ ¿˚øÎ
+            utterance.voice = englishVoice; // ÏÑ†ÌÉùÌïú English ÏùåÏÑ± Ï†ÅÏö©
             utterance.lang = englishVoice.lang;
         } else {
-            utterance.lang = 'en-US'; // ±‚∫ª English º≥¡§
+            utterance.lang = 'en-US'; // Í∏∞Î≥∏ English ÏÑ§Ï†ï
         }
 
-        // ¿Ωº∫ º≥¡§ (º”µµ, ≈Ê, ∫º∑˝)
+        // ÏùåÏÑ± ÏÑ§Ï†ï (ÏÜçÎèÑ, ÌÜ§, Î≥ºÎ•®)
         utterance.rate = 0.9;
         utterance.pitch = 1.0;
         utterance.volume = 1.0;
 
-        utterance.onstart = () => setIsSpeaking(true); // Ω√¿€ Ω√ ªÛ≈¬ º≥¡§
-        utterance.onend = () => setIsSpeaking(false); // ¡æ∑· Ω√ ªÛ≈¬ «ÿ¡¶
-        utterance.onerror = (event) => { // ø¿∑˘ πﬂª˝ Ω√ ∑Œ±◊ √‚∑¬
+        utterance.onstart = () => setIsSpeaking(true); // ÏãúÏûë Ïãú ÏÉÅÌÉú ÏÑ§Ï†ï
+        utterance.onend = () => setIsSpeaking(false); // Ï¢ÖÎ£å Ïãú ÏÉÅÌÉú Ìï¥Ï†ú
+        utterance.onerror = (event) => { // Ïò§Î•ò Î∞úÏÉù Ïãú Î°úÍ∑∏ Ï∂úÎ†•
             console.error('Speech synthesis error:', event);
             setIsSpeaking(false);
         };
 
-        // ≈ÿΩ∫∆Æ∞° ±Ê ∞ÊøÏ πÆ¿Â ¥‹¿ß∑Œ ∫–«“«œø© ¿–±‚
+        // ÌÖçÏä§Ìä∏Í∞Ä Í∏∏ Í≤ΩÏö∞ Î¨∏Ïû• Îã®ÏúÑÎ°ú Î∂ÑÌï†ÌïòÏó¨ ÏùΩÍ∏∞
         if (value.length > 200) {
-            const sentences = value.match(/[^.!?]+[.!?]+/g) || [value]; // πÆ¿Â¿∏∑Œ ∫–«“
+            const sentences = value.match(/[^.!?]+[.!?]+/g) || [value]; // Î¨∏Ïû•ÏúºÎ°ú Î∂ÑÌï†
             let index = 0;
 
             const speakNextSentence = () => {
-                if (index < sentences.length) { // πÆ¿Â¿Ã ≥≤æ∆¿÷¥¬ ∞ÊøÏ
+                if (index < sentences.length) { // Î¨∏Ïû•Ïù¥ ÎÇ®ÏïÑÏûàÎäî Í≤ΩÏö∞
                     const currentUtterance = new SpeechSynthesisUtterance(sentences[index]);
 
                     if (englishVoice) {
@@ -194,25 +298,25 @@ const TextArea = ({
                     currentUtterance.pitch = 1.0;
                     currentUtterance.volume = 1.0;
 
-                    currentUtterance.onend = () => { // πÆ¿Â ¡æ∑· Ω√ ¥Ÿ¿Ω πÆ¿Â ¿–±‚
+                    currentUtterance.onend = () => { // Î¨∏Ïû• Ï¢ÖÎ£å Ïãú Îã§Ïùå Î¨∏Ïû• ÏùΩÍ∏∞
                         index++;
                         speakNextSentence();
                     };
-                    currentUtterance.onerror = utterance.onerror; // ø¿∑˘ «⁄µÈ∑Ø ¿ÁªÁøÎ
-                    window.speechSynthesis.speak(currentUtterance); // «ˆ¿Á πÆ¿Â ¿–±‚ Ω√¿€
+                    currentUtterance.onerror = utterance.onerror; // Ïò§Î•ò Ìï∏Îì§Îü¨ Ïû¨ÏÇ¨Ïö©
+                    window.speechSynthesis.speak(currentUtterance); // ÌòÑÏû¨ Î¨∏Ïû• ÏùΩÍ∏∞ ÏãúÏûë
                 } else {
-                    setIsSpeaking(false); // ∏µÁ πÆ¿Â¿Ã ¡æ∑·µ«∏È ªÛ≈¬ «ÿ¡¶
+                    setIsSpeaking(false); // Î™®Îì† Î¨∏Ïû•Ïù¥ Ï¢ÖÎ£åÎêòÎ©¥ ÏÉÅÌÉú Ìï¥Ï†ú
                 }
             };
 
             setIsSpeaking(true);
-            speakNextSentence(); // √π πÆ¿Â ¿–±‚ Ω√¿€
+            speakNextSentence(); // Ï≤´ Î¨∏Ïû• ÏùΩÍ∏∞ ÏãúÏûë
         } else {
-            window.speechSynthesis.speak(utterance); // ≈ÿΩ∫∆Æ ±Ê¿Ã∞° ¬™¿∏∏È «— π¯ø° ¿–±‚
+            window.speechSynthesis.speak(utterance); // ÌÖçÏä§Ìä∏ Í∏∏Ïù¥Í∞Ä ÏßßÏúºÎ©¥ Ìïú Î≤àÏóê ÏùΩÍ∏∞
         }
     }, [value, speechSupported, isSpeaking, voices]);
 
-    // ƒƒ∆˜≥Õ∆Æ æ∏∂øÓ∆Æ Ω√ ¿Ωº∫ ¿Áª˝ ¡ﬂ¡ˆ
+    // Ïª¥Ìè¨ÎÑåÌä∏ Ïñ∏ÎßàÏö¥Ìä∏ Ïãú ÏùåÏÑ± Ïû¨ÏÉù Ï§ëÏßÄ
     useEffect(() => {
         return () => {
             if (speechSupported && isSpeaking) {
@@ -224,8 +328,7 @@ const TextArea = ({
     return (
         <div className="relative flex-1" style={{ minWidth: 0 }}>
             <div className="relative">
-                {/* Add clear button when there's text and not readonly */}
-                {!readOnly && value && (
+                {value && (
                     <button
                         onClick={onClear}
                         className="absolute top-7 right-4 p-1.5 text-gray-400 hover:text-gray-600 
@@ -240,7 +343,7 @@ const TextArea = ({
                     ref={textareaRef}
                     value={value}
                     onChange={(e) => {
-                        if (e.target.value.length <= maxLength) {
+                        if (isOutput || !maxLength || e.target.value.length <= maxLength) {
                             onChange(e);
                         }
                     }}
@@ -251,8 +354,8 @@ const TextArea = ({
                     ${readOnly ? 'bg-gray-50' : ''} ${className}`}
                     style={{
                         minHeight: '12rem',
-                        paddingBottom: readOnly ? '2.5rem' : '1.5rem',
-                        paddingRight: !readOnly && value ? '3rem' : '1rem', // Add space for clear button
+                        paddingBottom: translations.length > 0 ? '2.5rem' : '1.5rem',
+                        paddingRight: value ? '3rem' : '1rem',
                         overflowY: 'hidden'
                     }}
                     onTouchStart={onTouchStart}
@@ -260,7 +363,6 @@ const TextArea = ({
                     onTouchEnd={onTouchEnd}
                 />
 
-                {/* Keep the existing paste button logic */}
                 {!value && onPaste && (
                     <button
                         className="absolute top-7 right-2 px-3 py-1 text-sm text-gray-500 
@@ -272,7 +374,6 @@ const TextArea = ({
                     </button>
                 )}
 
-                {/* Keep the existing bottom controls */}
                 <div className="absolute -bottom-7 w-full flex justify-between items-center px-2">
                     <div className="flex-1">
                         {showSpeaker && speechSupported && value && (
@@ -287,12 +388,12 @@ const TextArea = ({
                     </div>
 
                     <div className="flex-1 text-right text-sm text-gray-500">
-                        {value.length}{!readOnly && `/${maxLength}`}
+                        {/* Ï∂úÎ†• ÌïÑÎìúÎäî Í∏ÄÏûêÏàòÎßå ÌëúÏãú */}
+                        {value.length}{!isOutput && maxLength && `/${maxLength}`}
                     </div>
                 </div>
 
-                {/* Keep the existing navigation buttons */}
-                {readOnly && translations.length > 0 && (
+                {translations.length > 0 && (
                     <div className="absolute bottom-4 left-0 w-full flex justify-between items-center px-2">
                         <button
                             onClick={onPrevious}
@@ -840,25 +941,37 @@ const TranslatorApp = () => {
     const [touchEnd, setTouchEnd] = useState(null);
     const [requestLog, setRequestLog] = useState(null);
     const [isRequestLogOpen, setIsRequestLogOpen] = useState(false);
+    // Add new state for language selection
+    const [sourceLang, setSourceLang] = useState('auto');
+    const [targetLang, setTargetLang] = useState('en');
 
     useEffect(() => {
         setHistory(loadHistory());
         setSavedTranslations(loadSavedTranslations());
     }, []);
 
-    const translateWithGemini = useCallback(async (text, previousTranslations = []) => {
+    const translateWithGemini = async (text, previousTranslations = []) => {
         try {
             const genAI = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
             const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-            // Get base instructions from the current model settings
             const basePreInstruction = modelInstructions[selectedModel]['pre-instruction'];
             const postInstruction = modelInstructions[selectedModel]['post-instruction'];
 
-            // Create the complete pre-instruction with optional additional context
             let completePreInstruction = basePreInstruction + "\n\n";
+
+            // Improved language instruction - use LANGUAGE_NAMES for full language names
+            const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
+            const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
+
+            if (sourceLang === 'auto') {
+                completePreInstruction += `Please detect the source language and translate the text to ${targetLanguage}.\n\n`;
+            } else {
+                completePreInstruction += `Translate from ${sourceLanguage} to ${targetLanguage}.\n\n`;
+            }
+
             if (previousTranslations.length > 0) {
-                completePreInstruction += "For each translation: - Use diverse vocabulary and expressions - Vary sentence structures - Consider different cultural contexts and idioms - Maintain the original tone while exploring different ways to express the same meaning - Aim for natural, conversational English that captures both literal and contextual meaning\n\n";
+                completePreInstruction += "For each translation: - Use diverse vocabulary and expressions - Vary sentence structures - Consider different cultural contexts and idioms - Maintain the original tone while exploring different ways to express the same meaning - Aim for natural, conversational language that captures both literal and contextual meaning\n\n";
             }
 
             // Create the user message with translation history and final instruction
@@ -885,7 +998,6 @@ const TranslatorApp = () => {
             };
             setRequestLog(requestBody);
 
-            // For Gemini, combine all messages since it doesn't support separate roles
             const fullPrompt = `${completePreInstruction}${userPrompt}${postInstruction}\n\n`;
             const result = await model.generateContent(fullPrompt);
             return result.response.text();
@@ -894,9 +1006,9 @@ const TranslatorApp = () => {
                 ? 'Invalid Gemini API key. Please check your environment variables.'
                 : `Translation error: ${error.message}`);
         }
-    }, [selectedModel, modelInstructions]);
+    };
 
-    const translateWithOpenRouter = useCallback(async (text, modelId, previousTranslations = []) => {
+    const translateWithOpenRouter = async (text, modelId, previousTranslations = []) => {
         const modelUrl = 'cohere/command-r-08-2024';
 
         // Get base instructions from the current model settings
@@ -905,8 +1017,19 @@ const TranslatorApp = () => {
 
         // Create the complete pre-instruction with optional additional context
         let completePreInstruction = basePreInstruction + "\n\n";
+
+        // Improved language instruction using LANGUAGE_NAMES
+        const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
+        const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
+
+        if (sourceLang === 'auto') {
+            completePreInstruction += `Please detect the source language and translate the text to ${targetLanguage}.\n\n`;
+        } else {
+            completePreInstruction += `Translate from ${sourceLanguage} to ${targetLanguage}.\n\n`;
+        }
+
         if (previousTranslations.length > 0) {
-            completePreInstruction += "For each translation: - Use diverse vocabulary and expressions - Vary sentence structures - Consider different cultural contexts and idioms - Maintain the original tone while exploring different ways to express the same meaning - Aim for natural, conversational English that captures both literal and contextual meaning\n\n";
+            completePreInstruction += "For each translation: - Use diverse vocabulary and expressions - Vary sentence structures - Consider different cultural contexts and idioms - Maintain the original tone while exploring different ways to express the same meaning - Aim for natural, conversational language that captures both literal and contextual meaning\n\n";
         }
 
         // Create the user message with translation history and final instruction
@@ -963,7 +1086,19 @@ const TranslatorApp = () => {
                 ? 'Invalid API key. Please check your environment variables.'
                 : `Translation error: ${error.message}`);
         }
-    }, [selectedModel, modelInstructions]);
+    };
+
+    const validateLanguageSupport = (sourceLang, targetLang) => {
+        const supportedLanguages = ['auto', 'en', 'fr', 'es', 'it', 'de', 'pt', 'ja', 'ko', 'zh', 'ar'];
+
+        if (sourceLang !== 'auto' && !supportedLanguages.includes(sourceLang)) {
+            throw new Error(`Unsupported source language: ${sourceLang}`);
+        }
+
+        if (!supportedLanguages.includes(targetLang)) {
+            throw new Error(`Unsupported target language: ${targetLang}`);
+        }
+    }
 
     const deleteHistoryItem = (index) => {
         const newHistory = [...history];
@@ -1036,6 +1171,7 @@ const TranslatorApp = () => {
         try {
             setIsLoading(true);
             setError('');
+            validateLanguageSupport(sourceLang, targetLang);
 
             let translatedResult;
             if (isAdditional) {
@@ -1218,14 +1354,33 @@ const TranslatorApp = () => {
                         </select>
                     </div>
 
+                    <LanguageSelector
+                        sourceLang={sourceLang}
+                        targetLang={targetLang}
+                        onSourceChange={setSourceLang}
+                        onTargetChange={setTargetLang}
+                        inputText={inputText}
+                        translatedText={translatedText}
+                        onInputTextChange={setInputText}
+                        onTranslatedTextChange={(text) => {
+                            setTranslations([{ text, timestamp: new Date() }]);
+                            setCurrentIndex(0);
+                        }}
+                        onResetTranslations={() => {
+                            setTranslations([]);
+                            setCurrentIndex(0);
+                        }}
+                    />
+
                     {/* Text areas container with increased bottom margin */}
-                    <div className="flex flex-col md:flex-row gap-6 mb-8"> {/* Added mb-8 for more space before buttons */}
-                        {/* Input text area */}
+                    <div className="flex flex-col md:flex-row gap-6 mb-8">
+                        {/* ÏûÖÎ†• TextArea */}
                         <TextArea
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
                             placeholder="Enter text..."
                             showSpeaker={true}
+                            maxLength={5000}  // ÏûÖÎ†• ÌïÑÎìúÎßå Ï†úÌïú
                             onPaste={async () => {
                                 try {
                                     const text = await navigator.clipboard.readText();
@@ -1234,25 +1389,36 @@ const TranslatorApp = () => {
                                     console.error('Failed to read clipboard:', err);
                                 }
                             }}
-                            onClear={handleClear}
+                            onClear={() => handleClear()}
                         />
 
-                        {/* Translation text area */}
-                        <div className="relative flex-1" style={{ minWidth: 0 }}>
-                            <TextArea
-                                value={translatedText}
-                                readOnly
-                                placeholder="Translation will appear here..."
-                                showSpeaker={true}
-                                onTouchStart={onTouchStart}
-                                onTouchMove={onTouchMove}
-                                onTouchEnd={onTouchEnd}
-                                translations={translations}
-                                currentIndex={currentIndex}
-                                onPrevious={handlePrevious}
-                                onNext={handleNext}
-                            />
-                        </div>
+                        {/* Ï∂úÎ†• TextArea */}
+                        <TextArea
+                            value={translatedText}
+                            isOutput={true}  // Ï∂úÎ†• ÌïÑÎìúÏûÑÏùÑ Î™ÖÏãú
+                            onChange={(e) => {
+                                const newText = e.target.value;
+                                const updatedTranslations = translations.map((item, index) =>
+                                    index === currentIndex
+                                        ? { ...item, text: newText }
+                                        : item
+                                );
+                                setTranslations(updatedTranslations);
+                            }}
+                            placeholder="Translation will appear here..."
+                            showSpeaker={true}
+                            onTouchStart={onTouchStart}
+                            onTouchMove={onTouchMove}
+                            onTouchEnd={onTouchEnd}
+                            translations={translations}
+                            currentIndex={currentIndex}
+                            onPrevious={handlePrevious}
+                            onNext={handleNext}
+                            onClear={() => {
+                                setTranslations([]);
+                                setCurrentIndex(0);
+                            }}
+                        />
                     </div>
 
                     {/* Error message */}
