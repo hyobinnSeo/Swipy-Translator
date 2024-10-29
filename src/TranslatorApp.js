@@ -210,6 +210,88 @@ const LANGUAGE_VOICE_MAPPING = {
     'pt': 'pt-BR-FranciscaNeural'
 };
 
+// Add these constants at the top of TranslatorApp.js, after the imports
+const VOICE_OPTIONS = {
+    'en': [
+        { id: 'en-US-JennyNeural', name: 'Jenny (Female)' },
+        { id: 'en-US-GuyNeural', name: 'Guy (Male)' },
+        { id: 'en-US-AriaNeural', name: 'Aria (Female)' },
+        { id: 'en-US-DavisNeural', name: 'Davis (Male)' }
+    ],
+    'ko': [
+        { id: 'ko-KR-SunHiNeural', name: '선희 (여성)' },
+        { id: 'ko-KR-InJoonNeural', name: '인준 (남성)' },
+        { id: 'ko-KR-JiMinNeural', name: '지민 (여성)' },
+        { id: 'ko-KR-BongJinNeural', name: '봉진 (남성)' }
+    ],
+    'ja': [
+        { id: 'ja-JP-NanamiNeural', name: '七海 (女性)' },
+        { id: 'ja-JP-KeitaNeural', name: '圭太 (男性)' },
+        { id: 'ja-JP-AoiNeural', name: '葵 (女性)' },
+        { id: 'ja-JP-DaichiNeural', name: '大智 (男性)' }
+    ],
+    'zh': [
+        { id: 'zh-CN-XiaoxiaoNeural', name: '晓晓 (女性)' },
+        { id: 'zh-CN-YunxiNeural', name: '云希 (男性)' },
+        { id: 'zh-CN-XiaoyiNeural', name: '晓伊 (女性)' },
+        { id: 'zh-CN-YunjianNeural', name: '云剑 (男性)' }
+    ],
+    'fr': [
+        { id: 'fr-FR-DeniseNeural', name: 'Denise (Femme)' },
+        { id: 'fr-FR-HenriNeural', name: 'Henri (Homme)' }
+    ],
+    'es': [
+        { id: 'es-ES-ElviraNeural', name: 'Elvira (Mujer)' },
+        { id: 'es-ES-AlvaroNeural', name: 'Alvaro (Hombre)' }
+    ],
+    'de': [
+        { id: 'de-DE-KatjaNeural', name: 'Katja (Weiblich)' },
+        { id: 'de-DE-ConradNeural', name: 'Conrad (Männlich)' }
+    ],
+    'it': [
+        { id: 'it-IT-ElsaNeural', name: 'Elsa (Donna)' },
+        { id: 'it-IT-DiegoNeural', name: 'Diego (Uomo)' }
+    ],
+    'pt': [
+        { id: 'pt-BR-FranciscaNeural', name: 'Francisca (Feminino)' },
+        { id: 'pt-BR-AntonioNeural', name: 'Antonio (Masculino)' }
+    ],
+    'ar': [
+        { id: 'ar-SA-ZariyahNeural', name: 'زارية (أنثى)' },
+        { id: 'ar-SA-HamedNeural', name: 'حامد (ذكر)' }
+    ]
+};
+
+const loadVoiceSettings = () => {
+    try {
+        return JSON.parse(localStorage.getItem('voiceSettings')) || {
+            'en': 'en-US-JennyNeural',
+            'ko': 'ko-KR-SunHiNeural',
+            'ja': 'ja-JP-NanamiNeural',
+            'zh': 'zh-CN-XiaoxiaoNeural',
+            'fr': 'fr-FR-DeniseNeural',
+            'es': 'es-ES-ElviraNeural',
+            'de': 'de-DE-KatjaNeural',
+            'it': 'it-IT-ElsaNeural',
+            'pt': 'pt-BR-FranciscaNeural',
+            'ar': 'ar-SA-ZariyahNeural'
+        };
+    } catch {
+        return {
+            'en': 'en-US-JennyNeural',
+            'ko': 'ko-KR-SunHiNeural',
+            'ja': 'ja-JP-NanamiNeural',
+            'zh': 'zh-CN-XiaoxiaoNeural',
+            'fr': 'fr-FR-DeniseNeural',
+            'es': 'es-ES-ElviraNeural',
+            'de': 'de-DE-KatjaNeural',
+            'it': 'it-IT-ElsaNeural',
+            'pt': 'pt-BR-FranciscaNeural',
+            'ar': 'ar-SA-ZariyahNeural'
+        };
+    }
+};
+
 const getToneInstructions = (tone, modelInstructions, selectedModel) => {
     const toneInstructions = modelInstructions[selectedModel]['tone-instructions'];
     return {
@@ -396,6 +478,96 @@ const ToneSelector = ({ selectedTone, onToneChange, selectedModel }) => {
     );
 };
 
+const saveVoiceSettings = (settings) => {
+    localStorage.setItem('voiceSettings', JSON.stringify(settings));
+};
+
+const VoiceSettingsModal = ({ isOpen, onClose, selectedVoices, onVoiceChange }) => {
+    const [localVoices, setLocalVoices] = useState(selectedVoices);
+
+    // Reset to defaults
+    const handleReset = () => {
+        const defaultVoices = {
+            'en': 'en-US-JennyNeural',
+            'ko': 'ko-KR-SunHiNeural',
+            'ja': 'ja-JP-NanamiNeural',
+            'zh': 'zh-CN-XiaoxiaoNeural',
+            'fr': 'fr-FR-DeniseNeural',
+            'es': 'es-ES-ElviraNeural',
+            'de': 'de-DE-KatjaNeural',
+            'it': 'it-IT-ElsaNeural',
+            'pt': 'pt-BR-FranciscaNeural',
+            'ar': 'ar-SA-ZariyahNeural'
+        };
+        setLocalVoices(defaultVoices);
+    };
+
+    // Save changes
+    const handleSave = () => {
+        onVoiceChange(localVoices);
+        onClose();
+    };
+
+    return (
+        <DialogWrapper isOpen={isOpen} onClose={onClose} className="w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="flex-shrink-0 p-6 border-b">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h2 className="text-xl font-semibold">Voice Settings</h2>
+                        <p className="text-sm text-gray-500 mt-1">Select preferred voices for each language</p>
+                    </div>
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+                <div className="space-y-6">
+                    {Object.entries(VOICE_OPTIONS).map(([lang, voices]) => (
+                        <div key={lang} className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700">
+                                {LANGUAGE_NAMES[lang]}:
+                            </label>
+                            <select
+                                value={localVoices[lang] || ''}
+                                onChange={(e) => setLocalVoices(prev => ({
+                                    ...prev,
+                                    [lang]: e.target.value
+                                }))}
+                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
+                                {voices.map((voice) => (
+                                    <option key={voice.id} value={voice.id}>
+                                        {voice.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="flex-shrink-0 p-6 border-t bg-white">
+                <div className="flex justify-end space-x-3">
+                    <button
+                        onClick={handleReset}
+                        className="px-4 py-2 text-blue-500 hover:text-blue-600"
+                    >
+                        Reset to Default
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                    >
+                        Done
+                    </button>
+                </div>
+            </div>
+        </DialogWrapper>
+    );
+};
+
 const TextArea = ({
     value,
     onChange,
@@ -413,7 +585,8 @@ const TextArea = ({
     onPrevious,
     onNext,
     isOutput = false,
-    language = 'en' // Add language prop
+    language = 'en',
+    selectedVoice  // Add selectedVoice prop
 }) => {
     const textareaRef = useRef(null);
     const resizeObserverRef = useRef(null);
@@ -468,11 +641,10 @@ const TextArea = ({
         try {
             const accessToken = await getAccessToken();
 
-            // Get appropriate voice for the language
-            const voice = LANGUAGE_VOICE_MAPPING[language] || LANGUAGE_VOICE_MAPPING.en;
-            const langCode = voice.split('-').slice(0, 2).join('-'); // e.g., "ko-KR" from "ko-KR-SunHiNeural"
+            // Use selectedVoice instead of default voice mapping
+            const voice = selectedVoice || LANGUAGE_VOICE_MAPPING[language];
+            const langCode = voice.split('-').slice(0, 2).join('-');
 
-            // Escape special characters in the text
             const escapedText = escapeXMLText(value);
 
             const ssml = `
@@ -502,14 +674,12 @@ const TextArea = ({
 
             const audioBlob = await response.blob();
 
-            // Revoke any existing object URL
             if (audioRef.current.src.startsWith('blob:')) {
                 URL.revokeObjectURL(audioRef.current.src);
             }
 
             const audioUrl = URL.createObjectURL(audioBlob);
 
-            // Set up audio events
             audioRef.current.onended = () => {
                 setIsSpeaking(false);
                 URL.revokeObjectURL(audioUrl);
@@ -521,7 +691,6 @@ const TextArea = ({
                 URL.revokeObjectURL(audioUrl);
             };
 
-            // Load and play the audio
             audioRef.current.src = audioUrl;
             const playPromise = audioRef.current.play();
 
@@ -540,7 +709,7 @@ const TextArea = ({
             console.error('Azure TTS error:', error);
             setIsSpeaking(false);
         }
-    }, [value, subscriptionKey, region, isSpeaking, baseUrl, language]);
+    }, [value, subscriptionKey, region, isSpeaking, baseUrl, language, selectedVoice]);
 
     // Cleanup audio on unmount
     useEffect(() => {
@@ -912,7 +1081,15 @@ const RequestLogViewer = ({ isOpen, onClose, requestLog }) => {
     );
 };
 
-const Sidebar = ({ isOpen, onClose, onOpenInstructions, onOpenSaved, onOpenRequestLog, onOpenHistory }) => {
+const Sidebar = ({
+    isOpen,
+    onClose,
+    onOpenInstructions,
+    onOpenSaved,
+    onOpenRequestLog,
+    onOpenHistory,
+    onOpenVoiceSettings  // Add this prop
+}) => {
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
@@ -926,14 +1103,12 @@ const Sidebar = ({ isOpen, onClose, onOpenInstructions, onOpenSaved, onOpenReque
 
     return (
         <>
-            {/* Overlay with fade transition */}
             <div
-                className={`fixed inset-0 bg-black transition-opacity duration-300 z-20 ${isOpen ? 'opacity-50' : 'opacity-0 pointer-events-none'
-                    }`}
+                className={`fixed inset-0 bg-black transition-opacity duration-300 z-20 
+                ${isOpen ? 'opacity-50' : 'opacity-0 pointer-events-none'}`}
                 onClick={onClose}
             />
 
-            {/* Sidebar with slide transition */}
             <div
                 className={`fixed left-0 top-0 h-full w-64 bg-white shadow-lg transform 
                 transition-transform duration-300 ease-in-out z-30 flex flex-col overflow-hidden
@@ -974,6 +1149,17 @@ const Sidebar = ({ isOpen, onClose, onOpenInstructions, onOpenSaved, onOpenReque
                         >
                             <BookmarkIcon className="h-4 w-4 mr-2" />
                             Saved Translations
+                        </button>
+
+                        <button
+                            onClick={() => {
+                                onOpenVoiceSettings();
+                                onClose();
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center transition-colors"
+                        >
+                            <Volume2 className="h-4 w-4 mr-2" />
+                            Voice Settings
                         </button>
 
                         <button
@@ -1386,6 +1572,19 @@ const TranslatorApp = () => {
     const [targetLang, setTargetLang] = useState('en');
     const [showSafetyWarning, setShowSafetyWarning] = useState(false);
     const [selectedTone, setSelectedTone] = useState('standard');
+    const [isVoiceSettingsOpen, setIsVoiceSettingsOpen] = useState(false);
+    const [selectedVoices, setSelectedVoices] = useState({
+        'en': 'en-US-JennyNeural',
+        'ko': 'ko-KR-SunHiNeural',
+        'ja': 'ja-JP-NanamiNeural',
+        'zh': 'zh-CN-XiaoxiaoNeural',
+        'fr': 'fr-FR-DeniseNeural',
+        'es': 'es-ES-ElviraNeural',
+        'de': 'de-DE-KatjaNeural',
+        'it': 'it-IT-ElsaNeural',
+        'pt': 'pt-BR-FranciscaNeural',
+        'ar': 'ar-SA-ZariyahNeural'
+    });
 
     /* eslint-disable react-hooks/exhaustive-deps */
     useEffect(() => {
@@ -1682,6 +1881,11 @@ const TranslatorApp = () => {
         }
     };
 
+    const handleVoiceChange = (newVoices) => {
+        setSelectedVoices(newVoices);
+        saveVoiceSettings(newVoices);
+    };
+
     // Handle touch events for swipe
     const minSwipeDistance = 50;
 
@@ -1730,19 +1934,7 @@ const TranslatorApp = () => {
                 onOpenInstructions={() => setIsInstructionsOpen(true)}
                 onOpenSaved={() => setIsSavedOpen(true)}
                 onOpenRequestLog={() => setIsRequestLogOpen(true)}
-            />
-
-            <SavedTranslationsDialog
-                isOpen={isSavedOpen}
-                onClose={() => setIsSavedOpen(false)}
-                savedTranslations={savedTranslations}
-                onSelectSaved={(item) => {
-                    setInputText(item.inputText);
-                    setTranslations([{ text: item.translatedText, timestamp: new Date() }]);
-                    setCurrentIndex(0);
-                }}
-                onDeleteSaved={deleteSavedTranslation}
-                onClearAll={clearAllSavedTranslations}
+                onOpenVoiceSettings={() => setIsVoiceSettingsOpen(true)}
             />
 
             <HistoryPanel
@@ -1759,6 +1951,19 @@ const TranslatorApp = () => {
                 onClearHistory={clearAllHistory}
             />
 
+            <SavedTranslationsDialog
+                isOpen={isSavedOpen}
+                onClose={() => setIsSavedOpen(false)}
+                savedTranslations={savedTranslations}
+                onSelectSaved={(item) => {
+                    setInputText(item.inputText);
+                    setTranslations([{ text: item.translatedText, timestamp: new Date() }]);
+                    setCurrentIndex(0);
+                }}
+                onDeleteSaved={deleteSavedTranslation}
+                onClearAll={clearAllSavedTranslations}
+            />
+
             <InstructionsModal
                 isOpen={isInstructionsOpen}
                 onClose={() => setIsInstructionsOpen(false)}
@@ -1766,6 +1971,13 @@ const TranslatorApp = () => {
                 selectedModel={selectedModel}
                 setModelInstructions={setModelInstructions}
                 selectedTone={selectedTone}
+            />
+
+            <VoiceSettingsModal
+                isOpen={isVoiceSettingsOpen}
+                onClose={() => setIsVoiceSettingsOpen(false)}
+                selectedVoices={selectedVoices}
+                onVoiceChange={handleVoiceChange}
             />
 
             <RequestLogViewer
@@ -1863,7 +2075,8 @@ const TranslatorApp = () => {
                             showSpeaker={true}
                             maxLength={5000}
                             onClear={() => handleClear()}
-                            language={sourceLang}  // Add this line for input TextArea
+                            language={sourceLang}
+                            selectedVoice={selectedVoices[sourceLang]}
                         />
 
                         {/* Output TextArea */}
@@ -1892,7 +2105,8 @@ const TranslatorApp = () => {
                                 setTranslations([]);
                                 setCurrentIndex(0);
                             }}
-                            language={targetLang}  // Add this line for output TextArea
+                            language={targetLang}
+                            selectedVoice={selectedVoices[targetLang]}
                         />
                     </div>
 
