@@ -33,6 +33,7 @@ jobs:
         env:
           REACT_APP_GEMINI_API_KEY: ${{ secrets.REACT_APP_GEMINI_API_KEY }}
           REACT_APP_OPENROUTER_API_KEY: ${{ secrets.REACT_APP_OPENROUTER_API_KEY }}
+          CI: false
         run: npm run build
         
       - name: Setup Pages
