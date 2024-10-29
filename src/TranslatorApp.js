@@ -325,7 +325,7 @@ const TextArea = ({
     className = '',
     onPaste,
     showSpeaker = false,
-    maxLength,  // optional now
+    maxLength,
     onClear,
     onTouchStart,
     onTouchMove,
@@ -334,7 +334,7 @@ const TextArea = ({
     currentIndex = 0,
     onPrevious,
     onNext,
-    isOutput = false  // 출력 필드 여부를 확인하는 새로운 prop
+    isOutput = false
 }) => {
     const textareaRef = React.useRef(null);
     const [voices, setVoices] = useState([]);
@@ -482,6 +482,33 @@ const TextArea = ({
                     onChange={(e) => {
                         if (isOutput || !maxLength || e.target.value.length <= maxLength) {
                             onChange(e);
+                        }
+                    }}
+                    onPaste={async (e) => {
+                        if (onPaste) {
+                            e.preventDefault(); // Prevent default paste
+                            try {
+                                const text = await navigator.clipboard.readText();
+                                // If there's a maxLength limit, trim the pasted text
+                                if (maxLength) {
+                                    const availableSpace = maxLength - value.length;
+                                    const trimmedText = text.slice(0, availableSpace);
+                                    // Create a new synthetic event with the trimmed text
+                                    onChange({
+                                        target: {
+                                            value: value + trimmedText
+                                        }
+                                    });
+                                } else {
+                                    onChange({
+                                        target: {
+                                            value: value + text
+                                        }
+                                    });
+                                }
+                            } catch (err) {
+                                console.error('Failed to read clipboard:', err);
+                            }
                         }
                     }}
                     placeholder={placeholder}
