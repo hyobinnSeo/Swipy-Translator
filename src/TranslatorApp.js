@@ -723,6 +723,9 @@ const DialogWrapper = ({ isOpen, onClose, children, className = '' }) => {
 const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, setModelInstructions }) => {
     const [selectedTone, setSelectedTone] = useState('standard');
 
+    // Find the current model name from AVAILABLE_MODELS
+    const currentModel = AVAILABLE_MODELS.find(model => model.id === selectedModel)?.name || selectedModel;
+
     const handleReset = () => {
         setModelInstructions({
             ...modelInstructions,
@@ -734,7 +737,10 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
         <DialogWrapper isOpen={isOpen} onClose={onClose} className="w-full max-w-2xl max-h-[90vh] flex flex-col">
             <div className="flex-shrink-0 p-6 border-b">
                 <div className="flex justify-between items-center">
-                    <h2 className="text-xl font-semibold">Instructions Settings</h2>
+                    <div>
+                        <h2 className="text-xl font-semibold">Instructions Settings</h2>
+                        <p className="text-sm text-gray-500 mt-1">Current Model: {currentModel}</p>
+                    </div>
                     <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
                         <X className="h-5 w-5" />
                     </button>
