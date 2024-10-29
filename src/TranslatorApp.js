@@ -188,9 +188,9 @@ const LANGUAGE_VOICE_MAPPING = {
 // Add these constants at the top of TranslatorApp.js, after the imports
 const VOICE_OPTIONS = {
     'en': [
-        { id: 'en-US-JennyNeural', name: 'Jenny (Female)' },
-        { id: 'en-US-GuyNeural', name: 'Guy (Male)' },
         { id: 'en-US-AriaNeural', name: 'Aria (Female)' },
+        { id: 'en-US-GuyNeural', name: 'Guy (Male)' },  
+        { id: 'en-US-JennyNeural', name: 'Jenny (Female)' },
         { id: 'en-US-DavisNeural', name: 'Davis (Male)' }
     ],
     'ko': [
@@ -1519,7 +1519,7 @@ const TranslatorApp = () => {
     const [selectedTone, setSelectedTone] = useState('standard');
     const [isVoiceSettingsOpen, setIsVoiceSettingsOpen] = useState(false);
     const [selectedVoices, setSelectedVoices] = useState({
-        'en': 'en-US-JennyNeural',
+        'en': 'en-US-AriaNeural',
         'ko': 'ko-KR-SunHiNeural',
         'ja': 'ja-JP-NanamiNeural',
         'zh': 'zh-CN-XiaoxiaoNeural',
