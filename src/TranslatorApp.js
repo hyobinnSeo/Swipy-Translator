@@ -42,28 +42,57 @@ const LANGUAGE_NAMES = {
     'ar': 'Arabic / العربية'
 };
 
-const TONES = [
-    {
-        id: 'standard',
-        name: '표준 / Standard',
-        description: '일반적인 번역 / Regular translation'
-    },
-    {
-        id: 'casual',
-        name: '캐주얼 / Casual',
-        description: '친근하고 편안한 말투 / Friendly and relaxed tone'
-    },
-    {
-        id: 'formal',
-        name: '격식체 / Formal',
-        description: '공식적이고 예의 바른 말투 / Professional and polite tone'
-    },
-    {
-        id: 'business',
-        name: '비즈니스 / Business',
-        description: '업무용 전문적인 말투 / Business-oriented tone'
-    }
-];
+const TONES = {
+    [MODELS.GEMINI]: [
+        {
+            id: 'standard',
+            name: '표준 / Standard',
+            description: '일반적인 번역 / Regular translation'
+        },
+        {
+            id: 'casual',
+            name: '캐주얼 / Casual',
+            description: '친근하고 편안한 말투 / Friendly and relaxed tone'
+        },
+        {
+            id: 'formal',
+            name: '격식체 / Formal',
+            description: '공식적이고 예의 바른 말투 / Professional and polite tone'
+        },
+        {
+            id: 'business',
+            name: '비즈니스 / Business',
+            description: '업무용 전문적인 말투 / Business-oriented tone'
+        }
+    ],
+    [MODELS.COMMAND]: [
+        {
+            id: 'standard',
+            name: '표준 / Standard',
+            description: '일반적인 번역 / Regular translation'
+        },
+        {
+            id: 'casual',
+            name: '캐주얼 / Casual',
+            description: '친근하고 편안한 말투 / Friendly and relaxed tone'
+        },
+        {
+            id: 'formal',
+            name: '격식체 / Formal',
+            description: '공식적이고 예의 바른 말투 / Professional and polite tone'
+        },
+        {
+            id: 'business',
+            name: '비즈니스 / Business',
+            description: '업무용 전문적인 말투 / Business-oriented tone'
+        },
+        {
+            id: 'spicy',
+            name: '스파이시 / Spicy',
+            description: '유머러스하고 재치있는 말투 / Humorous and witty tone'
+        }
+    ]
+};
 
 const DEFAULT_INSTRUCTIONS = {
     [MODELS.GEMINI]: {
@@ -129,7 +158,14 @@ const DEFAULT_INSTRUCTIONS = {
 - Maintain clear and concise expression
 - Use appropriate business formalities
 - Keep a professional yet accessible tone
-- Focus on clarity and efficiency in communication`
+- Focus on clarity and efficiency in communication`,
+            'spicy': `Tone and Style:
+- Use witty and clever expressions
+- Incorporate appropriate humor and wordplay
+- Keep the tone engaging and entertaining
+- Use creative language choices
+- Maintain cultural sensitivity while being playful
+- Adapt jokes and puns to target language context`
         }
     }
 };
@@ -269,7 +305,7 @@ const LanguageSelector = ({
     );
 };
 
-const ToneSelector = ({ selectedTone, onToneChange }) => {
+const ToneSelector = ({ selectedTone, onToneChange, selectedModel }) => {
     const [showToneSelector, setShowToneSelector] = useState(false);
     const containerRef = useRef(null);
 
@@ -284,6 +320,9 @@ const ToneSelector = ({ selectedTone, onToneChange }) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Get the tone list for the selected model
+    const modelTones = TONES[selectedModel] || TONES[MODELS.GEMINI];
+
     return (
         <div className="relative" ref={containerRef}>
             <button
@@ -292,12 +331,12 @@ const ToneSelector = ({ selectedTone, onToneChange }) => {
                    hover:bg-gray-50 rounded-lg transition-colors"
             >
                 <Settings className="w-4 h-4" />
-                <span>번역 톤: {TONES.find(t => t.id === selectedTone)?.name}</span>
+                <span>번역 톤: {modelTones.find(t => t.id === selectedTone)?.name}</span>
             </button>
 
             {showToneSelector && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10">
-                    {TONES.map((tone) => (
+                    {modelTones.map((tone) => (
                         <button
                             key={tone.id}
                             onClick={() => {
@@ -726,6 +765,9 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
     // Find the current model name from AVAILABLE_MODELS
     const currentModel = AVAILABLE_MODELS.find(model => model.id === selectedModel)?.name || selectedModel;
 
+    // Get the tone list for the selected model
+    const modelTones = TONES[selectedModel] || TONES[MODELS.GEMINI];
+
     const handleReset = () => {
         setModelInstructions({
             ...modelInstructions,
@@ -792,7 +834,7 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
                             onChange={(e) => setSelectedTone(e.target.value)}
                             className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 mb-2"
                         >
-                            {TONES.map(tone => (
+                            {modelTones.map(tone => (
                                 <option key={tone.id} value={tone.id}>
                                     {tone.name}
                                 </option>
@@ -1305,6 +1347,14 @@ const TranslatorApp = () => {
     const [selectedTone, setSelectedTone] = useState('standard');
 
     useEffect(() => {
+        // Reset tone to standard when changing models if current tone isn't available
+        const modelTones = TONES[selectedModel] || TONES[MODELS.GEMINI];
+        if (!modelTones.find(tone => tone.id === selectedTone)) {
+            setSelectedTone('standard');
+        }
+    }, [selectedModel]);
+
+    useEffect(() => {
         setHistory(loadHistory());
         setSavedTranslations(loadSavedTranslations());
     }, []);
@@ -1741,6 +1791,7 @@ const TranslatorApp = () => {
                     <ToneSelector
                         selectedTone={selectedTone}
                         onToneChange={setSelectedTone}
+                        selectedModel={selectedModel}
                     />
 
                     {/* Text areas container with increased bottom margin */}
