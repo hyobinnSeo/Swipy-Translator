@@ -22,32 +22,7 @@ import {
 } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const TranslatorHeader = ({ selectedModel, onModelChange }) => {
-    // Get the base URL dynamically
-    const baseUrl = process.env.PUBLIC_URL || '/';
 
-    return (
-        <div className="w-full border-b bg-white">
-            <div className="max-w-7xl mx-auto">
-                <div className="flex items-center p-4 space-x-4">
-                    <button
-                        className="text-gray-600 hover:text-gray-800 transition-colors"
-                        title="Menu"
-                    >
-                        <MenuIcon className="h-6 w-6" />
-                    </button>
-
-                    <a
-                        href={baseUrl}
-                        className="text-xl font-semibold text-gray-800 hover:text-gray-600 transition-colors cursor-pointer"
-                    >
-                        Hoochoo Translator
-                    </a>
-                </div>
-            </div>
-        </div>
-    );
-};
 
 // Constants
 const MODELS = {
@@ -260,36 +235,6 @@ const VOICE_OPTIONS = {
         { id: 'ar-SA-ZariyahNeural', name: 'زارية (أنثى)' },
         { id: 'ar-SA-HamedNeural', name: 'حامد (ذكر)' }
     ]
-};
-
-const loadVoiceSettings = () => {
-    try {
-        return JSON.parse(localStorage.getItem('voiceSettings')) || {
-            'en': 'en-US-JennyNeural',
-            'ko': 'ko-KR-SunHiNeural',
-            'ja': 'ja-JP-NanamiNeural',
-            'zh': 'zh-CN-XiaoxiaoNeural',
-            'fr': 'fr-FR-DeniseNeural',
-            'es': 'es-ES-ElviraNeural',
-            'de': 'de-DE-KatjaNeural',
-            'it': 'it-IT-ElsaNeural',
-            'pt': 'pt-BR-FranciscaNeural',
-            'ar': 'ar-SA-ZariyahNeural'
-        };
-    } catch {
-        return {
-            'en': 'en-US-JennyNeural',
-            'ko': 'ko-KR-SunHiNeural',
-            'ja': 'ja-JP-NanamiNeural',
-            'zh': 'zh-CN-XiaoxiaoNeural',
-            'fr': 'fr-FR-DeniseNeural',
-            'es': 'es-ES-ElviraNeural',
-            'de': 'de-DE-KatjaNeural',
-            'it': 'it-IT-ElsaNeural',
-            'pt': 'pt-BR-FranciscaNeural',
-            'ar': 'ar-SA-ZariyahNeural'
-        };
-    }
 };
 
 const getToneInstructions = (tone, modelInstructions, selectedModel) => {
