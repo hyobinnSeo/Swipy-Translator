@@ -731,8 +731,8 @@ const TextArea = ({
                 )}
             </div>
 
-            {/* Counter and speaker below textarea container */}
-            <div className="h-8 mt-1 relative flex items-center justify-between px-2">
+            {/* Counter and speaker below textarea container - Added mb-4 for more space */}
+            <div className="h-8 mt-1 mb-4 relative flex items-center justify-between px-2">
                 {/* Speaker button */}
                 <div className="flex-shrink-0">
                     {showSpeaker && speechSupported && value && (
@@ -1831,8 +1831,8 @@ const TranslatorApp = () => {
                     </div>
 
                     {/* Text areas */}
-                    <div className="flex flex-col md:flex-row gap-6">
-                        {/* Input TextArea - adjusted padding and margin */}
+                    <div className="flex flex-col md:flex-row gap-6 mb-6">
+                        {/* Input TextArea */}
                         <TextArea
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
@@ -1841,10 +1841,9 @@ const TranslatorApp = () => {
                             maxLength={5000}
                             onPaste={true}
                             onClear={() => handleClear()}
-                            className="mb-2" // Added margin bottom
                         />
 
-                        {/* Output TextArea - adjusted padding and margin */}
+                        {/* Output TextArea */}
                         <TextArea
                             value={translatedText}
                             isOutput={true}
@@ -1870,7 +1869,6 @@ const TranslatorApp = () => {
                                 setTranslations([]);
                                 setCurrentIndex(0);
                             }}
-                            className="mb-2" // Added margin bottom
                         />
                     </div>
 
@@ -1878,7 +1876,7 @@ const TranslatorApp = () => {
                     {error && <Alert>{error}</Alert>}
 
                     {/* Action buttons */}
-                    <div className="flex flex-col sm:flex-row justify-center gap-3 mt-6"> {/* Added margin top */}
+                    <div className="flex flex-col sm:flex-row justify-center gap-3">
                         <button
                             onClick={() => handleTranslate(false)}
                             disabled={!inputText || isLoading}
