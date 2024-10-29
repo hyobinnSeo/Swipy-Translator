@@ -35,9 +35,12 @@ const TranslatorHeader = ({ selectedModel, onModelChange }) => {
                         <MenuIcon className="h-6 w-6" />
                     </button>
 
-                    <h1 className="text-xl font-semibold text-gray-800">
+                    <a
+                        href="/"
+                        className="text-xl font-semibold text-gray-800 hover:text-gray-600 transition-colors cursor-pointer"
+                    >
                         Hoochoo Translator
-                    </h1>
+                    </a>
                 </div>
             </div>
         </div>
@@ -1653,9 +1656,12 @@ const TranslatorApp = () => {
                             <MenuIcon className="h-6 w-6" />
                         </button>
 
-                        <h1 className="text-xl font-semibold text-gray-800">
+                        <a
+                            href="/"
+                            className="text-xl font-semibold text-gray-800 hover:text-gray-600 transition-colors cursor-pointer"
+                        >
                             Hoochoo Translator
-                        </h1>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -1713,7 +1719,7 @@ const TranslatorApp = () => {
                     </div>
 
                     {/* Text areas */}
-                    <div className="flex flex-col md:flex-row gap-6 mb-6">
+                    <div className="flex flex-col md:flex-row gap-2 md:gap-6 mb-6">
                         {/* Input TextArea */}
                         <TextArea
                             value={inputText}
