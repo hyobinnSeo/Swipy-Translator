@@ -389,7 +389,6 @@ const TextArea = ({
     placeholder,
     readOnly = false,
     className = '',
-    onPaste,
     showSpeaker = false,
     maxLength,
     onClear,
@@ -529,13 +528,58 @@ const TextArea = ({
         }
     };
 
-    // Handle paste from clipboard
+    // Handle paste event
+    const handlePaste = (e) => {
+        if (readOnly) return;
+
+        // Get pasted content
+        const pastedText = e.clipboardData.getData('text');
+
+        // If there's a maxLength, ensure we don't exceed it
+        if (maxLength) {
+            const currentLength = value.length;
+            const selectionStart = e.target.selectionStart;
+            const selectionEnd = e.target.selectionEnd;
+            const selectedLength = selectionEnd - selectionStart;
+
+            // Calculate how much text we can add
+            const availableSpace = maxLength - currentLength + selectedLength;
+
+            if (pastedText.length > availableSpace) {
+                // Prevent default paste
+                e.preventDefault();
+
+                // Create new text within limits
+                const newText = value.slice(0, selectionStart) +
+                    pastedText.slice(0, availableSpace) +
+                    value.slice(selectionEnd);
+
+                // Update with truncated text
+                onChange({
+                    target: {
+                        value: newText
+                    }
+                });
+
+                // Set cursor position
+                const newPosition = selectionStart + availableSpace;
+                setTimeout(() => {
+                    if (textareaRef.current) {
+                        textareaRef.current.selectionStart = newPosition;
+                        textareaRef.current.selectionEnd = newPosition;
+                    }
+                }, 0);
+            }
+        }
+    };
+
+    // Handle paste from clipboard button
     const handlePasteFromClipboard = async () => {
         try {
             const text = await navigator.clipboard.readText();
             const event = {
                 target: {
-                    value: text
+                    value: text.slice(0, maxLength || text.length)
                 }
             };
             handleInput(event);
@@ -560,7 +604,7 @@ const TextArea = ({
                 )}
 
                 {/* Paste button */}
-                {!readOnly && !value && onPaste && (
+                {!readOnly && !value && (
                     <button
                         onClick={handlePasteFromClipboard}
                         className="absolute top-2 right-4 px-3 py-1.5 text-gray-600 hover:text-gray-800 
@@ -577,7 +621,7 @@ const TextArea = ({
                         ref={textareaRef}
                         value={value}
                         onChange={handleInput}
-                        onPaste={onPaste}
+                        onPaste={handlePaste}
                         placeholder={placeholder}
                         readOnly={readOnly}
                         className={`w-full px-4 py-4 text-lg resize-none rounded-lg 
@@ -586,7 +630,7 @@ const TextArea = ({
                         style={{
                             minHeight: '12rem',
                             paddingBottom: translations.length > 0 ? '3.5rem' : '1rem',
-                            paddingRight: value ? '3rem' : '5rem',  // Increased right padding to accommodate wider paste button
+                            paddingRight: value ? '3rem' : '5rem',
                         }}
                         onTouchStart={onTouchStart}
                         onTouchMove={onTouchMove}
@@ -1757,7 +1801,6 @@ const TranslatorApp = () => {
                             placeholder="Enter text..."
                             showSpeaker={true}
                             maxLength={5000}
-                            onPaste={true}
                             onClear={() => handleClear()}
                         />
 
