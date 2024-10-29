@@ -23,10 +23,12 @@ import {
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const TranslatorHeader = ({ selectedModel, onModelChange }) => {
+    // Get the base URL dynamically
+    const baseUrl = process.env.PUBLIC_URL || '/';
+
     return (
         <div className="w-full border-b bg-white">
             <div className="max-w-7xl mx-auto">
-                {/* Top bar with logo and menu button only */}
                 <div className="flex items-center p-4 space-x-4">
                     <button
                         className="text-gray-600 hover:text-gray-800 transition-colors"
@@ -36,7 +38,7 @@ const TranslatorHeader = ({ selectedModel, onModelChange }) => {
                     </button>
 
                     <a
-                        href="/"
+                        href={baseUrl}
                         className="text-xl font-semibold text-gray-800 hover:text-gray-600 transition-colors cursor-pointer"
                     >
                         Hoochoo Translator
@@ -1611,6 +1613,8 @@ const TranslatorApp = () => {
         setError('');
     };
 
+    const baseUrl = process.env.PUBLIC_URL || '/';
+
     return (
         <div className="w-full min-h-screen bg-gray-50">
             {/* Modals and Dialogs */}
@@ -1683,7 +1687,7 @@ const TranslatorApp = () => {
                         </button>
 
                         <a
-                            href="/"
+                            href={baseUrl}
                             className="text-xl font-semibold text-gray-800 hover:text-gray-600 transition-colors cursor-pointer"
                         >
                             Hoochoo Translator
