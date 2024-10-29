@@ -384,7 +384,7 @@ const TextArea = ({
     placeholder,
     readOnly = false,
     className = '',
-    onPaste, // This should now be a boolean
+    onPaste,
     showSpeaker = false,
     maxLength,
     onClear,
@@ -397,43 +397,86 @@ const TextArea = ({
     onNext,
     isOutput = false
 }) => {
-    const textareaRef = React.useRef(null);
-    const resizeObserverRef = React.useRef(null);
-    const adjustmentTimeoutRef = React.useRef(null);
-    const [voices, setVoices] = useState([]);
+    const textareaRef = useRef(null);
+    const resizeObserverRef = useRef(null);
+    const adjustmentTimeoutRef = useRef(null);
     const [isSpeaking, setIsSpeaking] = useState(false);
-    const [speechSupported, setSpeechSupported] = useState(false);
+    const speechRef = useRef(null);
 
-    // Debounced height adjustment function
+    // Initialize speech synthesis
+    useEffect(() => {
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+            speechRef.current = window.speechSynthesis;
+            // Pre-load voices
+            speechRef.current.getVoices();
+        }
+
+        return () => {
+            if (speechRef.current) {
+                speechRef.current.cancel();
+            }
+        };
+    }, []);
+
+    // Handle text-to-speech
+    const handleSpeak = useCallback(() => {
+        if (!speechRef.current || !value) return;
+
+        if (isSpeaking) {
+            speechRef.current.cancel();
+            setIsSpeaking(false);
+            return;
+        }
+
+        // Cancel any ongoing speech
+        speechRef.current.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(value);
+
+        // Get available voices
+        const voices = speechRef.current.getVoices();
+
+        // Try to find an English voice
+        const englishVoice = voices.find(voice =>
+            voice.lang.startsWith('en') && !voice.localService
+        ) || voices.find(voice =>
+            voice.lang.startsWith('en')
+        );
+
+        if (englishVoice) {
+            utterance.voice = englishVoice;
+        }
+
+        // Configure speech parameters
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        // Handle speech events
+        utterance.onstart = () => setIsSpeaking(true);
+        utterance.onend = () => setIsSpeaking(false);
+        utterance.onerror = () => setIsSpeaking(false);
+
+        speechRef.current.speak(utterance);
+    }, [value, isSpeaking]);
+
+    // Height adjustment logic remains the same
     const adjustHeight = useCallback(() => {
         if (!textareaRef.current) return;
 
-        // Cancel any pending adjustment
         if (adjustmentTimeoutRef.current) {
             cancelAnimationFrame(adjustmentTimeoutRef.current);
         }
 
-        // Schedule new adjustment in the next animation frame
         adjustmentTimeoutRef.current = requestAnimationFrame(() => {
             const textarea = textareaRef.current;
             if (!textarea) return;
 
-            // Store the current scroll position
             const scrollPos = window.scrollY;
-
-            // Reset height to auto to get the true scrollHeight
             textarea.style.height = 'auto';
-
-            // Calculate new height with minimum of 192px
             const newHeight = Math.max(192, textarea.scrollHeight);
-
-            // Set the new height
             textarea.style.height = `${newHeight}px`;
-
-            // Update overflow based on content
             textarea.style.overflowY = textarea.scrollHeight <= newHeight ? 'hidden' : 'auto';
-
-            // Restore scroll position to prevent page jump
             window.scrollTo(0, scrollPos);
         });
     }, []);
@@ -442,24 +485,16 @@ const TextArea = ({
     useEffect(() => {
         if (!textareaRef.current) return;
 
-        // Cleanup previous observer if it exists
         if (resizeObserverRef.current) {
             resizeObserverRef.current.disconnect();
         }
 
-        // Create new ResizeObserver with debounced callback
-        resizeObserverRef.current = new ResizeObserver((entries) => {
-            // Use requestAnimationFrame to limit updates
-            requestAnimationFrame(() => {
-                if (!Array.isArray(entries) || !entries.length) return;
-                adjustHeight();
-            });
+        resizeObserverRef.current = new ResizeObserver(() => {
+            requestAnimationFrame(adjustHeight);
         });
 
-        // Start observing
         resizeObserverRef.current.observe(textareaRef.current);
 
-        // Cleanup function
         return () => {
             if (resizeObserverRef.current) {
                 resizeObserverRef.current.disconnect();
@@ -470,184 +505,24 @@ const TextArea = ({
         };
     }, [adjustHeight]);
 
-    // Adjust height when value changes
     useEffect(() => {
         adjustHeight();
     }, [value, adjustHeight]);
 
-
-    // 음성 합성 지원 여부를 확인하고 음성 리스트를 로드
-    useEffect(() => {
-        if ('speechSynthesis' in window) { // 음성 합성을 지원하는 경우
-            setSpeechSupported(true); // 음성 합성 가능 여부를 true로 설정
-            const loadVoices = () => {
-                setVoices(window.speechSynthesis.getVoices()); // 사용 가능한 음성 리스트 설정
-            };
-            window.speechSynthesis.onvoiceschanged = loadVoices; // 음성 리스트가 변경될 때 호출
-            loadVoices(); // 초기 음성 리스트 로드
-            return () => {
-                window.speechSynthesis.cancel(); // 컴포넌트 언마운트 시 음성 재생 중지
-                window.speechSynthesis.onvoiceschanged = null; // 이벤트 핸들러 해제
-            };
-        }
-    }, []);
-
-    // 텍스트를 음성으로 읽는 함수
-    const handleSpeak = useCallback(() => {
-        if (!speechSupported || !value) return; // 음성 합성 지원이 없거나 텍스트가 없으면 종료
-
-        if (isSpeaking) { // 이미 재생 중이라면
-            window.speechSynthesis.cancel(); // 음성 재생 중지
-            setIsSpeaking(false); // 재생 상태 false로 설정
-            return;
-        }
-
-        window.speechSynthesis.cancel(); // 재생 전 기존 음성 중지
-
-        const utterance = new SpeechSynthesisUtterance(value); // 음성 합성 인스턴스 생성
-
-        // English 음성을 우선적으로 설정 (US 또는 GB)
-        const englishVoice = voices.find(voice =>
-            voice.lang === 'en-US' || voice.lang === 'en-GB'
-        );
-
-        if (englishVoice) {
-            utterance.voice = englishVoice; // 선택한 English 음성 적용
-            utterance.lang = englishVoice.lang;
-        } else {
-            utterance.lang = 'en-US'; // 기본 English 설정
-        }
-
-        // 음성 설정 (속도, 톤, 볼륨)
-        utterance.rate = 0.9;
-        utterance.pitch = 1.0;
-        utterance.volume = 1.0;
-
-        utterance.onstart = () => setIsSpeaking(true); // 시작 시 상태 설정
-        utterance.onend = () => setIsSpeaking(false); // 종료 시 상태 해제
-        utterance.onerror = (event) => { // 오류 발생 시 로그 출력
-            console.error('Speech synthesis error:', event);
-            setIsSpeaking(false);
-        };
-
-        // 텍스트가 길 경우 문장 단위로 분할하여 읽기
-        if (value.length > 200) {
-            const sentences = value.match(/[^.!?]+[.!?]+/g) || [value]; // 문장으로 분할
-            let index = 0;
-
-            const speakNextSentence = () => {
-                if (index < sentences.length) { // 문장이 남아있는 경우
-                    const currentUtterance = new SpeechSynthesisUtterance(sentences[index]);
-
-                    if (englishVoice) {
-                        currentUtterance.voice = englishVoice;
-                        currentUtterance.lang = englishVoice.lang;
-                    } else {
-                        currentUtterance.lang = 'en-US';
-                    }
-
-                    currentUtterance.rate = 0.9;
-                    currentUtterance.pitch = 1.0;
-                    currentUtterance.volume = 1.0;
-
-                    currentUtterance.onend = () => { // 문장 종료 시 다음 문장 읽기
-                        index++;
-                        speakNextSentence();
-                    };
-                    currentUtterance.onerror = utterance.onerror; // 오류 핸들러 재사용
-                    window.speechSynthesis.speak(currentUtterance); // 현재 문장 읽기 시작
-                } else {
-                    setIsSpeaking(false); // 모든 문장이 종료되면 상태 해제
-                }
-            };
-
-            setIsSpeaking(true);
-            speakNextSentence(); // 첫 문장 읽기 시작
-        } else {
-            window.speechSynthesis.speak(utterance); // 텍스트 길이가 짧으면 한 번에 읽기
-        }
-    }, [value, speechSupported, isSpeaking, voices]);
-
-    // 컴포넌트 언마운트 시 음성 재생 중지
-    useEffect(() => {
-        return () => {
-            if (speechSupported && isSpeaking) {
-                window.speechSynthesis.cancel();
-            }
-        };
-    }, [speechSupported, isSpeaking]);
-
-    // Unified paste handler that works for both button click and Ctrl+V
-    const performPaste = async () => {
-        if (readOnly || !onPaste) return;
-
-        try {
-            const clipboardText = await navigator.clipboard.readText();
-
-            // Get current cursor position
-            const cursorPosition = textareaRef.current?.selectionStart || 0;
-            const cursorEnd = textareaRef.current?.selectionEnd || 0;
-
-            // Calculate available space considering selection
-            const selectedLength = cursorEnd - cursorPosition;
-            const currentTextLength = value.length - selectedLength;
-            const availableSpace = maxLength ? maxLength - currentTextLength : Infinity;
-
-            if (availableSpace <= 0) return; // No space available
-
-            // Trim clipboard text if necessary
-            const trimmedText = clipboardText.slice(0, availableSpace);
-
-            // Create new text by combining before cursor + pasted + after cursor
-            const beforeCursor = value.slice(0, cursorPosition);
-            const afterCursor = value.slice(cursorEnd);
-            const newText = beforeCursor + trimmedText + afterCursor;
-
-            // Update the text
-            onChange({
-                target: {
-                    value: newText
-                }
-            });
-
-            // Set cursor position after pasted text
-            const newCursorPosition = cursorPosition + trimmedText.length;
-            setTimeout(() => {
-                if (textareaRef.current) {
-                    textareaRef.current.selectionStart = newCursorPosition;
-                    textareaRef.current.selectionEnd = newCursorPosition;
-                }
-            }, 0);
-        } catch (err) {
-            console.error('Failed to paste text:', err);
-        }
-    };
-
-    // Handle paste event (Ctrl+V)
-    const handlePaste = (e) => {
-        if (readOnly || !onPaste) return;
-
-        e.preventDefault();
-        performPaste();
-    };
-
-    // Enhanced input handler
+    // Handle input/paste events
     const handleInput = (e) => {
         if (readOnly) return;
 
         const newValue = e.target.value;
-
         if (!maxLength || newValue.length <= maxLength) {
             onChange(e);
         } else {
-            // If exceeding maxLength, truncate the input
             onChange({
                 target: {
                     value: newValue.slice(0, maxLength)
                 }
             });
 
-            // Reset cursor position
             const cursorPosition = Math.min(e.target.selectionStart, maxLength);
             setTimeout(() => {
                 if (textareaRef.current) {
@@ -676,7 +551,7 @@ const TextArea = ({
                     <textarea
                         ref={textareaRef}
                         value={value}
-                        onChange={onChange}
+                        onChange={handleInput}
                         onPaste={onPaste}
                         placeholder={placeholder}
                         readOnly={readOnly}
@@ -693,7 +568,6 @@ const TextArea = ({
                         onTouchEnd={onTouchEnd}
                     />
 
-                    {/* Translation navigation with rounded corners matching parent */}
                     {translations.length > 0 && (
                         <div className="absolute bottom-0 left-0 right-0 h-12 bg-white border-t flex items-center justify-between px-4 rounded-b-lg">
                             <button
@@ -718,26 +592,13 @@ const TextArea = ({
                         </div>
                     )}
                 </div>
-
-                {!value && onPaste && (
-                    <button
-                        className="absolute top-7 right-2 px-3 py-1 text-sm text-gray-500 
-                        hover:text-gray-700 flex items-center transition-colors bg-white"
-                        onClick={onPaste}
-                    >
-                        <Clipboard className="h-4 w-4 mr-2" />
-                        Paste
-                    </button>
-                )}
             </div>
 
-            {/* Counter and speaker below textarea container - Added mb-4 for more space */}
             <div className="h-8 mt-1 mb-4 relative flex items-center justify-between px-2">
-                {/* Speaker button */}
                 <div className="flex-shrink-0">
-                    {showSpeaker && speechSupported && value && (
+                    {showSpeaker && value && (
                         <button
-                            onClick={() => setIsSpeaking(!isSpeaking)}
+                            onClick={handleSpeak}
                             className={`text-gray-500 hover:text-gray-700 ${isSpeaking ? 'text-blue-500' : ''}`}
                             title={isSpeaking ? "Stop speaking" : "Text-to-speech"}
                         >
@@ -746,7 +607,6 @@ const TextArea = ({
                     )}
                 </div>
 
-                {/* Word counter */}
                 <div className="flex-shrink-0 text-sm text-gray-500">
                     {value.length}{!isOutput && maxLength && `/${maxLength}`}
                 </div>
@@ -1780,7 +1640,7 @@ const TranslatorApp = () => {
 
             {/* Main content */}
             <div className="max-w-7xl mx-auto p-4">
-                <div className="space-y-1"> 
+                <div className="space-y-1">
                     {/* Model selector */}
                     <div className="w-full">
                         <select
@@ -1881,8 +1741,8 @@ const TranslatorApp = () => {
                             onClick={() => handleTranslate(false)}
                             disabled={!inputText || isLoading}
                             className={`px-6 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto ${inputText && !isLoading
-                                    ? 'bg-blue-500 text-white hover:bg-blue-600'
-                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                 }`}
                         >
                             <ArrowRightLeft className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -1921,8 +1781,8 @@ const TranslatorApp = () => {
                                 <button
                                     onClick={handleSaveTranslation}
                                     className={`px-6 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto transition-all duration-300 ${saveSuccess
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-gray-100 hover:bg-gray-200'
+                                        ? 'bg-green-500 text-white'
+                                        : 'bg-gray-100 hover:bg-gray-200'
                                         }`}
                                 >
                                     {saveSuccess ? (
