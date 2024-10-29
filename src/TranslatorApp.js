@@ -660,7 +660,7 @@ const TextArea = ({
 
     return (
         <div className="relative flex-1" style={{ minWidth: 0 }}>
-            <div className="relative">
+            <div className="relative rounded-lg border focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all">
                 {value && (
                     <button
                         onClick={onClear}
@@ -672,80 +672,84 @@ const TextArea = ({
                     </button>
                 )}
 
-                <textarea
-                    ref={textareaRef}
-                    value={value}
-                    onChange={handleInput}
-                    onPaste={handlePaste}
-                    placeholder={placeholder}
-                    readOnly={readOnly}
-                    className={`w-full p-4 text-lg resize-none mt-4 border rounded-lg 
-                    focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all
-                    ${readOnly ? 'bg-gray-50' : ''} ${className}`}
-                    style={{
-                        minHeight: '12rem',
-                        paddingBottom: translations.length > 0 ? '2.5rem' : '1.5rem',
-                        paddingRight: value ? '3rem' : '1rem',
-                        overflowY: 'hidden'
-                    }}
-                    onTouchStart={onTouchStart}
-                    onTouchMove={onTouchMove}
-                    onTouchEnd={onTouchEnd}
-                />
+                <div className="relative">
+                    <textarea
+                        ref={textareaRef}
+                        value={value}
+                        onChange={onChange}
+                        onPaste={onPaste}
+                        placeholder={placeholder}
+                        readOnly={readOnly}
+                        className={`w-full p-4 text-lg resize-none mt-2 rounded-lg 
+                        focus:outline-none border-0
+                        ${readOnly ? 'bg-gray-50' : ''} ${className}`}
+                        style={{
+                            minHeight: '12rem',
+                            paddingBottom: translations.length > 0 ? '3.5rem' : '1.5rem',
+                            paddingRight: value ? '3rem' : '1rem',
+                        }}
+                        onTouchStart={onTouchStart}
+                        onTouchMove={onTouchMove}
+                        onTouchEnd={onTouchEnd}
+                    />
+
+                    {/* Translation navigation with rounded corners matching parent */}
+                    {translations.length > 0 && (
+                        <div className="absolute bottom-0 left-0 right-0 h-12 bg-white border-t flex items-center justify-between px-4 rounded-b-lg">
+                            <button
+                                onClick={onPrevious}
+                                className={`p-1.5 rounded-full hover:bg-gray-100 
+                                    ${currentIndex > 0 ? 'text-gray-500 hover:text-gray-700' : 'text-gray-300'}`}
+                                disabled={currentIndex === 0}
+                            >
+                                <ChevronLeft className="h-5 w-5" />
+                            </button>
+
+                            <div className="text-sm text-gray-500">
+                                {currentIndex + 1}/{translations.length}
+                            </div>
+
+                            <button
+                                onClick={onNext}
+                                className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+                            >
+                                <ChevronRight className="h-5 w-5" />
+                            </button>
+                        </div>
+                    )}
+                </div>
 
                 {!value && onPaste && (
                     <button
                         className="absolute top-7 right-2 px-3 py-1 text-sm text-gray-500 
                         hover:text-gray-700 flex items-center transition-colors bg-white"
-                        onClick={performPaste}
+                        onClick={onPaste}
                     >
                         <Clipboard className="h-4 w-4 mr-2" />
                         Paste
                     </button>
                 )}
+            </div>
 
-                <div className="absolute -bottom-7 w-full flex justify-between items-center px-2">
-                    <div className="flex-1">
-                        {showSpeaker && speechSupported && value && (
-                            <button
-                                onClick={handleSpeak}
-                                className={`text-gray-500 hover:text-gray-700 ${isSpeaking ? 'text-blue-500' : ''}`}
-                                title={isSpeaking ? "Stop speaking" : "Text-to-speech"}
-                            >
-                                <Volume2 className={`h-5 w-5 ${isSpeaking ? 'animate-pulse' : ''}`} />
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="flex-1 text-right text-sm text-gray-500">
-                        {/* 출력 필드는 글자수만 표시 */}
-                        {value.length}{!isOutput && maxLength && `/${maxLength}`}
-                    </div>
+            {/* Counter and speaker below textarea container */}
+            <div className="h-8 mt-1 relative flex items-center justify-between px-2">
+                {/* Speaker button */}
+                <div className="flex-shrink-0">
+                    {showSpeaker && speechSupported && value && (
+                        <button
+                            onClick={() => setIsSpeaking(!isSpeaking)}
+                            className={`text-gray-500 hover:text-gray-700 ${isSpeaking ? 'text-blue-500' : ''}`}
+                            title={isSpeaking ? "Stop speaking" : "Text-to-speech"}
+                        >
+                            <Volume2 className={`h-5 w-5 ${isSpeaking ? 'animate-pulse' : ''}`} />
+                        </button>
+                    )}
                 </div>
 
-                {translations.length > 0 && (
-                    <div className="absolute bottom-4 left-0 w-full flex justify-between items-center px-2">
-                        <button
-                            onClick={onPrevious}
-                            className={`p-1.5 rounded-full hover:bg-gray-100 
-                                ${currentIndex > 0 ? 'text-gray-500 hover:text-gray-700' : 'text-gray-300'}`}
-                            disabled={currentIndex === 0}
-                        >
-                            <ChevronLeft className="h-5 w-5" />
-                        </button>
-
-                        <div className="text-sm text-gray-500">
-                            {currentIndex + 1}/{translations.length}
-                        </div>
-
-                        <button
-                            onClick={onNext}
-                            className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700"
-                        >
-                            <ChevronRight className="h-5 w-5" />
-                        </button>
-                    </div>
-                )}
+                {/* Word counter */}
+                <div className="flex-shrink-0 text-sm text-gray-500">
+                    {value.length}{!isOutput && maxLength && `/${maxLength}`}
+                </div>
             </div>
         </div>
     );
@@ -1758,7 +1762,6 @@ const TranslatorApp = () => {
             {/* Header */}
             <div className="w-full border-b bg-white">
                 <div className="max-w-7xl mx-auto">
-                    {/* Top bar with logo and menu button only */}
                     <div className="flex items-center p-4 space-x-4">
                         <button
                             onClick={() => setIsSidebarOpen(true)}
@@ -1777,8 +1780,8 @@ const TranslatorApp = () => {
 
             {/* Main content */}
             <div className="max-w-7xl mx-auto p-4">
-                <div className="space-y-6">
-                    {/* Model selector - moved below the header */}
+                <div className="space-y-1"> 
+                    {/* Model selector */}
                     <div className="w-full">
                         <select
                             value={selectedModel}
@@ -1797,32 +1800,39 @@ const TranslatorApp = () => {
                         </select>
                     </div>
 
-                    <LanguageSelector
-                        sourceLang={sourceLang}
-                        targetLang={targetLang}
-                        onSourceChange={setSourceLang}
-                        onTargetChange={setTargetLang}
-                        inputText={inputText}
-                        translatedText={translatedText}
-                        onInputTextChange={setInputText}
-                        onTranslatedTextChange={(text) => {
-                            setTranslations([{ text, timestamp: new Date() }]);
-                            setCurrentIndex(0);
-                        }}
-                        onResetTranslations={() => {
-                            setTranslations([]);
-                            setCurrentIndex(0);
-                        }}
-                    />
+                    {/* Language selector */}
+                    <div className="mt-2"> {/* Added wrapper with smaller margin */}
+                        <LanguageSelector
+                            sourceLang={sourceLang}
+                            targetLang={targetLang}
+                            onSourceChange={setSourceLang}
+                            onTargetChange={setTargetLang}
+                            inputText={inputText}
+                            translatedText={translatedText}
+                            onInputTextChange={setInputText}
+                            onTranslatedTextChange={(text) => {
+                                setTranslations([{ text, timestamp: new Date() }]);
+                                setCurrentIndex(0);
+                            }}
+                            onResetTranslations={() => {
+                                setTranslations([]);
+                                setCurrentIndex(0);
+                            }}
+                        />
+                    </div>
 
-                    <ToneSelector
-                        selectedTone={selectedTone}
-                        onToneChange={setSelectedTone}
-                        selectedModel={selectedModel}
-                    />
+                    {/* Tone selector */}
+                    <div className="mt-2 mb-2"> {/* Added wrapper with smaller margins */}
+                        <ToneSelector
+                            selectedTone={selectedTone}
+                            onToneChange={setSelectedTone}
+                            selectedModel={selectedModel}
+                        />
+                    </div>
 
+                    {/* Text areas */}
                     <div className="flex flex-col md:flex-row gap-6">
-                        {/* Input TextArea */}
+                        {/* Input TextArea - adjusted padding and margin */}
                         <TextArea
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
@@ -1831,9 +1841,10 @@ const TranslatorApp = () => {
                             maxLength={5000}
                             onPaste={true}
                             onClear={() => handleClear()}
+                            className="mb-2" // Added margin bottom
                         />
 
-                        {/* Output TextArea */}
+                        {/* Output TextArea - adjusted padding and margin */}
                         <TextArea
                             value={translatedText}
                             isOutput={true}
@@ -1859,6 +1870,7 @@ const TranslatorApp = () => {
                                 setTranslations([]);
                                 setCurrentIndex(0);
                             }}
+                            className="mb-2" // Added margin bottom
                         />
                     </div>
 
@@ -1866,13 +1878,13 @@ const TranslatorApp = () => {
                     {error && <Alert>{error}</Alert>}
 
                     {/* Action buttons */}
-                    <div className="flex flex-col sm:flex-row justify-center gap-3">
+                    <div className="flex flex-col sm:flex-row justify-center gap-3 mt-6"> {/* Added margin top */}
                         <button
                             onClick={() => handleTranslate(false)}
                             disabled={!inputText || isLoading}
                             className={`px-6 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto ${inputText && !isLoading
-                                ? 'bg-blue-500 text-white hover:bg-blue-600'
-                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                 }`}
                         >
                             <ArrowRightLeft className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -1881,6 +1893,7 @@ const TranslatorApp = () => {
 
                         {translatedText && (
                             <>
+                                {/* Copy button */}
                                 <button
                                     onClick={async () => {
                                         try {
@@ -1906,11 +1919,12 @@ const TranslatorApp = () => {
                                     )}
                                 </button>
 
+                                {/* Save button */}
                                 <button
                                     onClick={handleSaveTranslation}
                                     className={`px-6 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto transition-all duration-300 ${saveSuccess
-                                        ? 'bg-green-500 text-white'
-                                        : 'bg-gray-100 hover:bg-gray-200'
+                                            ? 'bg-green-500 text-white'
+                                            : 'bg-gray-100 hover:bg-gray-200'
                                         }`}
                                 >
                                     {saveSuccess ? (
@@ -1933,5 +1947,4 @@ const TranslatorApp = () => {
         </div>
     );
 };
-
 export default TranslatorApp;
