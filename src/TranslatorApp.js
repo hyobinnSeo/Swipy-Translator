@@ -509,69 +509,33 @@ const TextArea = ({
         if (readOnly) return;
 
         const newValue = e.target.value;
+
         if (!maxLength || newValue.length <= maxLength) {
             onChange(e);
         } else {
-            onChange({
-                target: {
-                    value: newValue.slice(0, maxLength)
-                }
-            });
-
-            const cursorPosition = Math.min(e.target.selectionStart, maxLength);
-            setTimeout(() => {
-                if (textareaRef.current) {
-                    textareaRef.current.selectionStart = cursorPosition;
-                    textareaRef.current.selectionEnd = cursorPosition;
-                }
-            }, 0);
+            // Do not update the state when maxLength is exceeded
+            // The textarea will re-render with the existing value
         }
     };
+
+
 
     // Handle paste event
     const handlePaste = (e) => {
         if (readOnly) return;
 
-        // Get pasted content
         const pastedText = e.clipboardData.getData('text');
+        const availableSpace = maxLength - value.length + (e.target.selectionEnd - e.target.selectionStart);
 
-        // If there's a maxLength, ensure we don't exceed it
-        if (maxLength) {
-            const currentLength = value.length;
-            const selectionStart = e.target.selectionStart;
-            const selectionEnd = e.target.selectionEnd;
-            const selectedLength = selectionEnd - selectionStart;
-
-            // Calculate how much text we can add
-            const availableSpace = maxLength - currentLength + selectedLength;
-
-            if (pastedText.length > availableSpace) {
-                // Prevent default paste
-                e.preventDefault();
-
-                // Create new text within limits
-                const newText = value.slice(0, selectionStart) +
-                    pastedText.slice(0, availableSpace) +
-                    value.slice(selectionEnd);
-
-                // Update with truncated text
-                onChange({
-                    target: {
-                        value: newText
-                    }
-                });
-
-                // Set cursor position
-                const newPosition = selectionStart + availableSpace;
-                setTimeout(() => {
-                    if (textareaRef.current) {
-                        textareaRef.current.selectionStart = newPosition;
-                        textareaRef.current.selectionEnd = newPosition;
-                    }
-                }, 0);
-            }
+        if (pastedText.length > availableSpace) {
+            e.preventDefault();
+            const newText = value.slice(0, e.target.selectionStart) +
+                pastedText.slice(0, availableSpace) +
+                value.slice(e.target.selectionEnd);
+            onChange({ target: { value: newText } });
         }
     };
+
 
     // Handle paste from clipboard button
     const handlePasteFromClipboard = async () => {
