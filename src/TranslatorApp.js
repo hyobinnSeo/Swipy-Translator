@@ -407,7 +407,6 @@ const TextArea = ({
     useEffect(() => {
         if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
             speechRef.current = window.speechSynthesis;
-            // Pre-load voices
             speechRef.current.getVoices();
         }
 
@@ -428,15 +427,9 @@ const TextArea = ({
             return;
         }
 
-        // Cancel any ongoing speech
         speechRef.current.cancel();
-
         const utterance = new SpeechSynthesisUtterance(value);
-
-        // Get available voices
         const voices = speechRef.current.getVoices();
-
-        // Try to find an English voice
         const englishVoice = voices.find(voice =>
             voice.lang.startsWith('en') && !voice.localService
         ) || voices.find(voice =>
@@ -447,12 +440,10 @@ const TextArea = ({
             utterance.voice = englishVoice;
         }
 
-        // Configure speech parameters
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
         utterance.volume = 1.0;
 
-        // Handle speech events
         utterance.onstart = () => setIsSpeaking(true);
         utterance.onend = () => setIsSpeaking(false);
         utterance.onerror = () => setIsSpeaking(false);
@@ -460,7 +451,7 @@ const TextArea = ({
         speechRef.current.speak(utterance);
     }, [value, isSpeaking]);
 
-    // Height adjustment logic remains the same
+    // Height adjustment logic
     const adjustHeight = useCallback(() => {
         if (!textareaRef.current) return;
 
@@ -533,17 +524,46 @@ const TextArea = ({
         }
     };
 
+    // Handle paste from clipboard
+    const handlePasteFromClipboard = async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            const event = {
+                target: {
+                    value: text
+                }
+            };
+            handleInput(event);
+        } catch (err) {
+            console.error('Failed to read clipboard:', err);
+        }
+    };
+
     return (
         <div className="relative flex-1" style={{ minWidth: 0 }}>
-            <div className="relative rounded-lg border focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all">
+            <div className="relative rounded-lg border focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all bg-white overflow-hidden">
+                {/* Clear button */}
                 {value && (
                     <button
                         onClick={onClear}
-                        className="absolute top-7 right-4 p-1.5 text-gray-400 hover:text-gray-600 
+                        className="absolute top-2 right-4 p-1.5 text-gray-400 hover:text-gray-600 
                         hover:bg-gray-100 rounded-full transition-colors z-10"
                         title="Clear text"
                     >
                         <X className="h-4 w-4" />
+                    </button>
+                )}
+
+                {/* Paste button */}
+                {!readOnly && !value && onPaste && (
+                    <button
+                        onClick={handlePasteFromClipboard}
+                        className="absolute top-2 right-4 px-3 py-1.5 text-gray-600 hover:text-gray-800 
+                        hover:bg-gray-100 rounded-lg transition-colors z-10 flex items-center gap-2"
+                        title="Paste from clipboard"
+                    >
+                        <Clipboard className="h-4 w-4" />
+                        <span className="text-sm font-medium">Paste</span>
                     </button>
                 )}
 
@@ -555,21 +575,22 @@ const TextArea = ({
                         onPaste={onPaste}
                         placeholder={placeholder}
                         readOnly={readOnly}
-                        className={`w-full p-4 text-lg resize-none mt-2 rounded-lg 
-                        focus:outline-none border-0
+                        className={`w-full px-4 py-4 text-lg resize-none rounded-lg 
+                        focus:outline-none border-0 bg-white
                         ${readOnly ? 'bg-gray-50' : ''} ${className}`}
                         style={{
                             minHeight: '12rem',
-                            paddingBottom: translations.length > 0 ? '3.5rem' : '1.5rem',
-                            paddingRight: value ? '3rem' : '1rem',
+                            paddingBottom: translations.length > 0 ? '3.5rem' : '1rem',
+                            paddingRight: value ? '3rem' : '5rem',  // Increased right padding to accommodate wider paste button
                         }}
                         onTouchStart={onTouchStart}
                         onTouchMove={onTouchMove}
                         onTouchEnd={onTouchEnd}
                     />
 
+                    {/* Translation navigation */}
                     {translations.length > 0 && (
-                        <div className="absolute bottom-0 left-0 right-0 h-12 bg-white border-t flex items-center justify-between px-4 rounded-b-lg">
+                        <div className="absolute bottom-0 left-0 right-0 h-12 bg-white border-t flex items-center justify-between px-4">
                             <button
                                 onClick={onPrevious}
                                 className={`p-1.5 rounded-full hover:bg-gray-100 
@@ -594,6 +615,7 @@ const TextArea = ({
                 </div>
             </div>
 
+            {/* Bottom toolbar */}
             <div className="h-8 mt-1 mb-4 relative flex items-center justify-between px-2">
                 <div className="flex-shrink-0">
                     {showSpeaker && value && (
