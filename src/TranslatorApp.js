@@ -759,9 +759,7 @@ const DialogWrapper = ({ isOpen, onClose, children, className = '' }) => {
     );
 };
 
-const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, setModelInstructions }) => {
-    const [selectedTone, setSelectedTone] = useState('standard');
-
+const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, setModelInstructions, selectedTone }) => {
     // Find the current model name from AVAILABLE_MODELS
     const currentModel = AVAILABLE_MODELS.find(model => model.id === selectedModel)?.name || selectedModel;
 
@@ -827,19 +825,8 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Tone Instructions:
+                            Tone Instructions for {modelTones.find(t => t.id === selectedTone)?.name}:
                         </label>
-                        <select
-                            value={selectedTone}
-                            onChange={(e) => setSelectedTone(e.target.value)}
-                            className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 mb-2"
-                        >
-                            {modelTones.map(tone => (
-                                <option key={tone.id} value={tone.id}>
-                                    {tone.name}
-                                </option>
-                            ))}
-                        </select>
                         <textarea
                             value={modelInstructions[selectedModel]['tone-instructions'][selectedTone]}
                             onChange={(e) => setModelInstructions({
@@ -1346,6 +1333,7 @@ const TranslatorApp = () => {
     const [showSafetyWarning, setShowSafetyWarning] = useState(false);
     const [selectedTone, setSelectedTone] = useState('standard');
 
+    /* eslint-disable react-hooks/exhaustive-deps */
     useEffect(() => {
         // Reset tone to standard when changing models if current tone isn't available
         const modelTones = TONES[selectedModel] || TONES[MODELS.GEMINI];
@@ -1353,6 +1341,7 @@ const TranslatorApp = () => {
             setSelectedTone('standard');
         }
     }, [selectedModel]);
+/* eslint-enable react-hooks/exhaustive-deps */
 
     useEffect(() => {
         setHistory(loadHistory());
@@ -1722,6 +1711,7 @@ const TranslatorApp = () => {
                 modelInstructions={modelInstructions}
                 selectedModel={selectedModel}
                 setModelInstructions={setModelInstructions}
+                selectedTone={selectedTone} 
             />
 
             <RequestLogViewer
