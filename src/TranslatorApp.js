@@ -323,7 +323,7 @@ const TextArea = ({
     placeholder,
     readOnly = false,
     className = '',
-    onPaste,
+    onPaste, // This should now be a boolean
     showSpeaker = false,
     maxLength,
     onClear,
@@ -337,29 +337,83 @@ const TextArea = ({
     isOutput = false
 }) => {
     const textareaRef = React.useRef(null);
+    const resizeObserverRef = React.useRef(null);
+    const adjustmentTimeoutRef = React.useRef(null);
     const [voices, setVoices] = useState([]);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [speechSupported, setSpeechSupported] = useState(false);
 
-    // 텍스트 영역의 높이를 자동으로 조절하는 함수
+    // Debounced height adjustment function
     const adjustHeight = useCallback(() => {
-        if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto'; // 높이를 자동으로 초기화
-            const newHeight = Math.max(192, textareaRef.current.scrollHeight); // 스크롤 높이를 기준으로 새로운 높이 계산
-            textareaRef.current.style.height = `${newHeight}px`; // 계산된 높이로 설정
-            textareaRef.current.style.overflowY = textareaRef.current.scrollHeight <= newHeight ? 'hidden' : 'auto'; // 스크롤 필요 여부에 따른 overflow 설정
+        if (!textareaRef.current) return;
+
+        // Cancel any pending adjustment
+        if (adjustmentTimeoutRef.current) {
+            cancelAnimationFrame(adjustmentTimeoutRef.current);
         }
+
+        // Schedule new adjustment in the next animation frame
+        adjustmentTimeoutRef.current = requestAnimationFrame(() => {
+            const textarea = textareaRef.current;
+            if (!textarea) return;
+
+            // Store the current scroll position
+            const scrollPos = window.scrollY;
+
+            // Reset height to auto to get the true scrollHeight
+            textarea.style.height = 'auto';
+
+            // Calculate new height with minimum of 192px
+            const newHeight = Math.max(192, textarea.scrollHeight);
+
+            // Set the new height
+            textarea.style.height = `${newHeight}px`;
+
+            // Update overflow based on content
+            textarea.style.overflowY = textarea.scrollHeight <= newHeight ? 'hidden' : 'auto';
+
+            // Restore scroll position to prevent page jump
+            window.scrollTo(0, scrollPos);
+        });
     }, []);
 
-    // 컴포넌트가 마운트될 때와 value 변경 시 높이 조절
+    // Initialize ResizeObserver
     useEffect(() => {
-        adjustHeight(); // 초기 높이 설정
-        const resizeObserver = new ResizeObserver(adjustHeight); // 요소 크기 변경 감지
-        if (textareaRef.current) {
-            resizeObserver.observe(textareaRef.current); // ref가 할당된 요소를 감시
+        if (!textareaRef.current) return;
+
+        // Cleanup previous observer if it exists
+        if (resizeObserverRef.current) {
+            resizeObserverRef.current.disconnect();
         }
-        return () => resizeObserver.disconnect(); // 컴포넌트가 언마운트될 때 감시 종료
+
+        // Create new ResizeObserver with debounced callback
+        resizeObserverRef.current = new ResizeObserver((entries) => {
+            // Use requestAnimationFrame to limit updates
+            requestAnimationFrame(() => {
+                if (!Array.isArray(entries) || !entries.length) return;
+                adjustHeight();
+            });
+        });
+
+        // Start observing
+        resizeObserverRef.current.observe(textareaRef.current);
+
+        // Cleanup function
+        return () => {
+            if (resizeObserverRef.current) {
+                resizeObserverRef.current.disconnect();
+            }
+            if (adjustmentTimeoutRef.current) {
+                cancelAnimationFrame(adjustmentTimeoutRef.current);
+            }
+        };
+    }, [adjustHeight]);
+
+    // Adjust height when value changes
+    useEffect(() => {
+        adjustHeight();
     }, [value, adjustHeight]);
+
 
     // 음성 합성 지원 여부를 확인하고 음성 리스트를 로드
     useEffect(() => {
@@ -462,6 +516,87 @@ const TextArea = ({
         };
     }, [speechSupported, isSpeaking]);
 
+    // Unified paste handler that works for both button click and Ctrl+V
+    const performPaste = async () => {
+        if (readOnly || !onPaste) return;
+
+        try {
+            const clipboardText = await navigator.clipboard.readText();
+
+            // Get current cursor position
+            const cursorPosition = textareaRef.current?.selectionStart || 0;
+            const cursorEnd = textareaRef.current?.selectionEnd || 0;
+
+            // Calculate available space considering selection
+            const selectedLength = cursorEnd - cursorPosition;
+            const currentTextLength = value.length - selectedLength;
+            const availableSpace = maxLength ? maxLength - currentTextLength : Infinity;
+
+            if (availableSpace <= 0) return; // No space available
+
+            // Trim clipboard text if necessary
+            const trimmedText = clipboardText.slice(0, availableSpace);
+
+            // Create new text by combining before cursor + pasted + after cursor
+            const beforeCursor = value.slice(0, cursorPosition);
+            const afterCursor = value.slice(cursorEnd);
+            const newText = beforeCursor + trimmedText + afterCursor;
+
+            // Update the text
+            onChange({
+                target: {
+                    value: newText
+                }
+            });
+
+            // Set cursor position after pasted text
+            const newCursorPosition = cursorPosition + trimmedText.length;
+            setTimeout(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.selectionStart = newCursorPosition;
+                    textareaRef.current.selectionEnd = newCursorPosition;
+                }
+            }, 0);
+        } catch (err) {
+            console.error('Failed to paste text:', err);
+        }
+    };
+
+    // Handle paste event (Ctrl+V)
+    const handlePaste = (e) => {
+        if (readOnly || !onPaste) return;
+
+        e.preventDefault();
+        performPaste();
+    };
+
+    // Enhanced input handler
+    const handleInput = (e) => {
+        if (readOnly) return;
+
+        const newValue = e.target.value;
+
+        if (!maxLength || newValue.length <= maxLength) {
+            onChange(e);
+        } else {
+            // If exceeding maxLength, truncate the input
+            onChange({
+                target: {
+                    value: newValue.slice(0, maxLength)
+                }
+            });
+
+            // Reset cursor position
+            const cursorPosition = Math.min(e.target.selectionStart, maxLength);
+            setTimeout(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.selectionStart = cursorPosition;
+                    textareaRef.current.selectionEnd = cursorPosition;
+                }
+            }, 0);
+        }
+    };
+
     return (
         <div className="relative flex-1" style={{ minWidth: 0 }}>
             <div className="relative">
@@ -479,38 +614,8 @@ const TextArea = ({
                 <textarea
                     ref={textareaRef}
                     value={value}
-                    onChange={(e) => {
-                        if (isOutput || !maxLength || e.target.value.length <= maxLength) {
-                            onChange(e);
-                        }
-                    }}
-                    onPaste={async (e) => {
-                        if (onPaste) {
-                            e.preventDefault(); // Prevent default paste
-                            try {
-                                const text = await navigator.clipboard.readText();
-                                // If there's a maxLength limit, trim the pasted text
-                                if (maxLength) {
-                                    const availableSpace = maxLength - value.length;
-                                    const trimmedText = text.slice(0, availableSpace);
-                                    // Create a new synthetic event with the trimmed text
-                                    onChange({
-                                        target: {
-                                            value: value + trimmedText
-                                        }
-                                    });
-                                } else {
-                                    onChange({
-                                        target: {
-                                            value: value + text
-                                        }
-                                    });
-                                }
-                            } catch (err) {
-                                console.error('Failed to read clipboard:', err);
-                            }
-                        }
-                    }}
+                    onChange={handleInput}
+                    onPaste={handlePaste}
                     placeholder={placeholder}
                     readOnly={readOnly}
                     className={`w-full p-4 text-lg resize-none mt-4 border rounded-lg 
@@ -531,7 +636,7 @@ const TextArea = ({
                     <button
                         className="absolute top-7 right-2 px-3 py-1 text-sm text-gray-500 
                         hover:text-gray-700 flex items-center transition-colors bg-white"
-                        onClick={onPaste}
+                        onClick={performPaste}
                     >
                         <Clipboard className="h-4 w-4 mr-2" />
                         Paste
@@ -1640,15 +1745,8 @@ const TranslatorApp = () => {
                             onChange={(e) => setInputText(e.target.value)}
                             placeholder="Enter text..."
                             showSpeaker={true}
-                            maxLength={5000}  // 입력 필드만 제한
-                            onPaste={async () => {
-                                try {
-                                    const text = await navigator.clipboard.readText();
-                                    setInputText(text);
-                                } catch (err) {
-                                    console.error('Failed to read clipboard:', err);
-                                }
-                            }}
+                            maxLength={5000}
+                            onPaste={true}  // Just pass true instead of a function
                             onClear={() => handleClear()}
                         />
 
