@@ -197,6 +197,19 @@ const DEFAULT_INSTRUCTIONS = {
     }
 };
 
+const LANGUAGE_VOICE_MAPPING = {
+    'en': 'en-US-JennyNeural',
+    'ko': 'ko-KR-SunHiNeural',
+    'ja': 'ja-JP-NanamiNeural',
+    'zh': 'zh-CN-XiaoxiaoNeural',
+    'ar': 'ar-SA-ZariyahNeural',
+    'fr': 'fr-FR-DeniseNeural',
+    'es': 'es-ES-ElviraNeural',
+    'it': 'it-IT-ElsaNeural',
+    'de': 'de-DE-KatjaNeural',
+    'pt': 'pt-BR-FranciscaNeural'
+};
+
 const getToneInstructions = (tone, modelInstructions, selectedModel) => {
     const toneInstructions = modelInstructions[selectedModel]['tone-instructions'];
     return {
@@ -399,61 +412,145 @@ const TextArea = ({
     currentIndex = 0,
     onPrevious,
     onNext,
-    isOutput = false
+    isOutput = false,
+    language = 'en' // Add language prop
 }) => {
     const textareaRef = useRef(null);
     const resizeObserverRef = useRef(null);
     const adjustmentTimeoutRef = useRef(null);
+    const audioRef = useRef(new Audio());
     const [isSpeaking, setIsSpeaking] = useState(false);
-    const speechRef = useRef(null);
 
-    // Initialize speech synthesis
-    useEffect(() => {
-        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-            speechRef.current = window.speechSynthesis;
-            speechRef.current.getVoices();
+    // Azure TTS configuration
+    const subscriptionKey = process.env.REACT_APP_AZURE_TTS_KEY;
+    const region = process.env.REACT_APP_AZURE_REGION;
+    const baseUrl = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;
+
+    const getAccessToken = async () => {
+        try {
+            const response = await fetch(
+                `https://${region}.api.cognitive.microsoft.com/sts/v1.0/issueToken`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Ocp-Apim-Subscription-Key': subscriptionKey
+                    }
+                }
+            );
+
+            if (!response.ok) throw new Error('Failed to get access token');
+            return await response.text();
+        } catch (error) {
+            console.error('Error getting Azure access token:', error);
+            throw error;
         }
+    };
 
-        return () => {
-            if (speechRef.current) {
-                speechRef.current.cancel();
-            }
-        };
-    }, []);
+    const escapeXMLText = (text) => {
+        return text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;');
+    };
 
-    // Handle text-to-speech
-    const handleSpeak = useCallback(() => {
-        if (!speechRef.current || !value) return;
+    const handleSpeak = useCallback(async () => {
+        if (!value || !subscriptionKey || !region) return;
 
         if (isSpeaking) {
-            speechRef.current.cancel();
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
             setIsSpeaking(false);
             return;
         }
 
-        speechRef.current.cancel();
-        const utterance = new SpeechSynthesisUtterance(value);
-        const voices = speechRef.current.getVoices();
-        const englishVoice = voices.find(voice =>
-            voice.lang.startsWith('en') && !voice.localService
-        ) || voices.find(voice =>
-            voice.lang.startsWith('en')
-        );
+        try {
+            const accessToken = await getAccessToken();
 
-        if (englishVoice) {
-            utterance.voice = englishVoice;
+            // Get appropriate voice for the language
+            const voice = LANGUAGE_VOICE_MAPPING[language] || LANGUAGE_VOICE_MAPPING.en;
+            const langCode = voice.split('-').slice(0, 2).join('-'); // e.g., "ko-KR" from "ko-KR-SunHiNeural"
+
+            // Escape special characters in the text
+            const escapedText = escapeXMLText(value);
+
+            const ssml = `
+                <speak version='1.0' xml:lang='${langCode}'>
+                    <voice name='${voice}'>
+                        <prosody rate="0.9">
+                            ${escapedText}
+                        </prosody>
+                    </voice>
+                </speak>
+            `;
+
+            const response = await fetch(baseUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/ssml+xml',
+                    'X-Microsoft-OutputFormat': 'audio-24khz-160kbitrate-mono-mp3',
+                    'User-Agent': 'HoochooTranslator'
+                },
+                body: ssml
+            });
+
+            if (!response.ok) {
+                throw new Error(`TTS request failed: ${response.status} ${response.statusText}`);
+            }
+
+            const audioBlob = await response.blob();
+
+            // Revoke any existing object URL
+            if (audioRef.current.src.startsWith('blob:')) {
+                URL.revokeObjectURL(audioRef.current.src);
+            }
+
+            const audioUrl = URL.createObjectURL(audioBlob);
+
+            // Set up audio events
+            audioRef.current.onended = () => {
+                setIsSpeaking(false);
+                URL.revokeObjectURL(audioUrl);
+            };
+
+            audioRef.current.onerror = (e) => {
+                console.error('Audio playback error:', e);
+                setIsSpeaking(false);
+                URL.revokeObjectURL(audioUrl);
+            };
+
+            // Load and play the audio
+            audioRef.current.src = audioUrl;
+            const playPromise = audioRef.current.play();
+
+            if (playPromise !== undefined) {
+                playPromise
+                    .then(() => {
+                        setIsSpeaking(true);
+                    })
+                    .catch(error => {
+                        console.error('Playback error:', error);
+                        setIsSpeaking(false);
+                        URL.revokeObjectURL(audioUrl);
+                    });
+            }
+        } catch (error) {
+            console.error('Azure TTS error:', error);
+            setIsSpeaking(false);
         }
+    }, [value, subscriptionKey, region, isSpeaking, baseUrl, language]);
 
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
-        utterance.volume = 1.0;
-
-        utterance.onstart = () => setIsSpeaking(true);
-        utterance.onend = () => setIsSpeaking(false);
-        utterance.onerror = () => setIsSpeaking(false);
-
-        speechRef.current.speak(utterance);
-    }, [value, isSpeaking]);
+    // Cleanup audio on unmount
+    useEffect(() => {
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.src = '';
+            }
+        };
+    }, []);
 
     // Height adjustment logic
     const adjustHeight = useCallback(() => {
@@ -509,16 +606,10 @@ const TextArea = ({
         if (readOnly) return;
 
         const newValue = e.target.value;
-
         if (!maxLength || newValue.length <= maxLength) {
             onChange(e);
-        } else {
-            // Do not update the state when maxLength is exceeded
-            // The textarea will re-render with the existing value
         }
     };
-
-
 
     // Handle paste event
     const handlePaste = (e) => {
@@ -536,7 +627,6 @@ const TextArea = ({
         }
     };
 
-
     // Handle paste from clipboard button
     const handlePasteFromClipboard = async () => {
         try {
@@ -551,6 +641,8 @@ const TextArea = ({
             console.error('Failed to read clipboard:', err);
         }
     };
+
+    const shouldShowSpeaker = showSpeaker && value && language !== 'auto';
 
     return (
         <div className="relative flex-1" style={{ minWidth: 0 }}>
@@ -631,7 +723,7 @@ const TextArea = ({
             {/* Bottom toolbar */}
             <div className="h-8 mt-1 mb-4 relative flex items-center justify-between px-2">
                 <div className="flex-shrink-0">
-                    {showSpeaker && value && (
+                    {shouldShowSpeaker && (
                         <button
                             onClick={handleSpeak}
                             className={`text-gray-500 hover:text-gray-700 ${isSpeaking ? 'text-blue-500' : ''}`}
@@ -639,6 +731,11 @@ const TextArea = ({
                         >
                             <Volume2 className={`h-5 w-5 ${isSpeaking ? 'animate-pulse' : ''}`} />
                         </button>
+                    )}
+                    {showSpeaker && value && language === 'auto' && (
+                        <span className="text-sm text-gray-400 italic">
+                            TTS not available in auto-detect mode
+                        </span>
                     )}
                 </div>
 
@@ -1766,6 +1863,7 @@ const TranslatorApp = () => {
                             showSpeaker={true}
                             maxLength={5000}
                             onClear={() => handleClear()}
+                            language={sourceLang}  // Add this line for input TextArea
                         />
 
                         {/* Output TextArea */}
@@ -1794,6 +1892,7 @@ const TranslatorApp = () => {
                                 setTranslations([]);
                                 setCurrentIndex(0);
                             }}
+                            language={targetLang}  // Add this line for output TextArea
                         />
                     </div>
 
