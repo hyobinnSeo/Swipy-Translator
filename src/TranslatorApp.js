@@ -208,23 +208,19 @@ const LanguageSelector = ({
     ];
 
     const switchLanguages = () => {
-        // 언어 스왑
-        if (sourceLang === 'auto') {
-            onSourceChange(targetLang);
-            onTargetChange('en');
-        } else {
-            onSourceChange(targetLang);
-            onTargetChange(sourceLang);
-        }
+        // Basic language swap
+        onSourceChange(targetLang);
+        onTargetChange(sourceLang);
 
-        // 텍스트 내용 스왑
-        const tempText = inputText;
+        // Swap text content
         onInputTextChange(translatedText);
-        onTranslatedTextChange(tempText);
+        onTranslatedTextChange(inputText);
 
-        // 번역 리스트 리셋
+        // Reset translations
         onResetTranslations();
     };
+
+    const isAutoDetect = sourceLang === 'auto';
 
     return (
         <div className="flex items-center justify-between gap-2 mt-4 mb-2">
@@ -245,8 +241,12 @@ const LanguageSelector = ({
 
             <button
                 onClick={switchLanguages}
-                className="p-2 rounded-full hover:bg-gray-100"
-                title="Switch languages"
+                disabled={isAutoDetect}
+                className={`p-2 rounded-full ${isAutoDetect
+                        ? 'text-gray-300 cursor-not-allowed'
+                        : 'hover:bg-gray-100 text-gray-600'
+                    }`}
+                title={isAutoDetect ? "Language swap disabled during auto-detection" : "Switch languages"}
             >
                 <ArrowLeftRight className="w-5 h-5" />
             </button>
