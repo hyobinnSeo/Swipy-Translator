@@ -62,9 +62,49 @@ const TONES = {
             description: '공식적이고 예의 바른 말투 / Professional and polite tone'
         },
         {
+            id: 'humorous',
+            name: '유머러스 / Humorous',
+            description: '유머러스하고 재치있는 말투 / Humorous and witty tone'
+        },
+        {
             id: 'business',
             name: '비즈니스 / Business',
             description: '업무용 전문적인 말투 / Business-oriented tone'
+        },
+        {
+            id: 'educational',
+            name: '교육 / Educational',
+            description: '이해하기 쉬운 교육용 말투 / Clear instructional tone'
+        },
+        {
+            id: 'literary',
+            name: '문학 / Literary',
+            description: '우아하고 세련된 문학적 말투 / Elegant literary style'
+        },
+        {
+            id: 'diplomatic',
+            name: '외교 / Diplomatic',
+            description: '신중하고 정중한 말투 / Tactful and considerate tone'
+        },
+        {
+            id: 'marketing',
+            name: '마케팅 / Marketing',
+            description: '설득력 있는 홍보용 말투 / Persuasive marketing style'
+        },
+        {
+            id: 'academic',
+            name: '학술 / Academic',
+            description: '학술적이고 전문적인 말투 / Scholarly and technical tone'
+        },
+        {
+            id: 'legal',
+            name: '법률 / Legal',
+            description: '법률 문서 스타일 / Legal document style'
+        },
+        {
+            id: 'poetic',
+            name: '시적 / Poetic',
+            description: '운율있고 시적인 말투 / Rhythmic and poetic tone'
         }
     ],
     [MODELS.COMMAND]: [
@@ -84,15 +124,10 @@ const TONES = {
             description: '공식적이고 예의 바른 말투 / Professional and polite tone'
         },
         {
-            id: 'business',
-            name: '비즈니스 / Business',
-            description: '업무용 전문적인 말투 / Business-oriented tone'
-        },
-        {
-            id: 'spicy',
-            name: '스파이시 / Spicy',
+            id: 'humorous',
+            name: '유머러스 / Humorous',
             description: '유머러스하고 재치있는 말투 / Humorous and witty tone'
-        }
+        },
     ]
 };
 
@@ -121,13 +156,69 @@ const DEFAULT_INSTRUCTIONS = {
 - Use proper honorifics where applicable
 - Keep a respectful and courteous tone
 - Prioritize precise and elegant expression`,
+            'humorous': `Tone and Style:
+- Use witty and clever expressions
+- Incorporate appropriate humor and wordplay
+- Keep the tone engaging and entertaining
+- Use creative language choices
+- Maintain cultural sensitivity while being playful
+- Adapt jokes and puns to target language context`,
             'business': `Tone and Style:
 - Use professional business language
 - Incorporate industry-standard terminology
 - Maintain clear and concise expression
 - Use appropriate business formalities
 - Keep a professional yet accessible tone
-- Focus on clarity and efficiency in communication`
+- Focus on clarity and efficiency in communication`,
+            'educational': `Tone and Style:
+- Use clear, instructional language
+- Break down complex concepts
+- Maintain an engaging teaching tone
+- Use examples where appropriate
+- Focus on clarity and comprehension
+- Include appropriate learning-oriented terminology`,
+            'literary': `Tone and Style:
+- Use sophisticated vocabulary and phrasing
+- Maintain artistic and creative expression
+- Preserve metaphors and literary devices
+- Focus on aesthetic quality
+- Keep the elegant and refined style
+- Adapt cultural references appropriately`,
+            'diplomatic': `Tone and Style:
+- Use tactful and measured language
+- Maintain diplomatic courtesy
+- Focus on neutral and balanced expression
+- Use appropriate diplomatic terminology
+- Avoid potentially sensitive phrasing
+- Preserve formal diplomatic conventions`,
+            'marketing': `Tone and Style:
+- Use persuasive and engaging language
+- Incorporate marketing terminology
+- Maintain brand voice and style
+- Focus on impact and call-to-action
+- Use compelling and attractive phrasing
+- Adapt promotional elements appropriately`,
+            'academic': `Tone and Style:
+- Use scholarly and technical language
+- Maintain academic conventions
+- Include field-specific terminology
+- Focus on precision and accuracy
+- Use appropriate citations and references
+- Preserve academic tone and structure`,
+            'legal': `Tone and Style:
+- Use precise legal terminology
+- Maintain legal document structure
+- Focus on exact meaning and implications
+- Use appropriate legal conventions
+- Preserve legal clarity and specificity
+- Include necessary legal formatting`,
+            'poetic': `Tone and Style:
+- Preserve rhythm and meter when possible
+- Maintain poetic devices and imagery
+- Focus on artistic expression
+- Use appropriate poetic conventions
+- Keep the lyrical quality
+- Adapt cultural poetic elements`
         }
     },
     [MODELS.COMMAND]: {
@@ -154,20 +245,13 @@ const DEFAULT_INSTRUCTIONS = {
 - Use proper honorifics where applicable
 - Keep a respectful and courteous tone
 - Prioritize precise and elegant expression`,
-            'business': `Tone and Style:
-- Use professional business language
-- Incorporate industry-standard terminology
-- Maintain clear and concise expression
-- Use appropriate business formalities
-- Keep a professional yet accessible tone
-- Focus on clarity and efficiency in communication`,
-            'spicy': `Tone and Style:
+            'humorous': `Tone and Style:
 - Use witty and clever expressions
 - Incorporate appropriate humor and wordplay
 - Keep the tone engaging and entertaining
 - Use creative language choices
 - Maintain cultural sensitivity while being playful
-- Adapt jokes and puns to target language context`
+- Adapt jokes and puns to target language context`,
         }
     }
 };
@@ -402,7 +486,7 @@ const ToneSelector = ({ selectedTone, onToneChange, selectedModel }) => {
             </button>
 
             {showToneSelector && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50">
                     {modelTones.map((tone) => (
                         <button
                             key={tone.id}
@@ -766,7 +850,7 @@ const TextArea = ({
                     <button
                         onClick={onClear}
                         className="absolute top-2 right-4 p-1.5 text-gray-400 hover:text-gray-600 
-                        hover:bg-gray-100 rounded-full transition-colors z-10"
+                        hover:bg-gray-100 rounded-full transition-colors z-20"
                         title="Clear text"
                     >
                         <X className="h-4 w-4" />
@@ -778,7 +862,7 @@ const TextArea = ({
                     <button
                         onClick={handlePasteFromClipboard}
                         className="absolute top-2 right-4 px-3 py-1.5 text-gray-600 hover:text-gray-800 
-                        hover:bg-gray-100 rounded-lg transition-colors z-10 flex items-center gap-2"
+                        hover:bg-gray-100 rounded-lg transition-colors z-20 flex items-center gap-2"
                         title="Paste from clipboard"
                     >
                         <Clipboard className="h-4 w-4" />
