@@ -128,6 +128,11 @@ const TONES = {
             name: '유머러스 / Humorous',
             description: '유머러스하고 재치있는 말투 / Humorous and witty tone'
         },
+        {
+            id: 'cardi_B',
+            name: '카디비 / Cardi B',
+            description: '거침없고 직설적인 말투 / Raw and direct street tone'
+        }
     ]
 };
 
@@ -252,6 +257,15 @@ const DEFAULT_INSTRUCTIONS = {
 - Use creative language choices
 - Maintain cultural sensitivity while being playful
 - Adapt jokes and puns to target language context`,
+            'cardi_B': `Tone and Style:
+- Be bold and unapologetic in delivery
+- Keep it real and unfiltered AF
+- Incorporate current street slang and vernacular
+- Drop formality completely
+- Focus on authenticity over politeness
+- Use deliberate grammar/spelling variations for effect
+- Adapt street idioms appropriately
+- Mix casual profanity for emphasis`
         }
     }
 };
@@ -615,7 +629,7 @@ const TextArea = ({
     onNext,
     isOutput = false,
     language = 'en',
-    selectedVoice  // Add selectedVoice prop
+    selectedVoice
 }) => {
     const textareaRef = useRef(null);
     const resizeObserverRef = useRef(null);
@@ -669,8 +683,6 @@ const TextArea = ({
 
         try {
             const accessToken = await getAccessToken();
-
-            // Use selectedVoice instead of default voice mapping
             const voice = selectedVoice || LANGUAGE_VOICE_MAPPING[language];
             const langCode = voice.split('-').slice(0, 2).join('-');
 
@@ -857,8 +869,8 @@ const TextArea = ({
                     </button>
                 )}
 
-                {/* Paste button */}
-                {!readOnly && !value && (
+                {/* Paste button - only show if not output and no value */}
+                {!isOutput && !readOnly && !value && (
                     <button
                         onClick={handlePasteFromClipboard}
                         className="absolute top-2 right-4 px-3 py-1.5 text-gray-600 hover:text-gray-800 
