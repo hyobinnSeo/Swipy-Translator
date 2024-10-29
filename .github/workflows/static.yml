@@ -33,6 +33,8 @@ jobs:
         env:
           REACT_APP_GEMINI_API_KEY: ${{ secrets.REACT_APP_GEMINI_API_KEY }}
           REACT_APP_OPENROUTER_API_KEY: ${{ secrets.REACT_APP_OPENROUTER_API_KEY }}
+          REACT_APP_AZURE_TTS_KEY: ${{ secrets.REACT_APP_AZURE_TTS_KEY }}
+          REACT_APP_AZURE_REGION: ${{ secrets.REACT_APP_AZURE_REGION }}
           CI: false
         run: npm run build
         
