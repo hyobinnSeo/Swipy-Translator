@@ -287,7 +287,7 @@ const LANGUAGE_VOICE_MAPPING = {
 const VOICE_OPTIONS = {
     'en': [
         { id: 'en-US-AriaNeural', name: 'Aria (Female)' },
-        { id: 'en-US-GuyNeural', name: 'Guy (Male)' },  
+        { id: 'en-US-GuyNeural', name: 'Guy (Male)' },
         { id: 'en-US-JennyNeural', name: 'Jenny (Female)' },
         { id: 'en-US-DavisNeural', name: 'Davis (Male)' }
     ],
@@ -642,7 +642,7 @@ const TextArea = ({
     const region = process.env.REACT_APP_AZURE_REGION;
     const baseUrl = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;
 
-    const getAccessToken = async () => {
+    const getAccessToken = useCallback(async () => {
         try {
             const response = await fetch(
                 `https://${region}.api.cognitive.microsoft.com/sts/v1.0/issueToken`,
@@ -660,16 +660,16 @@ const TextArea = ({
             console.error('Error getting Azure access token:', error);
             throw error;
         }
-    };
+    }, [region, subscriptionKey]); // Added missing dependencies
 
-    const escapeXMLText = (text) => {
+    const escapeXMLText = useCallback((text) => {
         return text
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&apos;');
-    };
+    }, []);
 
     const handleSpeak = useCallback(async () => {
         if (!value || !subscriptionKey || !region) return;
@@ -750,14 +750,16 @@ const TextArea = ({
             console.error('Azure TTS error:', error);
             setIsSpeaking(false);
         }
-    }, [value, subscriptionKey, region, isSpeaking, baseUrl, language, selectedVoice]);
+    }, [value, subscriptionKey, region, isSpeaking, baseUrl, language, selectedVoice, getAccessToken, escapeXMLText]);
 
     // Cleanup audio on unmount
     useEffect(() => {
+        const currentAudioRef = audioRef.current; // Store ref value
+
         return () => {
-            if (audioRef.current) {
-                audioRef.current.pause();
-                audioRef.current.src = '';
+            if (currentAudioRef) {
+                currentAudioRef.pause();
+                currentAudioRef.src = '';
             }
         };
     }, []);
