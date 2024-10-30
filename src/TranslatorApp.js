@@ -49,89 +49,64 @@ const TONES = {
         {
             id: 'standard',
             name: '표준 / Standard',
-            description: '일반적인 번역 / Regular translation'
+            description: 'Regular translation'
         },
         {
             id: 'casual',
             name: '캐주얼 / Casual',
-            description: '친근하고 편안한 말투 / Friendly and relaxed tone'
+            description: 'Friendly and relaxed tone'
         },
         {
             id: 'formal',
             name: '격식체 / Formal',
-            description: '공식적이고 예의 바른 말투 / Professional and polite tone'
+            description: 'Professional and polite tone'
         },
         {
             id: 'humorous',
             name: '유머러스 / Humorous',
-            description: '유머러스하고 재치있는 말투 / Humorous and witty tone'
+            description: 'Humorous and witty tone'
         },
         {
             id: 'business',
             name: '비즈니스 / Business',
-            description: '업무용 전문적인 말투 / Business-oriented tone'
+            description: 'Business-oriented tone'
         },
         {
-            id: 'educational',
-            name: '교육 / Educational',
-            description: '이해하기 쉬운 교육용 말투 / Clear instructional tone'
+            id: 'kid_friendly',
+            name: '어린이용 / Kid-Friendly',
+            description: 'Simple and fun kid-friendly tone'
         },
         {
             id: 'literary',
             name: '문학 / Literary',
-            description: '우아하고 세련된 문학적 말투 / Elegant literary style'
-        },
-        {
-            id: 'diplomatic',
-            name: '외교 / Diplomatic',
-            description: '신중하고 정중한 말투 / Tactful and considerate tone'
-        },
-        {
-            id: 'marketing',
-            name: '마케팅 / Marketing',
-            description: '설득력 있는 홍보용 말투 / Persuasive marketing style'
-        },
-        {
-            id: 'academic',
-            name: '학술 / Academic',
-            description: '학술적이고 전문적인 말투 / Scholarly and technical tone'
-        },
-        {
-            id: 'legal',
-            name: '법률 / Legal',
-            description: '법률 문서 스타일 / Legal document style'
-        },
-        {
-            id: 'poetic',
-            name: '시적 / Poetic',
-            description: '운율있고 시적인 말투 / Rhythmic and poetic tone'
+            description: 'Elegant literary style'
         }
     ],
     [MODELS.COMMAND]: [
         {
             id: 'standard',
             name: '표준 / Standard',
-            description: '일반적인 번역 / Regular translation'
+            description: 'Regular translation'
         },
         {
             id: 'casual',
             name: '캐주얼 / Casual',
-            description: '친근하고 편안한 말투 / Friendly and relaxed tone'
+            description: 'Friendly and relaxed tone'
         },
         {
             id: 'formal',
             name: '격식체 / Formal',
-            description: '공식적이고 예의 바른 말투 / Professional and polite tone'
+            description: 'Professional and polite tone'
         },
         {
             id: 'humorous',
             name: '유머러스 / Humorous',
-            description: '유머러스하고 재치있는 말투 / Humorous and witty tone'
+            description: 'Humorous and witty tone'
         },
         {
             id: 'cardi_B',
             name: '카디비 / Cardi B',
-            description: '거침없고 직설적인 말투 / Raw and direct street tone'
+            description: 'Raw and direct street tone'
         }
     ]
 };
@@ -175,55 +150,17 @@ const DEFAULT_INSTRUCTIONS = {
 - Use appropriate business formalities
 - Keep a professional yet accessible tone
 - Focus on clarity and efficiency in communication`,
-            'educational': `Tone and Style:
-- Use clear, instructional language
-- Break down complex concepts
-- Maintain an engaging teaching tone
-- Use examples where appropriate
-- Focus on clarity and comprehension
-- Include appropriate learning-oriented terminology`,
+            'kid_friendly': `Tone and Style: Kid-Friendly
+- Use simple, friendly words
+- Make sure everything is easy to understand
+- Keep the tone encouraging and playful`,
             'literary': `Tone and Style:
 - Use sophisticated vocabulary and phrasing
 - Maintain artistic and creative expression
 - Preserve metaphors and literary devices
 - Focus on aesthetic quality
 - Keep the elegant and refined style
-- Adapt cultural references appropriately`,
-            'diplomatic': `Tone and Style:
-- Use tactful and measured language
-- Maintain diplomatic courtesy
-- Focus on neutral and balanced expression
-- Use appropriate diplomatic terminology
-- Avoid potentially sensitive phrasing
-- Preserve formal diplomatic conventions`,
-            'marketing': `Tone and Style:
-- Use persuasive and engaging language
-- Incorporate marketing terminology
-- Maintain brand voice and style
-- Focus on impact and call-to-action
-- Use compelling and attractive phrasing
-- Adapt promotional elements appropriately`,
-            'academic': `Tone and Style:
-- Use scholarly and technical language
-- Maintain academic conventions
-- Include field-specific terminology
-- Focus on precision and accuracy
-- Use appropriate citations and references
-- Preserve academic tone and structure`,
-            'legal': `Tone and Style:
-- Use precise legal terminology
-- Maintain legal document structure
-- Focus on exact meaning and implications
-- Use appropriate legal conventions
-- Preserve legal clarity and specificity
-- Include necessary legal formatting`,
-            'poetic': `Tone and Style:
-- Preserve rhythm and meter when possible
-- Maintain poetic devices and imagery
-- Focus on artistic expression
-- Use appropriate poetic conventions
-- Keep the lyrical quality
-- Adapt cultural poetic elements`
+- Adapt cultural references appropriately`
         }
     },
     [MODELS.COMMAND]: {
@@ -395,7 +332,7 @@ const LanguageSelector = ({
     onResetTranslations
 }) => {
     const languages = [
-        { code: 'auto', name: 'Auto Detect / 자동 감지' },
+        { code: 'auto', name: 'Auto Detect' },
         { code: 'en', name: 'English' },
         { code: 'fr', name: 'French / Français' },
         { code: 'es', name: 'Spanish / Español' },
@@ -496,7 +433,7 @@ const ToneSelector = ({ selectedTone, onToneChange, selectedModel }) => {
                    hover:bg-gray-50 rounded-lg transition-colors"
             >
                 <Settings className="w-4 h-4" />
-                <span>번역 톤: {modelTones.find(t => t.id === selectedTone)?.name}</span>
+                <span>Tone: {modelTones.find(t => t.id === selectedTone)?.name}</span>
             </button>
 
             {showToneSelector && (
