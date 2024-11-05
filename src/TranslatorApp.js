@@ -581,7 +581,7 @@ const TextArea = ({
                         focus:outline-none border-0 bg-white
                         ${readOnly ? 'bg-gray-50' : ''} ${className}`}
                         style={{
-                            height: isFixedSize ? '24rem' : undefined,  // Fixed height when isFixedSize is true
+                            height: isFixedSize ? '12rem' : undefined,  // Fixed height when isFixedSize is true
                             minHeight: isFixedSize ? undefined : '12rem',
                             overflowY: isFixedSize ? 'auto' : undefined,
                             paddingBottom: translations.length > 0 ? '3.5rem' : '1rem',
