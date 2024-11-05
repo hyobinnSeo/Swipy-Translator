@@ -113,7 +113,7 @@ const LanguageSelector = ({
                 <select
                     value={sourceLang}
                     onChange={(e) => onSourceChange(e.target.value)}
-                    className="w-full p-2 border rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                    className="w-full p-2 border rounded-lg bg-white focus:ring-2 focus:ring-gray-500"
                     dir={sourceLang === 'ar' ? 'rtl' : 'ltr'}
                 >
                     {languages.map(lang => (
@@ -140,7 +140,7 @@ const LanguageSelector = ({
                 <select
                     value={targetLang}
                     onChange={(e) => onTargetChange(e.target.value)}
-                    className="w-full p-2 border rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                    className="w-full p-2 border rounded-lg bg-white focus:ring-2 focus:ring-gray-500"
                     dir={targetLang === 'ar' ? 'rtl' : 'ltr'}
                 >
                     {languages.filter(lang => lang.code !== 'auto').map(lang => (
@@ -262,7 +262,7 @@ const VoiceSettingsModal = ({ isOpen, onClose, selectedVoices, onVoiceChange }) 
                                     ...prev,
                                     [lang]: e.target.value
                                 }))}
-                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-gray-500"
                             >
                                 {voices.map((voice) => (
                                     <option key={voice.id} value={voice.id}>
@@ -279,13 +279,13 @@ const VoiceSettingsModal = ({ isOpen, onClose, selectedVoices, onVoiceChange }) 
                 <div className="flex justify-end space-x-3">
                     <button
                         onClick={handleReset}
-                        className="px-4 py-2 text-blue-500 hover:text-blue-600"
+                        className="px-4 py-2 text-navy-500 hover:text-navy-600"
                     >
                         Reset to Default
                     </button>
                     <button
                         onClick={handleSave}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                        className="px-4 py-2 bg-navy-500 text-white rounded-lg hover:bg-navy-600"
                     >
                         Done
                     </button>
@@ -542,7 +542,7 @@ const TextArea = ({
 
     return (
         <div className="relative flex-1" style={{ minWidth: 0 }}>
-            <div className="relative rounded-lg border focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all bg-white overflow-hidden">
+            <div className="relative rounded-lg border focus-within:ring-2 focus-within:ring-gray-600 focus-within:border-navy-600 transition-all bg-white overflow-hidden">
                 {/* Clear button */}
                 {value && (
                     <button
@@ -622,7 +622,7 @@ const TextArea = ({
                     {shouldShowSpeaker && (
                         <button
                             onClick={handleSpeak}
-                            className={`text-gray-500 hover:text-gray-700 ${isSpeaking ? 'text-blue-500' : ''}`}
+                            className={`text-gray-500 hover:text-gray-700 ${isSpeaking ? 'text-navy-500' : ''}`}
                             title={isSpeaking ? "Stop speaking" : "Text-to-speech"}
                         >
                             <Volume2 className={`h-5 w-5 ${isSpeaking ? 'animate-pulse' : ''}`} />
@@ -716,7 +716,7 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
                                     'pre-instruction': e.target.value
                                 }
                             })}
-                            className="w-full h-32 p-2 border rounded-md focus:ring-2 focus:ring-blue-500 resize-none"
+                            className="w-full h-32 p-2 border rounded-md focus:ring-3 focus:ring-gray-500 resize-none"
                         />
                     </div>
 
@@ -733,7 +733,7 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
                                     'post-instruction': e.target.value
                                 }
                             })}
-                            className="w-full h-32 p-2 border rounded-md focus:ring-2 focus:ring-blue-500 resize-none"
+                            className="w-full h-32 p-2 border rounded-md focus:ring-3 focus:ring-gray-500 resize-none"
                         />
                     </div>
 
@@ -753,7 +753,7 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
                                     }
                                 }
                             })}
-                            className="w-full h-32 p-2 border rounded-md focus:ring-2 focus:ring-blue-500 resize-none"
+                            className="w-full h-32 p-2 border rounded-md focus:ring-3 focus:ring-gray-500 resize-none"
                         />
                     </div>
                 </div>
@@ -763,13 +763,13 @@ const InstructionsModal = ({ isOpen, onClose, modelInstructions, selectedModel, 
                 <div className="flex justify-end space-x-3">
                     <button
                         onClick={handleReset}
-                        className="px-4 py-2 text-blue-500 hover:text-blue-600"
+                        className="px-4 py-2 text-navy-500 hover:text-navy-600"
                     >
                         Reset to Default
                     </button>
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                        className="px-4 py-2 bg-navy-500 text-white rounded-lg hover:bg-navy-600"
                     >
                         Done
                     </button>
@@ -1011,7 +1011,7 @@ const SavedTranslationsDialog = ({ isOpen, onClose, savedTranslations, onSelectS
                             placeholder="Search translations..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-3 focus:ring-gray-500"
                         />
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                     </div>
@@ -1828,6 +1828,7 @@ const TranslatorApp = () => {
                 selectedModel={selectedModel}
                 setModelInstructions={setModelInstructions}
                 selectedTone={selectedTone}
+                className="w-full max-w-2xl max-h-[90vh] flex flex-col"
             />
 
             <VoiceSettingsModal
@@ -1889,7 +1890,7 @@ const TranslatorApp = () => {
                                 setTranslations([]);
                                 setCurrentIndex(0);
                             }}
-                            className="w-[200px] p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+                            className="w-[200px] p-2 border rounded-md focus:ring-2 focus:ring-gray-500"
                         >
                             {AVAILABLE_MODELS.map((model) => (
                                 <option key={model.id} value={model.id}>
@@ -1983,7 +1984,7 @@ const TranslatorApp = () => {
                             onClick={() => handleTranslate(false)}
                             disabled={!inputText || isLoading}
                             className={`px-6 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto ${inputText && !isLoading
-                                ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                ? 'bg-navy-500 text-white hover:bg-navy-600'
                                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                 }`}
                         >
@@ -2008,7 +2009,7 @@ const TranslatorApp = () => {
                                 >
                                     {copySuccess ? (
                                         <>
-                                            <ClipboardCheck className="mr-2 h-4 w-4 text-green-500" />
+                                            <ClipboardCheck className="mr-2 h-4 w-4 text-navy-500" />
                                             Copied!
                                         </>
                                     ) : (
@@ -2023,7 +2024,7 @@ const TranslatorApp = () => {
                                 <button
                                     onClick={handleSaveTranslation}
                                     className={`px-6 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto transition-all duration-300 ${saveSuccess
-                                        ? 'bg-green-500 text-white'
+                                        ? 'bg-navy-500 text-white'
                                         : 'bg-gray-100 hover:bg-gray-200'
                                         }`}
                                 >
