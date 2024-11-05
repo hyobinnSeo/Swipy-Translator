@@ -313,7 +313,8 @@ const TextArea = ({
     onNext,
     isOutput = false,
     language = 'en',
-    selectedVoice
+    selectedVoice,
+    isFixedSize = false
 }) => {
     const textareaRef = useRef(null);
     const resizeObserverRef = useRef(null);
@@ -450,7 +451,7 @@ const TextArea = ({
 
     // Height adjustment logic
     const adjustHeight = useCallback(() => {
-        if (!textareaRef.current) return;
+        if (!textareaRef.current || isFixedSize) return;  // Don't adjust height if fixed size
 
         if (adjustmentTimeoutRef.current) {
             cancelAnimationFrame(adjustmentTimeoutRef.current);
@@ -467,7 +468,7 @@ const TextArea = ({
             textarea.style.overflowY = textarea.scrollHeight <= newHeight ? 'hidden' : 'auto';
             window.scrollTo(0, scrollPos);
         });
-    }, []);
+    }, [isFixedSize]);
 
     // Initialize ResizeObserver
     useEffect(() => {
@@ -580,7 +581,9 @@ const TextArea = ({
                         focus:outline-none border-0 bg-white
                         ${readOnly ? 'bg-gray-50' : ''} ${className}`}
                         style={{
-                            minHeight: '12rem',
+                            height: isFixedSize ? '24rem' : undefined,  // Fixed height when isFixedSize is true
+                            minHeight: isFixedSize ? undefined : '12rem',
+                            overflowY: isFixedSize ? 'auto' : undefined,
                             paddingBottom: translations.length > 0 ? '3.5rem' : '1rem',
                             paddingRight: value ? '3rem' : '5rem',
                         }}
@@ -816,7 +819,9 @@ const Sidebar = ({
     onOpenRequestLog,
     onOpenHistory,
     onOpenVoiceSettings,
-    onOpenSettings  // Add this prop
+    onOpenSettings,
+    isFixedSize,
+    onToggleFixedSize
 }) => {
     useEffect(() => {
         if (isOpen) {
@@ -854,6 +859,24 @@ const Sidebar = ({
 
                 <div className="flex-1 overflow-y-auto overscroll-contain p-4">
                     <div className="space-y-2">
+                        {/* Add the toggle button for fixed size */}
+                        <div className="flex items-center justify-between px-4 py-2">
+                            <span className="text-sm">Fixed Size Text Areas</span>
+                            <button
+                                onClick={() => {
+                                    onToggleFixedSize();
+                                }}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isFixedSize ? 'bg-navy-500' : 'bg-gray-200'
+                                    }`}
+                            >
+                                <span
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isFixedSize ? 'translate-x-6' : 'translate-x-1'
+                                        }`}
+                                />
+                            </button>
+                        </div>
+
+                        {/* Existing buttons */}
                         <button
                             onClick={() => {
                                 onOpenHistory();
@@ -886,8 +909,6 @@ const Sidebar = ({
                             <Volume2 className="h-4 w-4 mr-2" />
                             Voice Settings
                         </button>
-
-
 
                         <button
                             onClick={() => {
@@ -1326,6 +1347,24 @@ const TranslatorApp = () => {
     });
     const [maxLength, setMaxLength] = useState(parseInt(localStorage.getItem('maxInputLength')) || 5000);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isFixedSize, setIsFixedSize] = useState(false);
+
+    // Add effect to persist the fixed size preference
+    useEffect(() => {
+        const savedFixedSize = localStorage.getItem('isFixedSize');
+        if (savedFixedSize !== null) {
+            setIsFixedSize(JSON.parse(savedFixedSize));
+        }
+    }, []);
+
+    // Add handler to toggle fixed size
+    const handleToggleFixedSize = () => {
+        setIsFixedSize(prev => {
+            const newValue = !prev;
+            localStorage.setItem('isFixedSize', JSON.stringify(newValue));
+            return newValue;
+        });
+    };
 
     /* eslint-disable react-hooks/exhaustive-deps */
     useEffect(() => {
@@ -1792,6 +1831,8 @@ const TranslatorApp = () => {
                 onOpenRequestLog={() => setIsRequestLogOpen(true)}
                 onOpenVoiceSettings={() => setIsVoiceSettingsOpen(true)}
                 onOpenSettings={() => setIsSettingsOpen(true)}
+                isFixedSize={isFixedSize}  // Add this prop
+                onToggleFixedSize={handleToggleFixedSize}  // Add this prop
             />
 
             <HistoryPanel
@@ -1932,19 +1973,18 @@ const TranslatorApp = () => {
 
                     {/* Text areas */}
                     <div className="flex flex-col md:flex-row gap-2 md:gap-6 mb-6">
-                        {/* Input TextArea */}
                         <TextArea
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
                             placeholder="Enter text..."
                             showSpeaker={true}
-                            maxLength={maxLength}  // Use the state variable here
+                            maxLength={maxLength}
                             onClear={() => handleClear()}
                             language={sourceLang}
                             selectedVoice={selectedVoices[sourceLang]}
+                            isFixedSize={isFixedSize}  // Add this prop
                         />
 
-                        {/* Output TextArea */}
                         <TextArea
                             value={translatedText}
                             isOutput={true}
@@ -1972,6 +2012,7 @@ const TranslatorApp = () => {
                             }}
                             language={targetLang}
                             selectedVoice={selectedVoices[targetLang]}
+                            isFixedSize={isFixedSize}  // Add this prop
                         />
                     </div>
 
