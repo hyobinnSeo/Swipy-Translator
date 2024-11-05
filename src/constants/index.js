@@ -109,6 +109,11 @@ export const TONES = {
             description: 'Humorous and witty tone'
         },
         {
+            id: 'literary',
+            name: '문학 / Literary',
+            description: 'Elegant literary style'
+        },
+        {
             id: 'cardi_B',
             name: '카디비 / Cardi B',
             description: 'Raw and direct street tone'
@@ -350,6 +355,13 @@ export const DEFAULT_INSTRUCTIONS = {
 - Use creative language choices
 - Maintain cultural sensitivity while being playful
 - Adapt jokes and puns to target language context`,
+            'literary': `Tone and Style:
+- Use sophisticated vocabulary and phrasing
+- Maintain artistic and creative expression
+- Preserve metaphors and literary devices
+- Focus on aesthetic quality
+- Keep the elegant and refined style
+- Adapt cultural references appropriately`,
             'cardi_B': `Tone and Style:
 - Be bold and unapologetic in delivery
 - Keep it real and unfiltered AF
