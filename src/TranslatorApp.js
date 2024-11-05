@@ -28,6 +28,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const MODELS = {
     GEMINI: 'gemini',
     COMMAND: 'command',
+    ANTHROPIC: 'claude',
     OPENAI: 'gpt'
 };
 
@@ -84,6 +85,33 @@ const TONES = {
         }
     ],
     [MODELS.COMMAND]: [
+        {
+            id: 'standard',
+            name: '표준 / Standard',
+            description: 'Regular translation'
+        },
+        {
+            id: 'casual',
+            name: '캐주얼 / Casual',
+            description: 'Friendly and relaxed tone'
+        },
+        {
+            id: 'formal',
+            name: '격식체 / Formal',
+            description: 'Professional and polite tone'
+        },
+        {
+            id: 'humorous',
+            name: '유머러스 / Humorous',
+            description: 'Humorous and witty tone'
+        },
+        {
+            id: 'cardi_B',
+            name: '카디비 / Cardi B',
+            description: 'Raw and direct street tone'
+        }
+    ],
+    [MODELS.ANTHROPIC]: [
         {
             id: 'standard',
             name: '표준 / Standard',
@@ -207,6 +235,48 @@ const DEFAULT_INSTRUCTIONS = {
         }
     },
     [MODELS.COMMAND]: {
+        'pre-instruction': "You are a professional translator who specializes in providing accurate and natural translations. Your task is to create translations that convey the complete meaning, nuances, and cultural context of the source text while maintaining the linguistic features of the target language.",
+        'post-instruction': "Note: Provide only the translated text. Do not include quotes, emojis, explanations or any additional comments.",
+        'tone-instructions': {
+            'standard': `Tone and Style:
+- Maintain a neutral and clear tone
+- Use standard language conventions
+- Focus on accurate meaning transmission
+- Keep formal and informal elements balanced
+- Ensure natural flow in the target language`,
+            'casual': `Tone and Style:
+- Use everyday conversational language
+- Incorporate common colloquialisms when appropriate
+- Keep the tone friendly and approachable
+- Use contractions where natural
+- Maintain an informal yet respectful tone
+- Adapt idioms to target language equivalents`,
+            'formal': `Tone and Style:
+- Use formal language throughout
+- Maintain professional terminology
+- Avoid contractions and colloquialisms
+- Use proper honorifics where applicable
+- Keep a respectful and courteous tone
+- Prioritize precise and elegant expression`,
+            'humorous': `Tone and Style:
+- Use witty and clever expressions
+- Incorporate appropriate humor and wordplay
+- Keep the tone engaging and entertaining
+- Use creative language choices
+- Maintain cultural sensitivity while being playful
+- Adapt jokes and puns to target language context`,
+            'cardi_B': `Tone and Style:
+- Be bold and unapologetic in delivery
+- Keep it real and unfiltered AF
+- Incorporate current street slang and vernacular
+- Drop formality completely
+- Focus on authenticity over politeness
+- Use deliberate grammar/spelling variations for effect
+- Adapt street idioms appropriately
+- Mix casual profanity for emphasis`
+        }
+    },
+    [MODELS.ANTHROPIC]: {
         'pre-instruction': "You are a professional translator who specializes in providing accurate and natural translations. Your task is to create translations that convey the complete meaning, nuances, and cultural context of the source text while maintaining the linguistic features of the target language.",
         'post-instruction': "Note: Provide only the translated text. Do not include quotes, emojis, explanations or any additional comments.",
         'tone-instructions': {
@@ -385,7 +455,8 @@ const getToneInstructions = (tone, modelInstructions, selectedModel) => {
 const AVAILABLE_MODELS = [
     { id: MODELS.GEMINI, name: 'Gemini 1.5', api: 'google' },
     { id: MODELS.COMMAND, name: 'Cohere Command R', api: 'openrouter' },
-    { id: MODELS.OPENAI, name: 'gpt-4o-mini-2024-07-18', api: 'openai' }
+    { id: MODELS.ANTHROPIC, name: 'Claude 3 Haiku', api: 'openrouter' },
+    { id: MODELS.OPENAI, name: 'GPT-4o mini', api: 'openai' }
 ];
 
 const MAX_HISTORY_ITEMS = 10;
@@ -1749,7 +1820,9 @@ const TranslatorApp = () => {
     };
 
     const translateWithOpenRouter = async (text, modelId, previousTranslations = []) => {
-        const modelUrl = 'cohere/command-r-08-2024';
+        const modelUrl = modelId === MODELS.ANTHROPIC
+            ? 'anthropic/claude-3-haiku'
+            : 'cohere/command-r-08-2024';
 
         // Get base instructions
         const basePreInstruction = modelInstructions[selectedModel]['pre-instruction'];
@@ -2004,6 +2077,9 @@ const TranslatorApp = () => {
                     case MODELS.COMMAND:
                         translatedResult = await translateWithOpenRouter(inputText, selectedModel, translations);
                         break;
+                    case MODELS.ANTHROPIC:
+                        translatedResult = await translateWithOpenRouter(inputText, selectedModel, translations);
+                        break;
                     case MODELS.OPENAI:
                         translatedResult = await translateWithOpenAI(inputText, translations);
                         break;
@@ -2016,6 +2092,9 @@ const TranslatorApp = () => {
                         translatedResult = await translateWithGemini(inputText);
                         break;
                     case MODELS.COMMAND:
+                        translatedResult = await translateWithOpenRouter(inputText, selectedModel);
+                        break;
+                    case MODELS.ANTHROPIC:
                         translatedResult = await translateWithOpenRouter(inputText, selectedModel);
                         break;
                     case MODELS.OPENAI:
