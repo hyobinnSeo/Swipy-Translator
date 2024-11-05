@@ -27,7 +27,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 // Constants
 const MODELS = {
     GEMINI: 'gemini',
-    COMMAND: 'command'
+    COMMAND: 'command',
+    OPENAI: 'gpt'
 };
 
 const LANGUAGE_NAMES = {
@@ -102,6 +103,48 @@ const TONES = {
             id: 'humorous',
             name: '유머러스 / Humorous',
             description: 'Humorous and witty tone'
+        },
+        {
+            id: 'cardi_B',
+            name: '카디비 / Cardi B',
+            description: 'Raw and direct street tone'
+        }
+    ],
+    [MODELS.OPENAI]: [
+        {
+            id: 'standard',
+            name: '표준 / Standard',
+            description: 'Regular translation'
+        },
+        {
+            id: 'casual',
+            name: '캐주얼 / Casual',
+            description: 'Friendly and relaxed tone'
+        },
+        {
+            id: 'formal',
+            name: '격식체 / Formal',
+            description: 'Professional and polite tone'
+        },
+        {
+            id: 'humorous',
+            name: '유머러스 / Humorous',
+            description: 'Humorous and witty tone'
+        },
+        {
+            id: 'business',
+            name: '비즈니스 / Business',
+            description: 'Business-oriented tone'
+        },
+        {
+            id: 'kid_friendly',
+            name: '어린이용 / Kid-Friendly',
+            description: 'Simple and fun kid-friendly tone'
+        },
+        {
+            id: 'literary',
+            name: '문학 / Literary',
+            description: 'Elegant literary style'
         },
         {
             id: 'cardi_B',
@@ -204,6 +247,66 @@ const DEFAULT_INSTRUCTIONS = {
 - Adapt street idioms appropriately
 - Mix casual profanity for emphasis`
         }
+    },
+    [MODELS.OPENAI]: {
+        'pre-instruction': "You are a professional translator who specializes in providing accurate and natural translations. Your task is to create translations that convey the complete meaning, nuances, and cultural context of the source text while maintaining the linguistic features of the target language.",
+        'post-instruction': "Note: Provide only the translated text. Do not include quotes, emojis, explanations or any additional comments.",
+        'tone-instructions': {
+            'standard': `Tone and Style:
+- Maintain a neutral and clear tone
+- Use standard language conventions
+- Focus on accurate meaning transmission
+- Keep formal and informal elements balanced
+- Ensure natural flow in the target language`,
+            'casual': `Tone and Style:
+- Use everyday conversational language
+- Incorporate common colloquialisms when appropriate
+- Keep the tone friendly and approachable
+- Use contractions where natural
+- Maintain an informal yet respectful tone
+- Adapt idioms to target language equivalents`,
+            'formal': `Tone and Style:
+- Use formal language throughout
+- Maintain professional terminology
+- Avoid contractions and colloquialisms
+- Use proper honorifics where applicable
+- Keep a respectful and courteous tone
+- Prioritize precise and elegant expression`,
+            'humorous': `Tone and Style:
+- Use witty and clever expressions
+- Incorporate appropriate humor and wordplay
+- Keep the tone engaging and entertaining
+- Use creative language choices
+- Maintain cultural sensitivity while being playful
+- Adapt jokes and puns to target language context`,
+            'business': `Tone and Style:
+- Use professional business language
+- Incorporate industry-standard terminology
+- Maintain clear and concise expression
+- Use appropriate business formalities
+- Keep a professional yet accessible tone
+- Focus on clarity and efficiency in communication`,
+            'kid_friendly': `Tone and Style:
+- Use simple, friendly words
+- Make sure everything is easy to understand
+- Keep the tone encouraging and playful`,
+            'literary': `Tone and Style:
+- Use sophisticated vocabulary and phrasing
+- Maintain artistic and creative expression
+- Preserve metaphors and literary devices
+- Focus on aesthetic quality
+- Keep the elegant and refined style
+- Adapt cultural references appropriately`,
+            'cardi_B': `Tone and Style:
+- Be bold and unapologetic in delivery
+- Keep it real and unfiltered AF
+- Incorporate current street slang and vernacular
+- Drop formality completely
+- Focus on authenticity over politeness
+- Use deliberate grammar/spelling variations for effect
+- Adapt street idioms appropriately
+- Mix casual profanity for emphasis`
+        }
     }
 };
 
@@ -281,7 +384,8 @@ const getToneInstructions = (tone, modelInstructions, selectedModel) => {
 
 const AVAILABLE_MODELS = [
     { id: MODELS.GEMINI, name: 'Gemini 1.5', api: 'google' },
-    { id: MODELS.COMMAND, name: 'Cohere Command R', api: 'openrouter' }
+    { id: MODELS.COMMAND, name: 'Cohere Command R', api: 'openrouter' },
+    { id: MODELS.OPENAI, name: 'gpt-4o-mini-2024-07-18', api: 'openai' }
 ];
 
 const MAX_HISTORY_ITEMS = 10;
@@ -1725,6 +1829,88 @@ const TranslatorApp = () => {
         }
     };
 
+    const translateWithOpenAI = async (text, previousTranslations = []) => {
+        try {
+            // Get base instructions
+            const basePreInstruction = modelInstructions[MODELS.OPENAI]['pre-instruction'];
+            const postInstruction = modelInstructions[MODELS.OPENAI]['post-instruction'];
+            const toneInstructions = getToneInstructions(selectedTone, modelInstructions, MODELS.OPENAI);
+
+            // Get language settings
+            const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
+            const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
+
+            // Construct the prompt
+            let prompt = `Instructions:\n${basePreInstruction}\n\n`;
+
+            // Add Language settings
+            prompt += `Language:\n`;
+            if (sourceLang === 'auto') {
+                prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
+            } else {
+                prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
+            }
+
+            // Add Tone settings
+            prompt += `Tone:\n${toneInstructions.instruction}\n\n`;
+
+            // Add text to translate
+            prompt += `Text to be translated:\n${text}\n\n`;
+
+            // Add previous translations if any
+            if (previousTranslations.length > 0) {
+                prompt += "Previous translations to avoid repeating:\n";
+                previousTranslations.forEach((trans, index) => {
+                    prompt += `${index + 1}: ${trans.text}\n`;
+                });
+                prompt += "\nNote: Provide a fresh translation different from the above versions.\n\n";
+            }
+
+            // Add post instructions
+            prompt += postInstruction;
+
+            // Set request log
+            const requestBody = {
+                model: "gpt-4o-mini-2024-07-18",
+                messages: [
+                    { role: "system", content: "You are a professional translator." },
+                    { role: "user", content: prompt }
+                ],
+                temperature: 0.7,
+                max_tokens: 2000
+            };
+            setRequestLog(requestBody);
+
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: "gpt-4o-mini-2024-07-18",
+                    messages: [
+                        { role: "system", content: "You are a professional translator." },
+                        { role: "user", content: prompt }
+                    ],
+                    temperature: 0.7,
+                    max_tokens: 2000
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.choices[0]?.message?.content;
+        } catch (error) {
+            throw new Error(error.message === 'Unauthorized'
+                ? 'Invalid OpenAI API key. Please check your environment variables.'
+                : `Translation error: ${error.message}`);
+        }
+    };
+
     const validateLanguageSupport = (sourceLang, targetLang) => {
         const supportedLanguages = ['auto', 'en', 'fr', 'es', 'it', 'de', 'pt', 'ja', 'ko', 'zh', 'ar'];
 
@@ -1811,16 +1997,32 @@ const TranslatorApp = () => {
 
             let translatedResult;
             if (isAdditional) {
-                if (selectedModel === MODELS.GEMINI) {
-                    translatedResult = await translateWithGemini(inputText, translations);
-                } else {
-                    translatedResult = await translateWithOpenRouter(inputText, selectedModel, translations);
+                switch (selectedModel) {
+                    case MODELS.GEMINI:
+                        translatedResult = await translateWithGemini(inputText, translations);
+                        break;
+                    case MODELS.COMMAND:
+                        translatedResult = await translateWithOpenRouter(inputText, selectedModel, translations);
+                        break;
+                    case MODELS.OPENAI:
+                        translatedResult = await translateWithOpenAI(inputText, translations);
+                        break;
+                    default:
+                        throw new Error('Invalid model selected');
                 }
             } else {
-                if (selectedModel === MODELS.GEMINI) {
-                    translatedResult = await translateWithGemini(inputText);
-                } else {
-                    translatedResult = await translateWithOpenRouter(inputText, selectedModel);
+                switch (selectedModel) {
+                    case MODELS.GEMINI:
+                        translatedResult = await translateWithGemini(inputText);
+                        break;
+                    case MODELS.COMMAND:
+                        translatedResult = await translateWithOpenRouter(inputText, selectedModel);
+                        break;
+                    case MODELS.OPENAI:
+                        translatedResult = await translateWithOpenAI(inputText);
+                        break;
+                    default:
+                        throw new Error('Invalid model selected');
                 }
             }
 
