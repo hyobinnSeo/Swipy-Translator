@@ -1,6 +1,35 @@
 import React, { useState } from 'react';
 import { X, Settings as SettingsIcon } from 'lucide-react';
 
+const DialogWrapper = ({ isOpen, onClose, children, className = '' }) => {
+  React.useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      onClick={onClose}
+    >
+      <div
+        className={`bg-white rounded-lg ${className}`}
+        onClick={e => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>
+  );
+};
+
 const SettingsDialog = ({ isOpen, onClose, maxLength, onMaxLengthChange }) => {
   const [localMaxLength, setLocalMaxLength] = useState(maxLength);
 
@@ -14,8 +43,8 @@ const SettingsDialog = ({ isOpen, onClose, maxLength, onMaxLengthChange }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg w-full max-w-md">
+    <DialogWrapper isOpen={isOpen} onClose={onClose}>
+      <div className="w-full max-w-md">
         <div className="p-4 border-b flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <SettingsIcon className="w-5 h-5 text-gray-500" />
@@ -57,13 +86,13 @@ const SettingsDialog = ({ isOpen, onClose, maxLength, onMaxLengthChange }) => {
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            className="px-4 py-2 bg-navy-500 text-white rounded-lg hover:bg-navy-600"
           >
             Save Changes
           </button>
         </div>
       </div>
-    </div>
+    </DialogWrapper>
   );
 };
 
