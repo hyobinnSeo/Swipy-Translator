@@ -34,6 +34,7 @@ import {
     MAX_SAVED_TRANSLATIONS,
     getToneInstructions
 } from './constants/index.js';
+import SettingsDialog from './components/dialogs/SettingsDialog.js';
 
 const loadHistory = () => {
     try {
@@ -814,7 +815,8 @@ const Sidebar = ({
     onOpenSaved,
     onOpenRequestLog,
     onOpenHistory,
-    onOpenVoiceSettings  // Add this prop
+    onOpenVoiceSettings,
+    onOpenSettings  // Add this prop
 }) => {
     useEffect(() => {
         if (isOpen) {
@@ -844,10 +846,7 @@ const Sidebar = ({
                 <div className="p-4 border-b flex-shrink-0">
                     <div className="flex justify-between items-center">
                         <h2 className="text-xl font-semibold">Menu</h2>
-                        <button
-                            onClick={onClose}
-                            className="text-gray-500 hover:text-gray-700 transition-colors"
-                        >
+                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
                             <X className="h-5 w-5" />
                         </button>
                     </div>
@@ -888,6 +887,8 @@ const Sidebar = ({
                             Voice Settings
                         </button>
 
+
+
                         <button
                             onClick={() => {
                                 onOpenInstructions();
@@ -909,6 +910,18 @@ const Sidebar = ({
                             <FileText className="h-4 w-4 mr-2" />
                             Last API Request
                         </button>
+
+                        <button
+                            onClick={() => {
+                                onOpenSettings();
+                                onClose();
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center transition-colors"
+                        >
+                            <Settings className="h-4 w-4 mr-2" />
+                            Settings
+                        </button>
+
                     </div>
                 </div>
             </div>
@@ -1311,6 +1324,8 @@ const TranslatorApp = () => {
         'pt': 'pt-BR-FranciscaNeural',
         'ar': 'ar-SA-ZariyahNeural'
     });
+    const [maxLength, setMaxLength] = useState(parseInt(localStorage.getItem('maxInputLength')) || 5000);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     /* eslint-disable react-hooks/exhaustive-deps */
     useEffect(() => {
@@ -1754,6 +1769,11 @@ const TranslatorApp = () => {
         setError('');
     };
 
+    const handleMaxLengthChange = (newMaxLength) => {
+        setMaxLength(newMaxLength);
+        localStorage.setItem('maxInputLength', newMaxLength.toString());
+    };
+
     const baseUrl = process.env.PUBLIC_URL || '/';
 
     return (
@@ -1771,6 +1791,7 @@ const TranslatorApp = () => {
                 onOpenSaved={() => setIsSavedOpen(true)}
                 onOpenRequestLog={() => setIsRequestLogOpen(true)}
                 onOpenVoiceSettings={() => setIsVoiceSettingsOpen(true)}
+                onOpenSettings={() => setIsSettingsOpen(true)}
             />
 
             <HistoryPanel
@@ -1825,6 +1846,13 @@ const TranslatorApp = () => {
             <SafetyWarningDialog
                 isOpen={showSafetyWarning}
                 onClose={() => setShowSafetyWarning(false)}
+            />
+
+            <SettingsDialog
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                maxLength={maxLength}
+                onMaxLengthChange={handleMaxLengthChange}
             />
 
             {/* Header */}
@@ -1909,7 +1937,7 @@ const TranslatorApp = () => {
                             onChange={(e) => setInputText(e.target.value)}
                             placeholder="Enter text..."
                             showSpeaker={true}
-                            maxLength={5000}
+                            maxLength={maxLength}  // Use the state variable here
                             onClear={() => handleClear()}
                             language={sourceLang}
                             selectedVoice={selectedVoices[sourceLang]}
