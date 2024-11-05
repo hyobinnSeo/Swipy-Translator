@@ -21,8 +21,7 @@ import {
     AlertTriangle
 } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-
-
+import { Helmet } from 'react-helmet';
 
 // Constants
 const MODELS = {
@@ -2187,6 +2186,10 @@ const TranslatorApp = () => {
 
     return (
         <div className="w-full min-h-screen bg-gray-50">
+            <Helmet>
+                <title>Hoochoo Translator</title>
+                <meta name="description" content="Multi-language translation application" />
+            </Helmet>
             {/* Modals and Dialogs */}
             <Sidebar
                 isOpen={isSidebarOpen}
