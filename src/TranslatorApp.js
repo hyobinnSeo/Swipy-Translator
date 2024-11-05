@@ -1348,6 +1348,14 @@ const TranslatorApp = () => {
     const [maxLength, setMaxLength] = useState(parseInt(localStorage.getItem('maxInputLength')) || 5000);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isFixedSize, setIsFixedSize] = useState(false);
+    const [isDarkMode, setIsDarkMode] = useState(false);
+
+    useEffect(() => {
+        const savedDarkMode = localStorage.getItem('isDarkMode');
+        if (savedDarkMode !== null) {
+            setIsDarkMode(JSON.parse(savedDarkMode));
+        }
+    }, []);
 
     // Add effect to persist the fixed size preference
     useEffect(() => {
@@ -1895,6 +1903,11 @@ const TranslatorApp = () => {
                 onClose={() => setIsSettingsOpen(false)}
                 maxLength={maxLength}
                 onMaxLengthChange={handleMaxLengthChange}
+                isDarkMode={isDarkMode}
+                onDarkModeChange={(newValue) => {
+                    setIsDarkMode(newValue);
+                    localStorage.setItem('isDarkMode', JSON.stringify(newValue));
+                }}
             />
 
             {/* Header */}

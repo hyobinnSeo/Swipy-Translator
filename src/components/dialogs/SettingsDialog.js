@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { X, Settings as SettingsIcon } from 'lucide-react';
+import { X, Settings as SettingsIcon, Moon, Sun } from 'lucide-react';
 
-const SettingsDialog = ({ isOpen, onClose, maxLength, onMaxLengthChange }) => {
+const SettingsDialog = ({ isOpen, onClose, maxLength, onMaxLengthChange, isDarkMode, onDarkModeChange }) => {
   const [localMaxLength, setLocalMaxLength] = useState(maxLength);
+  const [localDarkMode, setLocalDarkMode] = useState(isDarkMode);
 
   const handleSave = () => {
     // Convert to number and ensure it's at least 1000
     const newMaxLength = Math.max(1000, parseInt(localMaxLength) || 1000);
     onMaxLengthChange(newMaxLength);
+    onDarkModeChange(localDarkMode);
     onClose();
   };
 
@@ -27,7 +29,35 @@ const SettingsDialog = ({ isOpen, onClose, maxLength, onMaxLengthChange }) => {
         </div>
 
         <div className="p-6">
-          <div className="space-y-4">
+          <div className="space-y-6">
+            {/* Dark Mode Toggle */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Dark Mode
+              </label>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">
+                  {localDarkMode ? 'Dark theme enabled' : 'Light theme enabled'}
+                </span>
+                <button
+                  onClick={() => setLocalDarkMode(!localDarkMode)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-navy-500 focus:ring-offset-2 ${
+                    localDarkMode ? 'bg-navy-500' : 'bg-gray-200'
+                  }`}
+                  role="switch"
+                  aria-checked={localDarkMode}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      localDarkMode ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                  <span className="sr-only">Toggle dark mode</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Maximum Input Length */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Maximum Input Length
@@ -38,7 +68,7 @@ const SettingsDialog = ({ isOpen, onClose, maxLength, onMaxLengthChange }) => {
                   min="1000"
                   value={localMaxLength}
                   onChange={(e) => setLocalMaxLength(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-navy-500"
                 />
                 <p className="mt-1 text-sm text-gray-500">
                   Minimum allowed value is 1,000 characters
@@ -57,7 +87,7 @@ const SettingsDialog = ({ isOpen, onClose, maxLength, onMaxLengthChange }) => {
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            className="px-4 py-2 bg-navy-500 text-white rounded-lg hover:bg-navy-600"
           >
             Save Changes
           </button>
