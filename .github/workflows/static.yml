@@ -36,6 +36,7 @@ jobs:
           REACT_APP_OPENAI_API_KEY: ${{ secrets.REACT_APP_OPENAI_API_KEY }}
           REACT_APP_AZURE_TTS_KEY: ${{ secrets.REACT_APP_AZURE_TTS_KEY }}
           REACT_APP_AZURE_REGION: ${{ secrets.REACT_APP_AZURE_REGION }}
+          REACT_APP_ACCESS_PASSWORD: ${{ secrets.REACT_APP_ACCESS_PASSWORD }}
           CI: false
         run: npm run build
         
