@@ -1263,6 +1263,72 @@ const HistoryPanel = ({ isOpen, onClose, history, onSelectHistory, onDeleteHisto
     );
 };
 
+const ProgressButton = ({
+    onClick,
+    disabled,
+    isTranslating,
+    onCancel,
+    progress = 0
+}) => {
+    const [showCancelToast, setShowCancelToast] = useState(false);
+
+    const handleClick = useCallback(() => {
+        if (isTranslating) {
+            onCancel();
+            setShowCancelToast(true);
+            setTimeout(() => setShowCancelToast(false), 3000);
+        } else {
+            onClick();
+        }
+    }, [isTranslating, onClick, onCancel]);
+
+    return (
+        <div className="relative flex flex-col items-center">
+            <button
+                onClick={handleClick}
+                disabled={disabled && !isTranslating}
+                className={`px-6 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto relative overflow-hidden
+            ${disabled && !isTranslating
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-navy-500 text-white hover:bg-navy-600'}`}
+            >
+                {/* Progress overlay */}
+                {isTranslating && (
+                    <div
+                        className="absolute inset-0 bg-navy-700 transition-all duration-300"
+                        style={{
+                            width: `${progress}%`,
+                            opacity: 0.5
+                        }}
+                    />
+                )}
+
+                <div className="relative flex items-center justify-center">
+                    <ArrowRightLeft className={`mr-2 h-4 w-4 ${isTranslating ? 'animate-spin' : ''}`} />
+                    {isTranslating ? 'Translating...' : 'Translate'}
+                </div>
+            </button>
+
+            {/* Cancel instruction */}
+            {isTranslating && (
+                <div className="mt-2 text-sm text-gray-600">
+                    Tap again to cancel
+                </div>
+            )}
+
+            {/* Cancel toast */}
+            {showCancelToast && (
+                <div className="fixed bottom-4 right-4 z-50">
+                    <Alert className="bg-white border-gray-200 shadow-lg">
+                        <X className="h-4 w-4" />
+                        <div className="ml-2">Translation cancelled</div>
+                    </Alert>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const SafetyWarningDialog = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
 
@@ -1352,6 +1418,8 @@ const TranslatorApp = () => {
     const [maxLength, setMaxLength] = useState(parseInt(localStorage.getItem('maxInputLength')) || 5000);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isFixedSize, setIsFixedSize] = useState(false);
+    const [translationProgress, setTranslationProgress] = useState(0);
+    const [translationController, setTranslationController] = useState(null);
 
     // All useEffect hooks
     useEffect(() => {
@@ -1387,7 +1455,7 @@ const TranslatorApp = () => {
     const isVersionSecure = (currentVersion, minVersion) => {
         const current = currentVersion.split('.').map(Number);
         const min = minVersion.split('.').map(Number);
-        
+
         for (let i = 0; i < 3; i++) {
             if (current[i] > min[i]) return true;
             if (current[i] < min[i]) return false;
@@ -1401,7 +1469,7 @@ const TranslatorApp = () => {
         return <Navigate to="/" replace />;
     }
 
-    const translateWithGemini = async (text, previousTranslations = []) => {
+    const translateWithGemini = async (text, previousTranslations = [], signal) => {
         try {
             const genAI = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
             const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -1455,16 +1523,14 @@ const TranslatorApp = () => {
             };
             setRequestLog(requestBody);
 
-            const result = await model.generateContent(prompt);
+            const result = await model.generateContent(prompt, { signal });
             return result.response.text();
         } catch (error) {
-            throw new Error(error.message.includes('API key')
-                ? 'Invalid Gemini API key. Please check your environment variables.'
-                : `Translation error: ${error.message}`);
+            throw error;
         }
     };
 
-    const translateWithOpenRouter = async (text, modelId, previousTranslations = []) => {
+    const translateWithOpenRouter = async (text, modelId, previousTranslations = [], signal) => {
         const modelUrl = modelId === MODELS.ANTHROPIC
             ? 'anthropic/claude-3-haiku'
             : 'cohere/command-r-08-2024';
@@ -1522,6 +1588,7 @@ const TranslatorApp = () => {
         try {
             const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
+                signal, // Add this line
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${process.env.REACT_APP_OPENROUTER_API_KEY}`,
@@ -1547,7 +1614,7 @@ const TranslatorApp = () => {
         }
     };
 
-    const translateWithOpenAI = async (text, previousTranslations = []) => {
+    const translateWithOpenAI = async (text, previousTranslations = [], signal) => {
         try {
             // Get base instructions
             const basePreInstruction = modelInstructions[MODELS.OPENAI]['pre-instruction'];
@@ -1601,6 +1668,7 @@ const TranslatorApp = () => {
 
             const response = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
+                signal,
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`
@@ -1711,79 +1779,112 @@ const TranslatorApp = () => {
         try {
             setIsLoading(true);
             setError('');
-            validateLanguageSupport(sourceLang, targetLang);
+            validateLanguageSupport(sourceLang, targetLang); // Add this validation
+
+            // Create AbortController for cancellation
+            const controller = new AbortController();
+            setTranslationController(controller);
+
+            // Reset progress
+            setTranslationProgress(0);
+
+            // Start progress simulation
+            const progressInterval = setInterval(() => {
+                setTranslationProgress(prev => Math.min(prev + 2, 90));
+            }, 100);
 
             let translatedResult;
-            if (isAdditional) {
-                switch (selectedModel) {
-                    case MODELS.GEMINI:
-                        translatedResult = await translateWithGemini(inputText, translations);
-                        break;
-                    case MODELS.COMMAND:
-                        translatedResult = await translateWithOpenRouter(inputText, selectedModel, translations);
-                        break;
-                    case MODELS.ANTHROPIC:
-                        translatedResult = await translateWithOpenRouter(inputText, selectedModel, translations);
-                        break;
-                    case MODELS.OPENAI:
-                        translatedResult = await translateWithOpenAI(inputText, translations);
-                        break;
-                    default:
-                        throw new Error('Invalid model selected');
+            try {
+                if (isAdditional) {
+                    switch (selectedModel) {
+                        case MODELS.GEMINI:
+                            translatedResult = await translateWithGemini(inputText, translations, controller.signal);
+                            break;
+                        case MODELS.COMMAND:
+                            translatedResult = await translateWithOpenRouter(inputText, selectedModel, translations, controller.signal);
+                            break;
+                        case MODELS.ANTHROPIC:
+                            translatedResult = await translateWithOpenRouter(inputText, selectedModel, translations, controller.signal);
+                            break;
+                        case MODELS.OPENAI:
+                            translatedResult = await translateWithOpenAI(inputText, translations, controller.signal);
+                            break;
+                        default:
+                            throw new Error('Invalid model selected');
+                    }
+                } else {
+                    switch (selectedModel) {
+                        case MODELS.GEMINI:
+                            translatedResult = await translateWithGemini(inputText, [], controller.signal);
+                            break;
+                        case MODELS.COMMAND:
+                            translatedResult = await translateWithOpenRouter(inputText, selectedModel, [], controller.signal);
+                            break;
+                        case MODELS.ANTHROPIC:
+                            translatedResult = await translateWithOpenRouter(inputText, selectedModel, [], controller.signal);
+                            break;
+                        case MODELS.OPENAI:
+                            translatedResult = await translateWithOpenAI(inputText, [], controller.signal);
+                            break;
+                        default:
+                            throw new Error('Invalid model selected');
+                    }
                 }
-            } else {
-                switch (selectedModel) {
-                    case MODELS.GEMINI:
-                        translatedResult = await translateWithGemini(inputText);
-                        break;
-                    case MODELS.COMMAND:
-                        translatedResult = await translateWithOpenRouter(inputText, selectedModel);
-                        break;
-                    case MODELS.ANTHROPIC:
-                        translatedResult = await translateWithOpenRouter(inputText, selectedModel);
-                        break;
-                    case MODELS.OPENAI:
-                        translatedResult = await translateWithOpenAI(inputText);
-                        break;
-                    default:
-                        throw new Error('Invalid model selected');
+
+                clearInterval(progressInterval);
+                setTranslationProgress(100);
+
+                if (!translatedResult) throw new Error('No translation result.');
+
+                // Handle the translation result
+                if (isAdditional) {
+                    setTranslations(prev => [...prev, { text: translatedResult, timestamp: new Date() }]);
+                    setCurrentIndex(translations.length);
+                } else {
+                    setTranslations([{ text: translatedResult, timestamp: new Date() }]);
+                    setCurrentIndex(0);
                 }
+
+                // Add to history
+                const newHistory = [
+                    {
+                        inputText,
+                        translatedText: translatedResult,
+                        model: selectedModel,
+                        timestamp: new Date().toISOString()
+                    },
+                    ...history
+                ].slice(0, MAX_HISTORY_ITEMS);
+
+                setHistory(newHistory);
+                saveHistory(newHistory);
+
+            } catch (err) {
+                throw err;
+            } finally {
+                clearInterval(progressInterval);
             }
 
-            if (!translatedResult) throw new Error('No translation result.');
-
-            if (isAdditional) {
-                // Add new translation to the array
-                setTranslations(prev => [...prev, { text: translatedResult, timestamp: new Date() }]);
-                setCurrentIndex(translations.length);
-            } else {
-                // Reset translations with new first translation
-                setTranslations([{ text: translatedResult, timestamp: new Date() }]);
-                setCurrentIndex(0);
-            }
-
-            // Add to history
-            const newHistory = [
-                {
-                    inputText,
-                    translatedText: translatedResult,
-                    model: selectedModel,
-                    timestamp: new Date().toISOString()
-                },
-                ...history
-            ].slice(0, MAX_HISTORY_ITEMS);
-
-            setHistory(newHistory);
-            saveHistory(newHistory);
         } catch (err) {
-            if (err.message.includes('SAFETY')) {
+            if (err.name === 'AbortError') {
+                // Don't set error for cancelled translations
+                return;
+            } else if (err.message.includes('SAFETY')) {
                 setShowSafetyWarning(true);
             } else {
                 setError(err.message);
             }
         } finally {
             setIsLoading(false);
+            setTranslationProgress(0);
+            setTranslationController(null);
             setCopySuccess(false);
+        }
+    };
+
+    const handleCancelTranslation = () => {
+        if (translationController) {
+            translationController.abort();
         }
     };
 
@@ -2041,17 +2142,13 @@ const TranslatorApp = () => {
 
                     {/* Action buttons */}
                     <div className="flex flex-col sm:flex-row justify-center gap-3">
-                        <button
+                        <ProgressButton
                             onClick={() => handleTranslate(false)}
-                            disabled={!inputText || isLoading}
-                            className={`px-6 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto ${inputText && !isLoading
-                                ? 'bg-navy-500 text-white hover:bg-navy-600'
-                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                }`}
-                        >
-                            <ArrowRightLeft className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                            {isLoading ? 'Translating...' : 'Translate'}
-                        </button>
+                            disabled={!inputText}
+                            isTranslating={isLoading}
+                            onCancel={handleCancelTranslation}
+                            progress={translationProgress}
+                        />
 
                         {translatedText && (
                             <>
@@ -2084,9 +2181,7 @@ const TranslatorApp = () => {
                                 {/* Save button */}
                                 <button
                                     onClick={handleSaveTranslation}
-                                    className={`px-6 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto transition-all duration-300 ${saveSuccess
-                                        ? 'bg-navy-500 text-white'
-                                        : 'bg-gray-100 hover:bg-gray-200'
+                                    className={`px-6 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto transition-all duration-300 ${saveSuccess ? 'bg-navy-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
                                         }`}
                                 >
                                     {saveSuccess ? (
