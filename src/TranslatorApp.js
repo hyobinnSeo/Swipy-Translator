@@ -1323,36 +1323,45 @@ const ActionButton = ({
     };
 
     return (
-        <button
-            onClick={handleClick}
-            disabled={disabled && !isLoading}
-            className={`
-                px-4 sm:px-6 py-2 rounded-lg flex items-center justify-center
-                w-full sm:w-auto sm:min-w-[140px] md:min-w-[160px] 
-                transition-all duration-300 relative overflow-hidden
-                ${type === 'translate'
-                    ? (disabled && !isLoading
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : 'bg-navy-500 text-white hover:bg-navy-600')
-                    : isActive
-                        ? 'bg-navy-500 text-white'
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                }
-            `}
-        >
+        <div className="flex flex-col items-center">
+            <button
+                onClick={handleClick}
+                disabled={disabled && !isLoading}
+                className={`
+                    px-4 sm:px-6 py-2 rounded-lg flex items-center justify-center
+                    w-full sm:w-auto sm:min-w-[140px] md:min-w-[160px] 
+                    transition-all duration-300 relative overflow-hidden
+                    ${type === 'translate'
+                        ? (disabled && !isLoading
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-navy-500 text-white hover:bg-navy-600')
+                        : isActive
+                            ? 'bg-navy-500 text-white'
+                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    }
+                `}
+            >
+                {isLoading && type === 'translate' && (
+                    <div
+                        className="absolute inset-0 bg-navy-700 transition-all duration-300"
+                        style={{
+                            width: `${progress}%`,
+                            opacity: 0.5
+                        }}
+                    />
+                )}
+                <div className="relative flex items-center justify-center">
+                    {getButtonContent()}
+                </div>
+            </button>
+
+            {/* Cancel instruction */}
             {isLoading && type === 'translate' && (
-                <div
-                    className="absolute inset-0 bg-navy-700 transition-all duration-300"
-                    style={{
-                        width: `${progress}%`,
-                        opacity: 0.5
-                    }}
-                />
+                <div className="mt-2 text-sm text-gray-600">
+                    Tap again to cancel
+                </div>
             )}
-            <div className="relative flex items-center justify-center">
-                {getButtonContent()}
-            </div>
-        </button>
+        </div>
     );
 };
 
