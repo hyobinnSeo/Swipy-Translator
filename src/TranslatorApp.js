@@ -1269,8 +1269,7 @@ const ActionButton = ({
     isActive = false,
     isLoading = false,
     disabled = false,
-    onCancel,
-    progress = 0
+    onCancel
 }) => {
     const getButtonContent = () => {
         switch (type) {
@@ -1341,15 +1340,6 @@ const ActionButton = ({
                     }
                 `}
             >
-                {isLoading && type === 'translate' && (
-                    <div
-                        className="absolute inset-0 bg-navy-700 transition-all duration-300"
-                        style={{
-                            width: `${progress}%`,
-                            opacity: 0.5
-                        }}
-                    />
-                )}
                 <div className="relative flex items-center justify-center">
                     {getButtonContent()}
                 </div>
@@ -1454,8 +1444,8 @@ const TranslatorApp = () => {
     const [maxLength, setMaxLength] = useState(parseInt(localStorage.getItem('maxInputLength')) || 5000);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isFixedSize, setIsFixedSize] = useState(false);
-    const [translationProgress, setTranslationProgress] = useState(0);
     const [translationController, setTranslationController] = useState(null);
+
 
     // All useEffect hooks
     useEffect(() => {
@@ -1507,21 +1497,18 @@ const TranslatorApp = () => {
 
     const translateWithGemini = async (text, previousTranslations = [], signal) => {
         try {
-            const genAI = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
             // Get base instructions
             const basePreInstruction = modelInstructions[selectedModel]['pre-instruction'];
             const postInstruction = modelInstructions[selectedModel]['post-instruction'];
-
+            const toneInstructions = getToneInstructions(selectedTone, modelInstructions, selectedModel);
+    
             // Get language settings
             const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
             const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
-            const toneInstructions = getToneInstructions(selectedTone, modelInstructions, selectedModel);
-
+    
             // Construct the prompt
             let prompt = `Instructions:\n${basePreInstruction}\n\n`;
-
+    
             // Add Language settings
             prompt += `Language:\n`;
             if (sourceLang === 'auto') {
@@ -1529,13 +1516,13 @@ const TranslatorApp = () => {
             } else {
                 prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
             }
-
+    
             // Add Tone settings
             prompt += `Tone:\n${toneInstructions.instruction}\n\n`;
-
+    
             // Add text to translate
             prompt += `Text to be translated:\n${text}\n\n`;
-
+    
             // Add previous translations if any
             if (previousTranslations.length > 0) {
                 prompt += "Previous translations to avoid repeating:\n";
@@ -1544,24 +1531,53 @@ const TranslatorApp = () => {
                 });
                 prompt += "\nNote: Provide a fresh translation different from the above versions.\n\n";
             }
-
+    
             // Add post instructions
             prompt += postInstruction;
-
+    
             // Set request log
             const requestBody = {
+                contents: [{
+                    parts: [{ text: prompt }]
+                }],
+            };
+            
+            setRequestLog({
                 model: "gemini-1.5-flash",
                 messages: [{ content: prompt }],
-                endpoint: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash",
+                endpoint: "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent",
                 headers: {
                     'Content-Type': 'application/json'
                 },
-            };
-            setRequestLog(requestBody);
-
-            const result = await model.generateContent(prompt, { signal });
-            return result.response.text();
+            });
+    
+            const response = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`,
+                {
+                    method: 'POST',
+                    signal, // Add AbortController signal
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                }
+            );
+    
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+    
+            const data = await response.json();
+            if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                throw new Error('Invalid response structure from Gemini API');
+            }
+    
+            return data.candidates[0].content.parts[0].text;
+    
         } catch (error) {
+            if (error.name === 'AbortError') {
+                throw error; // AbortError를 그대로 전파
+            }
             throw error;
         }
     };
@@ -1624,7 +1640,7 @@ const TranslatorApp = () => {
         try {
             const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
-                signal, // Add this line
+                signal, // AbortController signal 추가
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${process.env.REACT_APP_OPENROUTER_API_KEY}`,
@@ -1639,17 +1655,20 @@ const TranslatorApp = () => {
                     ]
                 })
             });
-
+    
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
             return data.choices[0]?.message?.content;
         } catch (error) {
+            if (error.name === 'AbortError') {
+                throw error; // AbortError를 그대로 전파
+            }
             throw new Error(error.message === 'Unauthorized'
                 ? 'Invalid API key. Please check your environment variables.'
                 : `Translation error: ${error.message}`);
         }
     };
-
+    
     const translateWithOpenAI = async (text, previousTranslations = [], signal) => {
         try {
             // Get base instructions
@@ -1704,7 +1723,7 @@ const TranslatorApp = () => {
 
             const response = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
-                signal,
+                signal, // AbortController signal 추가
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`
@@ -1719,14 +1738,17 @@ const TranslatorApp = () => {
                     max_tokens: 2000
                 })
             });
-
+    
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-
+    
             const data = await response.json();
             return data.choices[0]?.message?.content;
         } catch (error) {
+            if (error.name === 'AbortError') {
+                throw error; // AbortError를 그대로 전파
+            }
             throw new Error(error.message === 'Unauthorized'
                 ? 'Invalid OpenAI API key. Please check your environment variables.'
                 : `Translation error: ${error.message}`);
@@ -1815,19 +1837,11 @@ const TranslatorApp = () => {
         try {
             setIsLoading(true);
             setError('');
-            validateLanguageSupport(sourceLang, targetLang); // Add this validation
+            validateLanguageSupport(sourceLang, targetLang);
 
             // Create AbortController for cancellation
             const controller = new AbortController();
             setTranslationController(controller);
-
-            // Reset progress
-            setTranslationProgress(0);
-
-            // Start progress simulation
-            const progressInterval = setInterval(() => {
-                setTranslationProgress(prev => Math.min(prev + 2, 90));
-            }, 100);
 
             let translatedResult;
             try {
@@ -1867,12 +1881,8 @@ const TranslatorApp = () => {
                     }
                 }
 
-                clearInterval(progressInterval);
-                setTranslationProgress(100);
-
                 if (!translatedResult) throw new Error('No translation result.');
 
-                // Handle the translation result
                 if (isAdditional) {
                     setTranslations(prev => [...prev, { text: translatedResult, timestamp: new Date() }]);
                     setCurrentIndex(translations.length);
@@ -1897,8 +1907,6 @@ const TranslatorApp = () => {
 
             } catch (err) {
                 throw err;
-            } finally {
-                clearInterval(progressInterval);
             }
 
         } catch (err) {
@@ -1912,7 +1920,6 @@ const TranslatorApp = () => {
             }
         } finally {
             setIsLoading(false);
-            setTranslationProgress(0);
             setTranslationController(null);
             setCopySuccess(false);
         }
@@ -2185,7 +2192,6 @@ const TranslatorApp = () => {
                             disabled={!inputText}
                             isLoading={isLoading}
                             onCancel={handleCancelTranslation}
-                            progress={translationProgress}
                         />
 
                         {translatedText && (
