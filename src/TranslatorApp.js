@@ -1263,69 +1263,96 @@ const HistoryPanel = ({ isOpen, onClose, history, onSelectHistory, onDeleteHisto
     );
 };
 
-const ProgressButton = ({
+const ActionButton = ({
+    type,
     onClick,
-    disabled,
-    isTranslating,
+    isActive = false,
+    isLoading = false,
+    disabled = false,
     onCancel,
     progress = 0
 }) => {
-    const [showCancelToast, setShowCancelToast] = useState(false);
-
-    const handleClick = useCallback(() => {
-        if (isTranslating) {
-            onCancel();
-            setShowCancelToast(true);
-            setTimeout(() => setShowCancelToast(false), 3000);
-        } else {
-            onClick();
+    const getButtonContent = () => {
+        switch (type) {
+            case 'translate':
+                return (
+                    <>
+                        <ArrowLeftRight className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                        <span className="min-w-[60px] sm:min-w-[80px]">
+                            {isLoading ? 'Translating...' : 'Translate'}
+                        </span>
+                    </>
+                );
+            case 'copy':
+                return (
+                    <>
+                        {isActive ? (
+                            <ClipboardCheck className="h-4 w-4 mr-2 text-white" />
+                        ) : (
+                            <ClipboardCopy className="h-4 w-4 mr-2" />
+                        )}
+                        <span className="min-w-[40px] sm:min-w-[80px]">
+                            {isActive ? 'Copied!' : 'Copy'}
+                        </span>
+                    </>
+                );
+            case 'save':
+                return (
+                    <>
+                        {isActive ? (
+                            <Check className="h-4 w-4 mr-2" />
+                        ) : (
+                            <BookmarkIcon className="h-4 w-4 mr-2" />
+                        )}
+                        <span className="min-w-[40px] sm:min-w-[80px]">
+                            {isActive ? 'Saved!' : 'Save'}
+                        </span>
+                    </>
+                );
+            default:
+                return null;
         }
-    }, [isTranslating, onClick, onCancel]);
+    };
+
+    const handleClick = () => {
+        if (type === 'translate' && isLoading) {
+            onCancel?.();
+        } else {
+            onClick?.();
+        }
+    };
 
     return (
-        <div className="relative flex flex-col items-center">
-            <button
-                onClick={handleClick}
-                disabled={disabled && !isTranslating}
-                className={`px-6 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto relative overflow-hidden
-            ${disabled && !isTranslating
+        <button
+            onClick={handleClick}
+            disabled={disabled && !isLoading}
+            className={`
+                px-4 sm:px-6 py-2 rounded-lg flex items-center justify-center
+                w-full sm:w-auto sm:min-w-[140px] md:min-w-[160px] 
+                transition-all duration-300 relative overflow-hidden
+                ${type === 'translate'
+                    ? (disabled && !isLoading
                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : 'bg-navy-500 text-white hover:bg-navy-600'}`}
-            >
-                {/* Progress overlay */}
-                {isTranslating && (
-                    <div
-                        className="absolute inset-0 bg-navy-700 transition-all duration-300"
-                        style={{
-                            width: `${progress}%`,
-                            opacity: 0.5
-                        }}
-                    />
-                )}
-
-                <div className="relative flex items-center justify-center">
-                    <ArrowRightLeft className={`mr-2 h-4 w-4 ${isTranslating ? 'animate-spin' : ''}`} />
-                    {isTranslating ? 'Translating...' : 'Translate'}
-                </div>
-            </button>
-
-            {/* Cancel instruction */}
-            {isTranslating && (
-                <div className="mt-2 text-sm text-gray-600">
-                    Tap again to cancel
-                </div>
+                        : 'bg-navy-500 text-white hover:bg-navy-600')
+                    : isActive
+                        ? 'bg-navy-500 text-white'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                }
+            `}
+        >
+            {isLoading && type === 'translate' && (
+                <div
+                    className="absolute inset-0 bg-navy-700 transition-all duration-300"
+                    style={{
+                        width: `${progress}%`,
+                        opacity: 0.5
+                    }}
+                />
             )}
-
-            {/* Cancel toast */}
-            {showCancelToast && (
-                <div className="fixed bottom-4 right-4 z-50">
-                    <Alert className="bg-white border-gray-200 shadow-lg">
-                        <X className="h-4 w-4" />
-                        <div className="ml-2">Translation cancelled</div>
-                    </Alert>
-                </div>
-            )}
-        </div>
+            <div className="relative flex items-center justify-center">
+                {getButtonContent()}
+            </div>
+        </button>
     );
 };
 
@@ -2141,19 +2168,21 @@ const TranslatorApp = () => {
                     {error && <Alert>{error}</Alert>}
 
                     {/* Action buttons */}
+                    {/* Action buttons */}
                     <div className="flex flex-col sm:flex-row justify-center gap-3">
-                        <ProgressButton
+                        <ActionButton
+                            type="translate"
                             onClick={() => handleTranslate(false)}
                             disabled={!inputText}
-                            isTranslating={isLoading}
+                            isLoading={isLoading}
                             onCancel={handleCancelTranslation}
                             progress={translationProgress}
                         />
 
                         {translatedText && (
                             <>
-                                {/* Copy button */}
-                                <button
+                                <ActionButton
+                                    type="copy"
                                     onClick={async () => {
                                         try {
                                             await navigator.clipboard.writeText(translatedText);
@@ -2163,39 +2192,14 @@ const TranslatorApp = () => {
                                             console.error('Failed to copy text:', err);
                                         }
                                     }}
-                                    className="px-6 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto bg-gray-100 hover:bg-gray-200 transition-colors"
-                                >
-                                    {copySuccess ? (
-                                        <>
-                                            <ClipboardCheck className="mr-2 h-4 w-4 text-navy-500" />
-                                            Copied!
-                                        </>
-                                    ) : (
-                                        <>
-                                            <ClipboardCopy className="mr-2 h-4 w-4" />
-                                            Copy
-                                        </>
-                                    )}
-                                </button>
+                                    isActive={copySuccess}
+                                />
 
-                                {/* Save button */}
-                                <button
+                                <ActionButton
+                                    type="save"
                                     onClick={handleSaveTranslation}
-                                    className={`px-6 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto transition-all duration-300 ${saveSuccess ? 'bg-navy-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
-                                        }`}
-                                >
-                                    {saveSuccess ? (
-                                        <>
-                                            <Check className="mr-2 h-4 w-4" />
-                                            Saved!
-                                        </>
-                                    ) : (
-                                        <>
-                                            <BookmarkIcon className="mr-2 h-4 w-4" />
-                                            Save
-                                        </>
-                                    )}
-                                </button>
+                                    isActive={saveSuccess}
+                                />
                             </>
                         )}
                     </div>
