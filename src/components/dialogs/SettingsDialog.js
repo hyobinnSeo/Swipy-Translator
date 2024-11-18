@@ -30,13 +30,15 @@ const DialogWrapper = ({ isOpen, onClose, children, className = '' }) => {
   );
 };
 
-const SettingsDialog = ({ isOpen, onClose, maxLength, onMaxLengthChange }) => {
+const SettingsDialog = ({ isOpen, onClose, maxLength, onMaxLengthChange, saveHistory, onSaveHistoryChange }) => {
   const [localMaxLength, setLocalMaxLength] = useState(maxLength);
+  const [localSaveHistory, setLocalSaveHistory] = useState(saveHistory);
 
   const handleSave = () => {
     // Convert to number and ensure it's at least 1000
     const newMaxLength = Math.max(1000, parseInt(localMaxLength) || 1000);
     onMaxLengthChange(newMaxLength);
+    onSaveHistoryChange(localSaveHistory);
     onClose();
   };
 
@@ -56,7 +58,7 @@ const SettingsDialog = ({ isOpen, onClose, maxLength, onMaxLengthChange }) => {
         </div>
 
         <div className="p-6">
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Maximum Input Length
@@ -73,6 +75,27 @@ const SettingsDialog = ({ isOpen, onClose, maxLength, onMaxLengthChange }) => {
                   Minimum allowed value is 1,000 characters
                 </p>
               </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700">Save Translation History</label>
+                <button
+                  onClick={() => setLocalSaveHistory(!localSaveHistory)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    localSaveHistory ? 'bg-navy-500' : 'bg-gray-200'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      localSaveHistory ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              <p className="mt-1 text-sm text-gray-500">
+                When disabled, your translation history will not be saved between sessions
+              </p>
             </div>
           </div>
         </div>

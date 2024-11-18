@@ -17,10 +17,8 @@ import {
     ChevronLeft,
     ChevronRight,
     ArrowLeftRight,
-    ArrowRightLeft,
     AlertTriangle
 } from 'lucide-react';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Helmet } from 'react-helmet';
 import { Navigate } from 'react-router-dom';
 import {
@@ -39,16 +37,25 @@ import {
 } from './constants/index.js';
 import SettingsDialog from './components/dialogs/SettingsDialog.js';
 
-const loadHistory = () => {
+
+// History loading function - should respect the saveHistory setting
+const loadHistory = (saveHistoryEnabled) => {
     try {
-        return JSON.parse(localStorage.getItem('translationHistory')) || [];
+        // Only load history if the feature is enabled
+        if (saveHistoryEnabled) {
+            return JSON.parse(localStorage.getItem('translationHistory')) || [];
+        }
+        return [];
     } catch {
         return [];
     }
 };
 
-const saveHistory = (history) => {
-    localStorage.setItem('translationHistory', JSON.stringify(history));
+// History saving function - should respect the saveHistory setting
+const saveHistoryToStorage = (history, saveHistoryEnabled) => {
+    if (saveHistoryEnabled) {
+        localStorage.setItem('translationHistory', JSON.stringify(history));
+    }
 };
 
 const loadSavedTranslations = () => {
@@ -1445,7 +1452,9 @@ const TranslatorApp = () => {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isFixedSize, setIsFixedSize] = useState(false);
     const [translationController, setTranslationController] = useState(null);
-
+    const [saveHistory, setSaveHistory] = useState(
+        JSON.parse(localStorage.getItem('saveHistory') ?? 'true')
+    );
 
     // All useEffect hooks
     useEffect(() => {
@@ -1457,9 +1466,10 @@ const TranslatorApp = () => {
     }, [selectedModel, selectedTone]);
 
     useEffect(() => {
-        setHistory(loadHistory());
+        // Load history based on the current saveHistory setting
+        setHistory(loadHistory(saveHistory));
         setSavedTranslations(loadSavedTranslations());
-    }, []);
+    }, [saveHistory]); // Add saveHistory as a dependency
 
     useEffect(() => {
         const savedFixedSize = localStorage.getItem('isFixedSize');
@@ -1501,14 +1511,14 @@ const TranslatorApp = () => {
             const basePreInstruction = modelInstructions[selectedModel]['pre-instruction'];
             const postInstruction = modelInstructions[selectedModel]['post-instruction'];
             const toneInstructions = getToneInstructions(selectedTone, modelInstructions, selectedModel);
-    
+
             // Get language settings
             const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
             const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
-    
+
             // Construct the prompt
             let prompt = `Instructions:\n${basePreInstruction}\n\n`;
-    
+
             // Add Language settings
             prompt += `Language:\n`;
             if (sourceLang === 'auto') {
@@ -1516,13 +1526,13 @@ const TranslatorApp = () => {
             } else {
                 prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
             }
-    
+
             // Add Tone settings
             prompt += `Tone:\n${toneInstructions.instruction}\n\n`;
-    
+
             // Add text to translate
             prompt += `Text to be translated:\n${text}\n\n`;
-    
+
             // Add previous translations if any
             if (previousTranslations.length > 0) {
                 prompt += "Previous translations to avoid repeating:\n";
@@ -1531,17 +1541,17 @@ const TranslatorApp = () => {
                 });
                 prompt += "\nNote: Provide a fresh translation different from the above versions.\n\n";
             }
-    
+
             // Add post instructions
             prompt += postInstruction;
-    
+
             // Set request log
             const requestBody = {
                 contents: [{
                     parts: [{ text: prompt }]
                 }],
             };
-            
+
             setRequestLog({
                 model: "gemini-1.5-flash",
                 messages: [{ content: prompt }],
@@ -1550,7 +1560,7 @@ const TranslatorApp = () => {
                     'Content-Type': 'application/json'
                 },
             });
-    
+
             const response = await fetch(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`,
                 {
@@ -1562,18 +1572,18 @@ const TranslatorApp = () => {
                     body: JSON.stringify(requestBody)
                 }
             );
-    
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-    
+
             const data = await response.json();
             if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
                 throw new Error('Invalid response structure from Gemini API');
             }
-    
+
             return data.candidates[0].content.parts[0].text;
-    
+
         } catch (error) {
             if (error.name === 'AbortError') {
                 throw error; // AbortError를 그대로 전파
@@ -1655,7 +1665,7 @@ const TranslatorApp = () => {
                     ]
                 })
             });
-    
+
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
             return data.choices[0]?.message?.content;
@@ -1668,7 +1678,7 @@ const TranslatorApp = () => {
                 : `Translation error: ${error.message}`);
         }
     };
-    
+
     const translateWithOpenAI = async (text, previousTranslations = [], signal) => {
         try {
             // Get base instructions
@@ -1738,11 +1748,11 @@ const TranslatorApp = () => {
                     max_tokens: 2000
                 })
             });
-    
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-    
+
             const data = await response.json();
             return data.choices[0]?.message?.content;
         } catch (error) {
@@ -1771,12 +1781,12 @@ const TranslatorApp = () => {
         const newHistory = [...history];
         newHistory.splice(index, 1);
         setHistory(newHistory);
-        saveHistory(newHistory);
+        saveHistoryToStorage(newHistory, saveHistory);
     };
 
     const clearAllHistory = () => {
         setHistory([]);
-        saveHistory([]);
+        saveHistoryToStorage([], saveHistory);
     };
 
     const handleSaveTranslation = () => {
@@ -1891,19 +1901,21 @@ const TranslatorApp = () => {
                     setCurrentIndex(0);
                 }
 
-                // Add to history
-                const newHistory = [
-                    {
-                        inputText,
-                        translatedText: translatedResult,
-                        model: selectedModel,
-                        timestamp: new Date().toISOString()
-                    },
-                    ...history
-                ].slice(0, MAX_HISTORY_ITEMS);
-
-                setHistory(newHistory);
-                saveHistory(newHistory);
+                // Inside handleTranslate, modify the history section:
+                if (saveHistory) {
+                    const newHistory = [
+                        {
+                            inputText,
+                            translatedText: translatedResult,
+                            model: selectedModel,
+                            timestamp: new Date().toISOString()
+                        },
+                        ...history
+                    ].slice(0, MAX_HISTORY_ITEMS);
+                
+                    setHistory(newHistory);
+                    saveHistoryToStorage(newHistory, saveHistory);
+                }
 
             } catch (err) {
                 throw err;
@@ -2059,6 +2071,16 @@ const TranslatorApp = () => {
                 onClose={() => setIsSettingsOpen(false)}
                 maxLength={maxLength}
                 onMaxLengthChange={handleMaxLengthChange}
+                saveHistory={saveHistory}
+                onSaveHistoryChange={(newValue) => {
+                    setSaveHistory(newValue);
+                    localStorage.setItem('saveHistory', JSON.stringify(newValue));
+                    if (!newValue) {
+                        // Clear existing history when disabled
+                        setHistory([]);
+                        localStorage.removeItem('translationHistory');
+                    }
+                }}
             />
 
             {/* Header */}
