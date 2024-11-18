@@ -6,6 +6,10 @@ export const MODELS = {
     OPENAI: 'gpt'
 };
 
+// Current app version - used to enforce password protection
+export const APP_VERSION = '2.0.0';
+export const MIN_SECURE_VERSION = '2.0.0'; // Version where password protection was added
+
 // Language names and their display values
 export const LANGUAGE_NAMES = {
     'auto': 'Auto Detect',

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Helmet } from 'react-helmet';
+import { Navigate } from 'react-router-dom';
 import {
     MODELS,
     LANGUAGE_NAMES,
@@ -32,7 +33,9 @@ import {
     AVAILABLE_MODELS,
     MAX_HISTORY_ITEMS,
     MAX_SAVED_TRANSLATIONS,
-    getToneInstructions
+    getToneInstructions,
+    APP_VERSION,
+    MIN_SECURE_VERSION
 } from './constants/index.js';
 import SettingsDialog from './components/dialogs/SettingsDialog.js';
 
@@ -1309,6 +1312,7 @@ const SafetyWarningDialog = ({ isOpen, onClose }) => {
 };
 
 const TranslatorApp = () => {
+    // All hooks declarations
     const [inputText, setInputText] = useState('');
     const [translations, setTranslations] = useState([]); // Array of translations
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -1349,7 +1353,20 @@ const TranslatorApp = () => {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isFixedSize, setIsFixedSize] = useState(false);
 
-    // Add effect to persist the fixed size preference
+    // All useEffect hooks
+    useEffect(() => {
+        // Reset tone to standard when changing models if current tone isn't available
+        const modelTones = TONES[selectedModel] || TONES[MODELS.GEMINI];
+        if (!modelTones.find(tone => tone.id === selectedTone)) {
+            setSelectedTone('standard');
+        }
+    }, [selectedModel, selectedTone]);
+
+    useEffect(() => {
+        setHistory(loadHistory());
+        setSavedTranslations(loadSavedTranslations());
+    }, []);
+
     useEffect(() => {
         const savedFixedSize = localStorage.getItem('isFixedSize');
         if (savedFixedSize !== null) {
@@ -1357,7 +1374,7 @@ const TranslatorApp = () => {
         }
     }, []);
 
-    // Add handler to toggle fixed size
+    // Add the handleToggleFixedSize function
     const handleToggleFixedSize = () => {
         setIsFixedSize(prev => {
             const newValue = !prev;
@@ -1366,20 +1383,23 @@ const TranslatorApp = () => {
         });
     };
 
-    /* eslint-disable react-hooks/exhaustive-deps */
-    useEffect(() => {
-        // Reset tone to standard when changing models if current tone isn't available
-        const modelTones = TONES[selectedModel] || TONES[MODELS.GEMINI];
-        if (!modelTones.find(tone => tone.id === selectedTone)) {
-            setSelectedTone('standard');
+    // Version check function
+    const isVersionSecure = (currentVersion, minVersion) => {
+        const current = currentVersion.split('.').map(Number);
+        const min = minVersion.split('.').map(Number);
+        
+        for (let i = 0; i < 3; i++) {
+            if (current[i] > min[i]) return true;
+            if (current[i] < min[i]) return false;
         }
-    }, [selectedModel]);
-    /* eslint-enable react-hooks/exhaustive-deps */
+        return true;
+    };
 
-    useEffect(() => {
-        setHistory(loadHistory());
-        setSavedTranslations(loadSavedTranslations());
-    }, []);
+    // Version security check after all hooks
+    if (!isVersionSecure(APP_VERSION, MIN_SECURE_VERSION)) {
+        localStorage.removeItem('translator_auth');
+        return <Navigate to="/" replace />;
+    }
 
     const translateWithGemini = async (text, previousTranslations = []) => {
         try {
