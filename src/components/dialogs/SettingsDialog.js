@@ -21,7 +21,7 @@ const DialogWrapper = ({ isOpen, onClose, children, className = '' }) => {
       onClick={onClose}
     >
       <div
-        className={`bg-white rounded-lg shadow-xl ${className}`}
+        className={`bg-white rounded-lg shadow-xl max-h-[90vh] flex flex-col h-[90vh] ${className}`}
         onClick={e => e.stopPropagation()}
       >
         {children}
@@ -94,8 +94,8 @@ const SettingsDialog = ({
 
   return (
     <DialogWrapper isOpen={isOpen} onClose={onClose}>
-      <div className="w-full max-w-md">
-        <div className="px-6 py-4 border-b flex items-center justify-between bg-gray-50">
+      <div className="w-full max-w-md flex flex-col h-full">
+        <div className="shrink-0 px-6 py-4 border-b flex items-center justify-between bg-gray-50">
           <div className="flex items-center space-x-2">
             <SettingsIcon className="w-5 h-5 text-gray-500" />
             <h2 className="text-lg font-semibold text-gray-900">Settings</h2>
@@ -105,7 +105,7 @@ const SettingsDialog = ({
           </button>
         </div>
 
-        <div className="p-6 space-y-8">
+        <div className="flex-1 overflow-y-auto p-6 space-y-8">
           {/* General Settings Section */}
           <div>
             <SectionTitle>General Settings</SectionTitle>
@@ -177,7 +177,7 @@ const SettingsDialog = ({
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t bg-gray-50 flex justify-end space-x-3">
+        <div className="shrink-0 px-6 py-4 border-t bg-gray-50 flex justify-end space-x-3">
           <button
             onClick={onClose}
             className="px-4 py-2 text-gray-600 hover:text-gray-800"
