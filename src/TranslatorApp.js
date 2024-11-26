@@ -37,7 +37,6 @@ import {
 } from './constants/index.js';
 import SettingsDialog from './components/dialogs/SettingsDialog.js';
 
-
 // History loading function - should respect the saveHistory setting
 const loadHistory = (saveHistoryEnabled) => {
     try {
@@ -1455,6 +1454,11 @@ const TranslatorApp = () => {
     const [saveHistory, setSaveHistory] = useState(
         JSON.parse(localStorage.getItem('saveHistory') ?? 'true')
     );
+    const [apiKeys, setApiKeys] = useState(() => ({
+        gemini: localStorage.getItem('gemini_api_key') || '',
+        openrouter: localStorage.getItem('openrouter_api_key') || '',
+        openai: localStorage.getItem('openai_api_key') || ''
+    }));
 
     // All useEffect hooks
     useEffect(() => {
@@ -1477,6 +1481,13 @@ const TranslatorApp = () => {
             setIsFixedSize(JSON.parse(savedFixedSize));
         }
     }, []);
+
+    const handleApiKeysChange = (newApiKeys) => {
+        setApiKeys(newApiKeys);
+        localStorage.setItem('gemini_api_key', newApiKeys.gemini);
+        localStorage.setItem('openrouter_api_key', newApiKeys.openrouter);
+        localStorage.setItem('openai_api_key', newApiKeys.openai);
+    };
 
     // Add the handleToggleFixedSize function
     const handleToggleFixedSize = () => {
@@ -1506,6 +1517,9 @@ const TranslatorApp = () => {
     }
 
     const translateWithGemini = async (text, previousTranslations = [], signal) => {
+        if (!apiKeys.gemini) {
+            throw new Error('Please enter your Gemini API key in settings');
+        }
         try {
             // Get base instructions
             const basePreInstruction = modelInstructions[selectedModel]['pre-instruction'];
@@ -1562,7 +1576,7 @@ const TranslatorApp = () => {
             });
 
             const response = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKeys.gemini}`,
                 {
                     method: 'POST',
                     signal, // Add AbortController signal
@@ -1593,6 +1607,9 @@ const TranslatorApp = () => {
     };
 
     const translateWithOpenRouter = async (text, modelId, previousTranslations = [], signal) => {
+        if (!apiKeys.openrouter) {
+            throw new Error('Please enter your OpenRouter API key in settings');
+        }
         const modelUrl = modelId === MODELS.ANTHROPIC
             ? 'anthropic/claude-3-haiku'
             : 'cohere/command-r-08-2024';
@@ -1653,7 +1670,7 @@ const TranslatorApp = () => {
                 signal, // AbortController signal 추가
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${process.env.REACT_APP_OPENROUTER_API_KEY}`,
+                    'Authorization': `Bearer ${apiKeys.openrouter}`,
                     'HTTP-Referer': window.location.origin,
                     'X-Title': 'Translator App'
                 },
@@ -1680,6 +1697,9 @@ const TranslatorApp = () => {
     };
 
     const translateWithOpenAI = async (text, previousTranslations = [], signal) => {
+        if (!apiKeys.openai) {
+            throw new Error('Please enter your OpenAI API key in settings');
+        }
         try {
             // Get base instructions
             const basePreInstruction = modelInstructions[MODELS.OPENAI]['pre-instruction'];
@@ -1736,7 +1756,7 @@ const TranslatorApp = () => {
                 signal, // AbortController signal 추가
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`
+                    'Authorization': `Bearer ${apiKeys.openai}`
                 },
                 body: JSON.stringify({
                     model: "gpt-4o-mini-2024-07-18",
@@ -1912,7 +1932,7 @@ const TranslatorApp = () => {
                         },
                         ...history
                     ].slice(0, MAX_HISTORY_ITEMS);
-                
+
                     setHistory(newHistory);
                     saveHistoryToStorage(newHistory, saveHistory);
                 }
@@ -2076,11 +2096,12 @@ const TranslatorApp = () => {
                     setSaveHistory(newValue);
                     localStorage.setItem('saveHistory', JSON.stringify(newValue));
                     if (!newValue) {
-                        // Clear existing history when disabled
                         setHistory([]);
                         localStorage.removeItem('translationHistory');
                     }
                 }}
+                apiKeys={apiKeys}
+                onApiKeysChange={handleApiKeysChange}
             />
 
             {/* Header */}
