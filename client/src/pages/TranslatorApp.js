@@ -36,6 +36,7 @@ import {
 } from '../constants';
 
 import { updateTTSCredentials } from '../services/ttsService';
+import { updateSTTCredentials } from '../services/sttService';
 
 const TranslatorApp = () => {
     // Settings and configuration state
@@ -57,6 +58,10 @@ const TranslatorApp = () => {
             projectId: localStorage.getItem('google_cloud_project_id') || '',
             privateKey: localStorage.getItem('google_cloud_private_key') || '',
             clientEmail: localStorage.getItem('google_cloud_client_email') || ''
+        },
+        azure: {
+            subscriptionKey: localStorage.getItem('azure_speech_key') || '',
+            region: localStorage.getItem('azure_speech_region') || ''
         }
     }));
     const [selectedVoices, setSelectedVoices] = useState(() => {
@@ -180,12 +185,24 @@ const TranslatorApp = () => {
             localStorage.setItem('google_cloud_private_key', newApiKeys.googleCloud.privateKey);
             localStorage.setItem('google_cloud_client_email', newApiKeys.googleCloud.clientEmail);
 
-            // Update TTS/STT credentials on the server
+            // Update TTS credentials on the server
             try {
                 await updateTTSCredentials(newApiKeys.googleCloud);
             } catch (error) {
                 console.error('Failed to update Google Cloud credentials:', error);
-                // You might want to show an error message to the user here
+            }
+        }
+
+        // Store and update Azure credentials
+        if (newApiKeys.azure) {
+            localStorage.setItem('azure_speech_key', newApiKeys.azure.subscriptionKey);
+            localStorage.setItem('azure_speech_region', newApiKeys.azure.region);
+
+            // Update STT credentials on the server
+            try {
+                await updateSTTCredentials(newApiKeys.azure);
+            } catch (error) {
+                console.error('Failed to update Azure credentials:', error);
             }
         }
     };

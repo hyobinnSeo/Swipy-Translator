@@ -13,6 +13,29 @@ const initializeSocket = () => {
     return socket;
 };
 
+// Update Azure credentials on the server
+export const updateSTTCredentials = async (credentials) => {
+    const socket = initializeSocket();
+    return new Promise((resolve, reject) => {
+        socket.emit('update-stt-credentials', credentials);
+        
+        const onSuccess = () => {
+            socket.off('stt-credentials-updated');
+            socket.off('stt-credentials-error');
+            resolve();
+        };
+
+        const onError = (error) => {
+            socket.off('stt-credentials-updated');
+            socket.off('stt-credentials-error');
+            reject(new Error(error.message));
+        };
+
+        socket.on('stt-credentials-updated', onSuccess);
+        socket.on('stt-credentials-error', onError);
+    });
+};
+
 // Start recording audio
 export const startRecording = () => {
     return new Promise(async (resolve, reject) => {

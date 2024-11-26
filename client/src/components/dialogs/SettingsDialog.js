@@ -69,6 +69,10 @@ const SettingsDialog = ({
       projectId: apiKeys.googleCloud?.projectId || '',
       privateKey: apiKeys.googleCloud?.privateKey || '',
       clientEmail: apiKeys.googleCloud?.clientEmail || ''
+    },
+    azure: {
+      subscriptionKey: apiKeys.azure?.subscriptionKey || '',
+      region: apiKeys.azure?.region || ''
     }
   });
 
@@ -207,7 +211,7 @@ const SettingsDialog = ({
             <SectionTitle darkMode={darkMode}>Google Cloud Services</SectionTitle>
             <div className={`space-y-4 p-4 rounded-lg ${darkMode ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
               <p className={`text-sm mb-4 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-                These credentials are used for both Text-to-Speech and Speech-to-Text services
+                These credentials are used for Text-to-Speech services
               </p>
               <APIKeyField
                 label="Project ID"
@@ -241,6 +245,39 @@ const SettingsDialog = ({
               />
               <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
                 These credentials can be found in your Google Cloud service account key file
+              </p>
+            </div>
+          </div>
+
+          {/* Azure Speech Services Section */}
+          <div>
+            <SectionTitle darkMode={darkMode}>Azure Speech Services</SectionTitle>
+            <div className={`space-y-4 p-4 rounded-lg ${darkMode ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
+              <p className={`text-sm mb-4 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+                These credentials are used for Speech-to-Text services
+              </p>
+              <APIKeyField
+                label="Subscription Key"
+                value={localApiKeys.azure.subscriptionKey}
+                onChange={(value) => setLocalApiKeys(prev => ({
+                  ...prev,
+                  azure: { ...prev.azure, subscriptionKey: value }
+                }))}
+                placeholder="Enter your Azure Speech Service subscription key"
+                darkMode={darkMode}
+              />
+              <APIKeyField
+                label="Region"
+                value={localApiKeys.azure.region}
+                onChange={(value) => setLocalApiKeys(prev => ({
+                  ...prev,
+                  azure: { ...prev.azure, region: value }
+                }))}
+                placeholder="Enter your Azure Speech Service region (e.g., eastus)"
+                darkMode={darkMode}
+              />
+              <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+                These credentials can be found in your Azure Speech Service resource
               </p>
             </div>
           </div>

@@ -4,7 +4,7 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 const textToSpeech = require('@google-cloud/text-to-speech');
-const speech = require('@google-cloud/speech');
+const sdk = require('microsoft-cognitiveservices-speech-sdk');
 const path = require('path');
 
 const app = express();
@@ -22,9 +22,12 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Initialize TTS and STT clients with credentials from environment
+// Initialize TTS client and Azure config
 let ttsClient = null;
-let sttClient = null;
+let azureConfig = {
+    subscriptionKey: process.env.AZURE_SPEECH_KEY || '',
+    region: process.env.AZURE_SPEECH_REGION || ''
+};
 
 function initializeClients(credentials) {
     try {
@@ -37,13 +40,12 @@ function initializeClients(credentials) {
             return null;
         }
 
-        // Create credentials object in the format expected by the Google Cloud client
+        // Create credentials object for Google TTS
         const googleCredentials = {
             type: "service_account",
             project_id: credentials.projectId,
-            private_key: credentials.privateKey.replace(/\\n/g, '\n'), // Handle escaped newlines
+            private_key: credentials.privateKey.replace(/\\n/g, '\n'),
             client_email: credentials.clientEmail,
-            // Add required but unused fields
             private_key_id: "unused",
             client_id: "unused",
             auth_uri: "https://accounts.google.com/o/oauth2/auth",
@@ -57,30 +59,22 @@ function initializeClients(credentials) {
             credentials: googleCredentials
         });
         
-        // Initialize STT client with credentials
-        sttClient = new speech.SpeechClient({
-            credentials: googleCredentials
-        });
-        
-        console.log('Successfully initialized Google Cloud clients');
-        return { ttsClient, sttClient };
+        console.log('Successfully initialized clients');
+        return { ttsClient };
     } catch (error) {
-        console.error('Error initializing Google Cloud clients:', error);
+        console.error('Error initializing clients:', error);
         return null;
     }
 }
 
 // Helper function to get voice configuration
 function getVoiceConfig(voiceId) {
-    // Extract language code and voice model from voice ID
-    // Example voiceId: 'en-US-Journey-F'
     const [langCode, countryCode, model] = voiceId.split('-');
     const languageCode = `${langCode}-${countryCode}`;
 
     return {
         name: voiceId,
         languageCode: languageCode,
-        // Some voices use Neural2 or Wavenet models
         model: model.includes('Neural2') ? 'Neural2' : 
                model.includes('Wavenet') ? 'Wavenet' : 
                'Journey'
@@ -112,43 +106,55 @@ async function synthesizeSpeech(text, targetLang, voiceId) {
     }
 }
 
-// Function to transcribe speech
+// Function to transcribe speech using Azure
 async function transcribeSpeech(audioContent) {
-    if (!sttClient) {
-        console.error('STT Client Status:', {
-            clientExists: !!sttClient,
-            ttsClientExists: !!ttsClient // Log TTS client status for comparison
-        });
-        throw new Error('STT client not initialized. Please provide valid credentials in settings.');
+    if (!azureConfig.subscriptionKey || !azureConfig.region) {
+        throw new Error('Azure Speech config not initialized. Please check credentials in settings.');
     }
 
-    try {
-        const audio = {
-            content: audioContent
-        };
-        
-        const config = {
-            encoding: 'WEBM_OPUS',
-            sampleRateHertz: 48000,
-            languageCode: 'en-US',
-        };
-        
-        const request = {
-            audio: audio,
-            config: config,
-        };
+    return new Promise((resolve, reject) => {
+        try {
+            // Create the push stream
+            const pushStream = sdk.AudioInputStream.createPushStream();
 
-        console.log('Attempting STT recognition with config:', config);
-        const [response] = await sttClient.recognize(request);
-        const transcription = response.results
-            .map(result => result.alternatives[0].transcript)
-            .join('\n');
+            // Convert base64 to buffer and push to stream
+            const audioBuffer = Buffer.from(audioContent, 'base64');
+            pushStream.write(audioBuffer);
+            pushStream.close();
+
+            // Create the audio config from the stream
+            const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
             
-        return transcription;
-    } catch (error) {
-        console.error('STT error details:', error);
-        throw error;
-    }
+            // Create the speech config
+            const speechConfig = sdk.SpeechConfig.fromSubscription(
+                azureConfig.subscriptionKey,
+                azureConfig.region
+            );
+
+            // Create the speech recognizer
+            const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
+
+            // Start recognition
+            recognizer.recognizeOnceAsync(
+                result => {
+                    if (result.text) {
+                        resolve(result.text);
+                    } else {
+                        reject(new Error('No speech detected'));
+                    }
+                    recognizer.close();
+                },
+                error => {
+                    console.error('Speech recognition error:', error);
+                    recognizer.close();
+                    reject(error);
+                }
+            );
+        } catch (error) {
+            console.error('Error in speech transcription setup:', error);
+            reject(error);
+        }
+    });
 }
 
 // Function to get default voice for a language
@@ -179,7 +185,6 @@ io.on('connection', (socket) => {
             const clients = initializeClients(credentials);
             if (clients) {
                 ttsClient = clients.ttsClient;
-                sttClient = clients.sttClient;
                 console.log('Clients initialized successfully');
                 socket.emit('tts-credentials-updated', { success: true });
             } else {
@@ -192,6 +197,30 @@ io.on('connection', (socket) => {
         } catch (error) {
             console.error('Error updating credentials:', error);
             socket.emit('tts-credentials-updated', { 
+                success: false, 
+                error: error.message 
+            });
+        }
+    });
+
+    // Handle Azure STT credentials update
+    socket.on('update-stt-credentials', (credentials) => {
+        try {
+            console.log('Received Azure credentials update request');
+            if (!credentials.subscriptionKey || !credentials.region) {
+                throw new Error('Missing required Azure credentials');
+            }
+
+            azureConfig = {
+                subscriptionKey: credentials.subscriptionKey,
+                region: credentials.region
+            };
+
+            console.log('Azure credentials updated successfully');
+            socket.emit('stt-credentials-updated', { success: true });
+        } catch (error) {
+            console.error('Error updating Azure credentials:', error);
+            socket.emit('stt-credentials-error', { 
                 success: false, 
                 error: error.message 
             });
