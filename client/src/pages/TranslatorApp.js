@@ -208,27 +208,118 @@ const TranslatorApp = () => {
     const baseUrl = process.env.PUBLIC_URL || '/';
 
     return (
-        <div className={`w-full min-h-screen ${darkMode ? 'dark bg-slate-900' : 'bg-gray-50'}`}>
+        <div className={`w-full min-h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
             <Helmet>
                 <title>Hoochoo Translator</title>
                 <meta name="description" content="Multi-language translation application" />
             </Helmet>
 
-            {/* Header with improved dark mode */}
-            <div className={`w-full border-b ${
-                darkMode 
-                    ? 'bg-slate-800/50 border-slate-700/50 backdrop-blur-sm' 
-                    : 'bg-white'
-            }`}>
+            {/* Modals and Dialogs */}
+            <Sidebar
+                isOpen={isSidebarOpen}
+                onClose={closeSidebar}
+                onOpenHistory={openHistory}
+                onOpenInstructions={openInstructions}
+                onOpenSaved={openSaved}
+                onOpenRequestLog={openRequestLog}
+                onOpenVoiceSettings={openVoiceSettings}
+                onOpenSettings={openSettings}
+                isFixedSize={isFixedSize}
+                onToggleFixedSize={handleToggleFixedSize}
+                isParaphraserMode={isParaphraserMode}
+                onToggleParaphraserMode={() => {
+                    setIsParaphraserMode(prev => !prev);
+                    setTranslations([]);
+                    setCurrentIndex(0);
+                }}
+            />
+
+            <HistoryPanel
+                isOpen={isHistoryOpen}
+                onClose={closeHistory}
+                history={history}
+                onSelectHistory={(item) => {
+                    setInputText(item.inputText);
+                    setTranslations([{ text: item.translatedText, timestamp: new Date() }]);
+                    setCurrentIndex(0);
+                    closeHistory();
+                }}
+                onDeleteHistory={deleteHistoryItem}
+                onClearHistory={clearHistory}
+            />
+
+            <SavedTranslationsDialog
+                isOpen={isSavedOpen}
+                onClose={closeSaved}
+                savedTranslations={savedTranslations}
+                onSelectSaved={(item) => {
+                    setInputText(item.inputText);
+                    setTranslations([{ text: item.translatedText, timestamp: new Date() }]);
+                    setCurrentIndex(0);
+                }}
+                onDeleteSaved={deleteSavedTranslation}
+                onClearAll={clearSavedTranslations}
+            />
+
+            <InstructionsModal
+                isOpen={isInstructionsOpen}
+                onClose={closeInstructions}
+                modelInstructions={modelInstructions}
+                selectedModel={selectedModel}
+                setModelInstructions={setModelInstructions}
+                selectedTone={selectedTone}
+            />
+
+            <VoiceSettingsModal
+                isOpen={isVoiceSettingsOpen}
+                onClose={closeVoiceSettings}
+                selectedVoices={selectedVoices}
+                onVoiceChange={handleVoiceChange}
+            />
+
+            <RequestLogViewer
+                isOpen={isRequestLogOpen}
+                onClose={closeRequestLog}
+                requestLog={null}
+            />
+
+            <SafetyWarningDialog
+                isOpen={showSafetyWarning}
+                onClose={() => setShowSafetyWarning(false)}
+            />
+
+            <SettingsDialog
+                isOpen={isSettingsOpen}
+                onClose={closeSettings}
+                maxLength={maxLength}
+                onMaxLengthChange={handleMaxLengthChange}
+                saveHistory={saveHistory}
+                onSaveHistoryChange={(newValue) => {
+                    setSaveHistory(newValue);
+                    localStorage.setItem('saveHistory', JSON.stringify(newValue));
+                    if (!newValue) {
+                        clearHistory();
+                    }
+                }}
+                darkMode={darkMode}
+                onDarkModeChange={handleDarkModeChange}
+                apiKeys={apiKeys}
+                onApiKeysChange={handleApiKeysChange}
+            />
+
+            {/* Header */}
+            <div className={`w-full border-b ${darkMode
+                ? 'bg-slate-800/50 border-slate-700/50 backdrop-blur-sm'
+                : 'bg-white'
+                }`}>
                 <div className="max-w-7xl mx-auto">
                     <div className="flex items-center p-4 space-x-4">
                         <button
                             onClick={openSidebar}
-                            className={`${
-                                darkMode 
-                                    ? 'text-slate-300 hover:text-slate-100' 
-                                    : 'text-gray-600 hover:text-gray-800'
-                            } transition-colors`}
+                            className={`${darkMode
+                                ? 'text-slate-300 hover:text-slate-100'
+                                : 'text-gray-600 hover:text-gray-800'
+                                } transition-colors`}
                             title="Menu"
                         >
                             <MenuIcon className="h-6 w-6" />
@@ -236,11 +327,10 @@ const TranslatorApp = () => {
 
                         <a
                             href={baseUrl}
-                            className={`text-xl font-semibold ${
-                                darkMode 
-                                    ? 'text-slate-100 hover:text-white' 
-                                    : 'text-gray-800 hover:text-gray-600'
-                            } transition-colors cursor-pointer`}
+                            className={`text-xl font-semibold ${darkMode
+                                ? 'text-slate-100 hover:text-white'
+                                : 'text-gray-800 hover:text-gray-600'
+                                } transition-colors cursor-pointer`}
                         >
                             Hoochoo Translator
                         </a>
@@ -248,10 +338,10 @@ const TranslatorApp = () => {
                 </div>
             </div>
 
-            {/* Main content with improved dark mode */}
+            {/* Main content */}
             <div className="max-w-7xl mx-auto p-4">
                 <div className="space-y-1">
-                    {/* Model selector with improved dark styling */}
+                    {/* Model selector */}
                     <div className="w-full">
                         <select
                             value={selectedModel}
@@ -260,11 +350,10 @@ const TranslatorApp = () => {
                                 setTranslations([]);
                                 setCurrentIndex(0);
                             }}
-                            className={`w-[200px] p-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                                darkMode 
-                                    ? 'bg-slate-800 border-slate-600 text-slate-100 hover:bg-slate-700' 
-                                    : 'bg-white'
-                            } transition-colors`}
+                            className={`w-[200px] p-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${darkMode
+                                ? 'bg-slate-800 border-slate-600 text-slate-100 hover:bg-slate-700'
+                                : 'bg-white'
+                                } transition-colors`}
                         >
                             {AVAILABLE_MODELS.map((model) => (
                                 <option key={model.id} value={model.id}
@@ -309,7 +398,7 @@ const TranslatorApp = () => {
                         />
                     </div>
 
-                    {/* Text areas with improved dark mode */}
+                    {/* Text areas */}
                     <div className="flex flex-col md:flex-row gap-2 md:gap-6 mb-6">
                         <TextArea
                             value={inputText}
@@ -322,7 +411,8 @@ const TranslatorApp = () => {
                             selectedVoice={selectedVoices[sourceLang]}
                             isFixedSize={isFixedSize}
                             darkMode={darkMode}
-                            className={darkMode ? 'bg-slate-800/80 text-slate-100 border-slate-600 focus:border-blue-500 placeholder-slate-400' : ''}
+                            className={darkMode ? 'bg-slate-800/80 text-slate-100 border-slate-600 focus:border-blue-500 placeholder-slate-400'
+                                : ''}
                         />
 
                         <TextArea
@@ -361,18 +451,19 @@ const TranslatorApp = () => {
                             selectedVoice={selectedVoices[isParaphraserMode ? sourceLang : targetLang]}
                             isFixedSize={isFixedSize}
                             darkMode={darkMode}
-                            className={darkMode ? 'bg-slate-800/80 text-slate-100 border-slate-600 focus:border-blue-500 placeholder-slate-400' : ''}
+                            className={darkMode ? 'bg-slate-800/80 text-slate-100 border-slate-600 focus:border-blue-500 placeholder-slate-400'
+                                : ''}
                         />
                     </div>
 
-                    {/* Error message with improved dark mode */}
+                    {/* Error message */}
                     {error && (
                         <Alert className={darkMode ? 'bg-red-900/50 text-red-200 border-red-800' : ''}>
                             {error}
                         </Alert>
                     )}
 
-                    {/* Action buttons with improved dark mode */}
+                    {/* Action buttons */}
                     <div className="flex flex-col sm:flex-row justify-center gap-3">
                         <ActionButton
                             type={isParaphraserMode ? "paraphrase" : "translate"}
