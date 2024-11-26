@@ -15,32 +15,36 @@ import {
     AlertTriangle
 } from 'lucide-react';
 
-// Import extracted components
+// Import components
 import Alert from './components/common/Alert';
 import ActionButton from './components/common/ActionButton';
 import LanguageSelector from './components/LanguageSelector';
 import ToneSelector from './components/ToneSelector';
 import TextArea from './components/TextArea';
+import Sidebar from './components/Sidebar';
+import VoiceSettingsModal from './components/dialogs/VoiceSettingsModal';
+import InstructionsModal from './components/dialogs/InstructionsModal';
+import RequestLogViewer from './components/dialogs/RequestLogViewer';
+import SettingsDialog from './components/dialogs/SettingsDialog';
+import DialogWrapper from './components/dialogs/DialogWrapper';
 
-// Import translation services
+// Import services
 import { translateWithGemini, translateWithOpenRouter, translateWithOpenAI } from './services/translationService';
+import * as storageService from './services/storageService';
 
 // Import constants
 import {
     MODELS,
-    LANGUAGE_NAMES,
     TONES,
-    LANGUAGE_VOICE_MAPPING,
-    VOICE_OPTIONS,
+    LANGUAGE_NAMES,
     DEFAULT_INSTRUCTIONS,
     AVAILABLE_MODELS,
-    MAX_HISTORY_ITEMS,
-    MAX_SAVED_TRANSLATIONS,
     getToneInstructions,
     APP_VERSION,
-    MIN_SECURE_VERSION
-} from './constants/index.js';
-import SettingsDialog from './components/dialogs/SettingsDialog.js';
+    MIN_SECURE_VERSION,
+    MAX_SAVED_TRANSLATIONS,
+    MAX_HISTORY_ITEMS
+} from './constants';
 
 // History loading function - should respect the saveHistory setting
 const loadHistory = (saveHistoryEnabled) => {
@@ -76,487 +80,6 @@ const saveSavedTranslations = (translations) => {
 
 const saveVoiceSettings = (settings) => {
     localStorage.setItem('voiceSettings', JSON.stringify(settings));
-};
-
-const VoiceSettingsModal = ({ isOpen, onClose, selectedVoices, onVoiceChange }) => {
-    const [localVoices, setLocalVoices] = useState(selectedVoices);
-
-    // Reset to defaults
-    const handleReset = () => {
-        const defaultVoices = {
-            'en': 'en-US-JennyNeural',
-            'ko': 'ko-KR-SunHiNeural',
-            'ja': 'ja-JP-NanamiNeural',
-            'zh': 'zh-CN-XiaoxiaoNeural',
-            'fr': 'fr-FR-DeniseNeural',
-            'es': 'es-ES-ElviraNeural',
-            'de': 'de-DE-KatjaNeural',
-            'it': 'it-IT-ElsaNeural',
-            'pt': 'pt-BR-FranciscaNeural',
-            'ar': 'ar-SA-ZariyahNeural'
-        };
-        setLocalVoices(defaultVoices);
-    };
-
-    // Save changes
-    const handleSave = () => {
-        onVoiceChange(localVoices);
-        onClose();
-    };
-
-    return (
-        <DialogWrapper isOpen={isOpen} onClose={onClose} className="w-full max-w-2xl max-h-[90vh] flex flex-col">
-            <div className="flex-shrink-0 p-6 border-b">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h2 className="text-xl font-semibold">Voice Settings</h2>
-                        <p className="text-sm text-gray-500 mt-1">Select preferred voices for each language</p>
-                    </div>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-                        <X className="h-5 w-5" />
-                    </button>
-                </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6">
-                <div className="space-y-6">
-                    {Object.entries(VOICE_OPTIONS).map(([lang, voices]) => (
-                        <div key={lang} className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-700">
-                                {LANGUAGE_NAMES[lang]}:
-                            </label>
-                            <select
-                                value={localVoices[lang] || ''}
-                                onChange={(e) => setLocalVoices(prev => ({
-                                    ...prev,
-                                    [lang]: e.target.value
-                                }))}
-                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-gray-500"
-                            >
-                                {voices.map((voice) => (
-                                    <option key={voice.id} value={voice.id}>
-                                        {voice.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            <div className="flex-shrink-0 p-6 border-t bg-white">
-                <div className="flex justify-end space-x-3">
-                    <button
-                        onClick={handleReset}
-                        className="px-4 py-2 text-navy-500 hover:text-navy-600"
-                    >
-                        Reset to Default
-                    </button>
-                    <button
-                        onClick={handleSave}
-                        className="px-4 py-2 bg-navy-500 text-white rounded-lg hover:bg-navy-600"
-                    >
-                        Done
-                    </button>
-                </div>
-            </div>
-        </DialogWrapper>
-    );
-};
-
-// Reusable Dialog Wrapper Component
-const DialogWrapper = ({ isOpen, onClose, children, className = '' }) => {
-    React.useEffect(() => {
-        if (isOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = 'unset';
-        }
-        return () => {
-            document.body.style.overflow = 'unset';
-        };
-    }, [isOpen]);
-
-    if (!isOpen) return null;
-
-    return (
-        <div
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-            onClick={onClose}
-        >
-            <div
-                className={`bg-white rounded-lg ${className}`}
-                onClick={e => e.stopPropagation()}
-            >
-                {children}
-            </div>
-        </div>
-    );
-};
-
-const InstructionsModal = ({ 
-    isOpen, 
-    onClose, 
-    modelInstructions, 
-    selectedModel, 
-    setModelInstructions, 
-    selectedTone 
-  }) => {
-    const [showToneDropdown, setShowToneDropdown] = useState(false);
-    const [selectedModelForInstructions, setSelectedModelForInstructions] = useState(selectedModel);
-    const [selectedToneInstructions, setSelectedToneInstructions] = useState(selectedTone);
-    
-    // Update selected model and tone when the modal opens or selected model changes
-    useEffect(() => {
-      setSelectedModelForInstructions(selectedModel);
-      // Find a valid tone for the selected model
-      const modelTones = TONES[selectedModel] || TONES[MODELS.GEMINI];
-      const isCurrentToneValid = modelTones.find(t => t.id === selectedTone);
-      if (!isCurrentToneValid) {
-        setSelectedToneInstructions(modelTones[0]?.id || 'standard');
-      } else {
-        setSelectedToneInstructions(selectedTone);
-      }
-    }, [selectedModel, selectedTone, isOpen]);
-  
-    const handleModelChange = (newModel) => {
-      setSelectedModelForInstructions(newModel);
-      // Reset tone to first available tone for new model
-      const modelTones = TONES[newModel] || TONES[MODELS.GEMINI];
-      setSelectedToneInstructions(modelTones[0]?.id || 'standard');
-    };
-  
-    const handleReset = () => {
-      setModelInstructions({
-        ...modelInstructions,
-        [selectedModelForInstructions]: modelInstructions[selectedModelForInstructions]
-      });
-    };
-  
-    if (!isOpen) return null;
-  
-    const currentModelTones = TONES[selectedModelForInstructions] || TONES[MODELS.GEMINI];
-  
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col">
-          {/* Header */}
-          <div className="p-6 border-b">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-xl font-semibold">Instructions Settings</h2>
-                <p className="text-sm text-gray-500 mt-1">Configure translation instructions</p>
-              </div>
-              <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-  
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="space-y-6">
-              {/* Model Selection */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  AI Model:
-                </label>
-                <select
-                  value={selectedModelForInstructions}
-                  onChange={(e) => handleModelChange(e.target.value)}
-                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-gray-500"
-                >
-                  {AVAILABLE_MODELS.map((model) => (
-                    <option key={model.id} value={model.id}>
-                      {model.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-  
-              {/* Tone Selection */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Translation Tone:
-                </label>
-                <div className="relative">
-                  <button
-                    onClick={() => setShowToneDropdown(!showToneDropdown)}
-                    className="w-full px-4 py-2 text-left border rounded-lg bg-white flex justify-between items-center hover:bg-gray-50"
-                  >
-                    <span>
-                      {currentModelTones.find(t => t.id === selectedToneInstructions)?.name || 'Standard'}
-                    </span>
-                    <ChevronDown className="h-4 w-4" />
-                  </button>
-                  
-                  {showToneDropdown && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg">
-                      {currentModelTones.map((tone) => (
-                        <button
-                          key={tone.id}
-                          onClick={() => {
-                            setSelectedToneInstructions(tone.id);
-                            setShowToneDropdown(false);
-                          }}
-                          className="w-full px-4 py-2 text-left hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg"
-                        >
-                          <div className="font-medium">{tone.name}</div>
-                          <div className="text-sm text-gray-500">{tone.description}</div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-  
-              {/* Pre-translation Instructions */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Pre-translation Instructions:
-                </label>
-                <textarea
-                  value={modelInstructions[selectedModelForInstructions]['pre-instruction']}
-                  onChange={(e) => setModelInstructions({
-                    ...modelInstructions,
-                    [selectedModelForInstructions]: {
-                      ...modelInstructions[selectedModelForInstructions],
-                      'pre-instruction': e.target.value
-                    }
-                  })}
-                  className="w-full h-32 p-2 border rounded-lg focus:ring-2 focus:ring-gray-500 resize-none"
-                />
-              </div>
-  
-              {/* Tone Instructions */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tone-specific Instructions:
-                </label>
-                <textarea
-                  value={modelInstructions[selectedModelForInstructions]['tone-instructions'][selectedToneInstructions]}
-                  onChange={(e) => setModelInstructions({
-                    ...modelInstructions,
-                    [selectedModelForInstructions]: {
-                      ...modelInstructions[selectedModelForInstructions],
-                      'tone-instructions': {
-                        ...modelInstructions[selectedModelForInstructions]['tone-instructions'],
-                        [selectedToneInstructions]: e.target.value
-                      }
-                    }
-                  })}
-                  className="w-full h-32 p-2 border rounded-lg focus:ring-2 focus:ring-gray-500 resize-none"
-                />
-              </div>
-  
-              {/* Post-translation Instructions */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Post-translation Instructions:
-                </label>
-                <textarea
-                  value={modelInstructions[selectedModelForInstructions]['post-instruction']}
-                  onChange={(e) => setModelInstructions({
-                    ...modelInstructions,
-                    [selectedModelForInstructions]: {
-                      ...modelInstructions[selectedModelForInstructions],
-                      'post-instruction': e.target.value
-                    }
-                  })}
-                  className="w-full h-32 p-2 border rounded-lg focus:ring-2 focus:ring-gray-500 resize-none"
-                />
-              </div>
-            </div>
-          </div>
-  
-          {/* Footer */}
-          <div className="p-6 border-t bg-white">
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={handleReset}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                Reset to Default
-              </button>
-              <button
-                onClick={onClose}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-const RequestLogViewer = ({ isOpen, onClose, requestLog }) => {
-    return (
-        <DialogWrapper isOpen={isOpen} onClose={onClose} className="w-full max-w-2xl max-h-[80vh] flex flex-col">
-            <div className="p-4 border-b flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Last API Request</h2>
-                <button
-                    onClick={onClose}
-                    className="text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                    <X className="h-5 w-5" />
-                </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4">
-                {requestLog ? (
-                    <pre className="whitespace-pre-wrap bg-gray-50 p-4 rounded-lg text-sm font-mono">
-                        {JSON.stringify(requestLog, null, 2)}
-                    </pre>
-                ) : (
-                    <div className="text-center text-gray-500 py-8">
-                        <FileText className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-                        <p>No request log available</p>
-                    </div>
-                )}
-            </div>
-        </DialogWrapper>
-    );
-};
-
-const Sidebar = ({
-    isOpen,
-    onClose,
-    onOpenInstructions,
-    onOpenSaved,
-    onOpenRequestLog,
-    onOpenHistory,
-    onOpenVoiceSettings,
-    onOpenSettings,
-    isFixedSize,
-    onToggleFixedSize
-}) => {
-    useEffect(() => {
-        if (isOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = 'unset';
-        }
-        return () => {
-            document.body.style.overflow = 'unset';
-        };
-    }, [isOpen]);
-
-    return (
-        <>
-            <div
-                className={`fixed inset-0 bg-black transition-opacity duration-300 z-20 
-                ${isOpen ? 'opacity-50' : 'opacity-0 pointer-events-none'}`}
-                onClick={onClose}
-            />
-
-            <div
-                className={`fixed left-0 top-0 h-full w-64 bg-white shadow-lg transform 
-                transition-transform duration-300 ease-in-out z-30 flex flex-col overflow-hidden
-                ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="p-4 border-b flex-shrink-0">
-                    <div className="flex justify-between items-center">
-                        <h2 className="text-xl font-semibold">Menu</h2>
-                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-                            <X className="h-5 w-5" />
-                        </button>
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto overscroll-contain p-4">
-                    <div className="space-y-2">
-                        {/* Add the toggle button for fixed size */}
-                        <div className="flex items-center justify-between px-4 py-2">
-                            <span className="text-sm">Fixed Size Text Areas</span>
-                            <button
-                                onClick={() => {
-                                    onToggleFixedSize();
-                                }}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isFixedSize ? 'bg-navy-500' : 'bg-gray-200'
-                                    }`}
-                            >
-                                <span
-                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isFixedSize ? 'translate-x-6' : 'translate-x-1'
-                                        }`}
-                                />
-                            </button>
-                        </div>
-
-                        {/* Existing buttons */}
-                        <button
-                            onClick={() => {
-                                onOpenHistory();
-                                onClose();
-                            }}
-                            className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center transition-colors"
-                        >
-                            <History className="h-4 w-4 mr-2" />
-                            Translation History
-                        </button>
-
-                        <button
-                            onClick={() => {
-                                onOpenSaved();
-                                onClose();
-                            }}
-                            className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center transition-colors"
-                        >
-                            <BookmarkIcon className="h-4 w-4 mr-2" />
-                            Saved Translations
-                        </button>
-
-                        <button
-                            onClick={() => {
-                                onOpenVoiceSettings();
-                                onClose();
-                            }}
-                            className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center transition-colors"
-                        >
-                            <Volume2 className="h-4 w-4 mr-2" />
-                            Voice Settings
-                        </button>
-
-                        <button
-                            onClick={() => {
-                                onOpenInstructions();
-                                onClose();
-                            }}
-                            className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center transition-colors"
-                        >
-                            <Settings className="h-4 w-4 mr-2" />
-                            Instructions
-                        </button>
-
-                        <button
-                            onClick={() => {
-                                onOpenRequestLog();
-                                onClose();
-                            }}
-                            className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center transition-colors"
-                        >
-                            <FileText className="h-4 w-4 mr-2" />
-                            Last API Request
-                        </button>
-
-                        <button
-                            onClick={() => {
-                                onOpenSettings();
-                                onClose();
-                            }}
-                            className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-lg flex items-center transition-colors"
-                        >
-                            <Settings className="h-4 w-4 mr-2" />
-                            Settings
-                        </button>
-
-                    </div>
-                </div>
-            </div>
-        </>
-    );
 };
 
 const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message }) => {
@@ -990,7 +513,7 @@ const TranslatorApp = () => {
         }
     }, []);
 
-        const handleApiKeysChange = (newApiKeys) => {
+    const handleApiKeysChange = (newApiKeys) => {
         setApiKeys(newApiKeys);
         localStorage.setItem('gemini_api_key', newApiKeys.gemini);
         localStorage.setItem('openrouter_api_key', newApiKeys.openrouter);
@@ -1023,275 +546,6 @@ const TranslatorApp = () => {
         localStorage.removeItem('translator_auth');
         return <Navigate to="/" replace />;
     }
-
-    const translateWithGemini = async (text, previousTranslations = [], signal) => {
-        if (!apiKeys.gemini) {
-            throw new Error('Please enter your Gemini API key in settings');
-        }
-        try {
-            // Get base instructions
-            const basePreInstruction = modelInstructions[selectedModel]['pre-instruction'];
-            const postInstruction = modelInstructions[selectedModel]['post-instruction'];
-            const toneInstructions = getToneInstructions(selectedTone, modelInstructions, selectedModel);
-
-            // Get language settings
-            const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
-            const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
-
-            // Construct the prompt
-            let prompt = `Instructions:\n${basePreInstruction}\n\n`;
-
-            // Add Language settings
-            prompt += `Language:\n`;
-            if (sourceLang === 'auto') {
-                prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
-            } else {
-                prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
-            }
-
-            // Add Tone settings
-            prompt += `Tone:\n${toneInstructions.instruction}\n\n`;
-
-            // Add text to translate
-            prompt += `Text to be translated:\n${text}\n\n`;
-
-            // Add previous translations if any
-            if (previousTranslations.length > 0) {
-                prompt += "Previous translations to avoid repeating:\n";
-                previousTranslations.forEach((trans, index) => {
-                    prompt += `${index + 1}: ${trans.text}\n`;
-                });
-                prompt += "\nNote: Provide a fresh translation different from the above versions.\n\n";
-            }
-
-            // Add post instructions
-            prompt += postInstruction;
-
-            // Set request log
-            const requestBody = {
-                contents: [{
-                    parts: [{ text: prompt }]
-                }],
-            };
-
-            setRequestLog({
-                model: "gemini-1.5-flash",
-                messages: [{ content: prompt }],
-                endpoint: "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent",
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-            });
-
-            const response = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKeys.gemini}`,
-                {
-                    method: 'POST',
-                    signal, // Add AbortController signal
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestBody)
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-                throw new Error('Invalid response structure from Gemini API');
-            }
-
-            return data.candidates[0].content.parts[0].text;
-
-        } catch (error) {
-            if (error.name === 'AbortError') {
-                throw error; // AbortError를 그대로 전파
-            }
-            throw error;
-        }
-    };
-
-    const translateWithOpenRouter = async (text, modelId, previousTranslations = [], signal) => {
-        if (!apiKeys.openrouter) {
-            throw new Error('Please enter your OpenRouter API key in settings');
-        }
-        const modelUrl = modelId === MODELS.ANTHROPIC
-            ? 'anthropic/claude-3-haiku'
-            : 'cohere/command-r-08-2024';
-
-        // Get base instructions
-        const basePreInstruction = modelInstructions[selectedModel]['pre-instruction'];
-        const postInstruction = modelInstructions[selectedModel]['post-instruction'];
-        const toneInstructions = getToneInstructions(selectedTone, modelInstructions, selectedModel);
-
-        // Get language settings
-        const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
-        const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
-
-        // Construct the prompt for system message
-        let prompt = `Instructions:\n${basePreInstruction}\n\n`;
-
-        // Add Language settings
-        prompt += `Language:\n`;
-        if (sourceLang === 'auto') {
-            prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
-        } else {
-            prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
-        }
-
-        // Add Tone settings
-        prompt += `Tone:\n${toneInstructions.instruction}\n\n`;
-
-        // Create user message with the text to translate
-        prompt += `Text to be translated:\n${text}\n\n`;
-
-        // Add previous translations if any
-        if (previousTranslations.length > 0) {
-            prompt += "Previous translations to avoid repeating:\n";
-            previousTranslations.forEach((trans, index) => {
-                prompt += `${index + 1}: ${trans.text}\n`;
-            });
-            prompt += "\nNote: Provide a fresh translation different from the above versions.\n\n";
-        }
-
-        const requestBody = {
-            model: modelUrl,
-            messages: [
-                { role: "system", content: prompt },
-                { role: "system", content: postInstruction }
-            ],
-            endpoint: "https://openrouter.ai/api/v1/chat/completions",
-            headers: {
-                'Content-Type': 'application/json',
-                'HTTP-Referer': window.location.origin,
-                'X-Title': 'Translator App'
-            },
-        };
-        setRequestLog(requestBody);
-
-        try {
-            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-                method: 'POST',
-                signal, // AbortController signal 추가
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKeys.openrouter}`,
-                    'HTTP-Referer': window.location.origin,
-                    'X-Title': 'Translator App'
-                },
-                body: JSON.stringify({
-                    model: modelUrl,
-                    messages: [
-                        { role: "system", content: prompt },
-                        { role: "system", content: postInstruction }
-                    ]
-                })
-            });
-
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            const data = await response.json();
-            return data.choices[0]?.message?.content;
-        } catch (error) {
-            if (error.name === 'AbortError') {
-                throw error; // AbortError를 그대로 전파
-            }
-            throw new Error(error.message === 'Unauthorized'
-                ? 'Invalid API key. Please check your environment variables.'
-                : `Translation error: ${error.message}`);
-        }
-    };
-
-    const translateWithOpenAI = async (text, previousTranslations = [], signal) => {
-        if (!apiKeys.openai) {
-            throw new Error('Please enter your OpenAI API key in settings');
-        }
-        try {
-            // Get base instructions
-            const basePreInstruction = modelInstructions[MODELS.OPENAI]['pre-instruction'];
-            const postInstruction = modelInstructions[MODELS.OPENAI]['post-instruction'];
-            const toneInstructions = getToneInstructions(selectedTone, modelInstructions, MODELS.OPENAI);
-
-            // Get language settings
-            const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
-            const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
-
-            // Construct the prompt
-            let prompt = `Instructions:\n${basePreInstruction}\n\n`;
-
-            // Add Language settings
-            prompt += `Language:\n`;
-            if (sourceLang === 'auto') {
-                prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
-            } else {
-                prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
-            }
-
-            // Add Tone settings
-            prompt += `Tone:\n${toneInstructions.instruction}\n\n`;
-
-            // Add text to translate
-            prompt += `Text to be translated:\n${text}\n\n`;
-
-            // Add previous translations if any
-            if (previousTranslations.length > 0) {
-                prompt += "Previous translations to avoid repeating:\n";
-                previousTranslations.forEach((trans, index) => {
-                    prompt += `${index + 1}: ${trans.text}\n`;
-                });
-                prompt += "\nNote: Provide a fresh translation different from the above versions.\n\n";
-            }
-
-            // Add post instructions
-            prompt += postInstruction;
-
-            // Set request log
-            const requestBody = {
-                model: "gpt-4o-mini-2024-07-18",
-                messages: [
-                    { role: "system", content: "You are a professional translator." },
-                    { role: "user", content: prompt }
-                ],
-                temperature: 0.7,
-                max_tokens: 2000
-            };
-            setRequestLog(requestBody);
-
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                signal, // AbortController signal 추가
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKeys.openai}`
-                },
-                body: JSON.stringify({
-                    model: "gpt-4o-mini-2024-07-18",
-                    messages: [
-                        { role: "system", content: "You are a professional translator." },
-                        { role: "user", content: prompt }
-                    ],
-                    temperature: 0.7,
-                    max_tokens: 2000
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            return data.choices[0]?.message?.content;
-        } catch (error) {
-            if (error.name === 'AbortError') {
-                throw error; // AbortError를 그대로 전파
-            }
-            throw new Error(error.message === 'Unauthorized'
-                ? 'Invalid OpenAI API key. Please check your environment variables.'
-                : `Translation error: ${error.message}`);
-        }
-    };
 
     const validateLanguageSupport = (sourceLang, targetLang) => {
         const supportedLanguages = ['auto', 'en', 'fr', 'es', 'it', 'de', 'pt', 'ja', 'ko', 'zh', 'ar'];
@@ -1371,99 +625,191 @@ const TranslatorApp = () => {
         }
     };
 
-    const handleTranslate = async (isAdditional = false) => {
+const handleTranslate = async (isAdditional = false) => {
+    try {
+        setIsLoading(true);
+        setError('');
+        validateLanguageSupport(sourceLang, targetLang);
+
+        // Create AbortController for cancellation
+        const controller = new AbortController();
+        setTranslationController(controller);
+
+        let translatedResult;
         try {
-            setIsLoading(true);
-            setError('');
-            validateLanguageSupport(sourceLang, targetLang);
-
-            // Create AbortController for cancellation
-            const controller = new AbortController();
-            setTranslationController(controller);
-
-            let translatedResult;
-            try {
-                if (isAdditional) {
-                    switch (selectedModel) {
-                        case MODELS.GEMINI:
-                            translatedResult = await translateWithGemini(inputText, translations, controller.signal);
-                            break;
-                        case MODELS.COMMAND:
-                            translatedResult = await translateWithOpenRouter(inputText, selectedModel, translations, controller.signal);
-                            break;
-                        case MODELS.ANTHROPIC:
-                            translatedResult = await translateWithOpenRouter(inputText, selectedModel, translations, controller.signal);
-                            break;
-                        case MODELS.OPENAI:
-                            translatedResult = await translateWithOpenAI(inputText, translations, controller.signal);
-                            break;
-                        default:
-                            throw new Error('Invalid model selected');
-                    }
-                } else {
-                    switch (selectedModel) {
-                        case MODELS.GEMINI:
-                            translatedResult = await translateWithGemini(inputText, [], controller.signal);
-                            break;
-                        case MODELS.COMMAND:
-                            translatedResult = await translateWithOpenRouter(inputText, selectedModel, [], controller.signal);
-                            break;
-                        case MODELS.ANTHROPIC:
-                            translatedResult = await translateWithOpenRouter(inputText, selectedModel, [], controller.signal);
-                            break;
-                        case MODELS.OPENAI:
-                            translatedResult = await translateWithOpenAI(inputText, [], controller.signal);
-                            break;
-                        default:
-                            throw new Error('Invalid model selected');
-                    }
+            if (isAdditional) {
+                switch (selectedModel) {
+                    case MODELS.GEMINI:
+                        translatedResult = await translateWithGemini(
+                            inputText, 
+                            translations, 
+                            controller.signal, 
+                            apiKeys.gemini,
+                            modelInstructions,
+                            selectedModel,
+                            selectedTone,
+                            sourceLang,
+                            targetLang,
+                            LANGUAGE_NAMES
+                        );
+                        break;
+                    case MODELS.COMMAND:
+                        translatedResult = await translateWithOpenRouter(
+                            inputText, 
+                            selectedModel, 
+                            translations, 
+                            controller.signal, 
+                            apiKeys.openrouter,
+                            modelInstructions,
+                            selectedModel,
+                            selectedTone,
+                            sourceLang,
+                            targetLang,
+                            LANGUAGE_NAMES
+                        );
+                        break;
+                    case MODELS.ANTHROPIC:
+                        translatedResult = await translateWithOpenRouter(
+                            inputText, 
+                            selectedModel, 
+                            translations, 
+                            controller.signal, 
+                            apiKeys.openrouter,
+                            modelInstructions,
+                            selectedModel,
+                            selectedTone,
+                            sourceLang,
+                            targetLang,
+                            LANGUAGE_NAMES
+                        );
+                        break;
+                    case MODELS.OPENAI:
+                        translatedResult = await translateWithOpenAI(
+                            inputText, 
+                            translations, 
+                            controller.signal, 
+                            apiKeys.openai,
+                            modelInstructions,
+                            selectedModel,
+                            selectedTone,
+                            sourceLang,
+                            targetLang,
+                            LANGUAGE_NAMES
+                        );
+                        break;
+                    default:
+                        throw new Error('Invalid model selected');
                 }
-
-                if (!translatedResult) throw new Error('No translation result.');
-
-                if (isAdditional) {
-                    setTranslations(prev => [...prev, { text: translatedResult, timestamp: new Date() }]);
-                    setCurrentIndex(translations.length);
-                } else {
-                    setTranslations([{ text: translatedResult, timestamp: new Date() }]);
-                    setCurrentIndex(0);
+            } else {
+                switch (selectedModel) {
+                    case MODELS.GEMINI:
+                        translatedResult = await translateWithGemini(
+                            inputText, 
+                            [], 
+                            controller.signal, 
+                            apiKeys.gemini,
+                            modelInstructions,
+                            selectedModel,
+                            selectedTone,
+                            sourceLang,
+                            targetLang,
+                            LANGUAGE_NAMES
+                        );
+                        break;
+                    case MODELS.COMMAND:
+                        translatedResult = await translateWithOpenRouter(
+                            inputText, 
+                            selectedModel, 
+                            [], 
+                            controller.signal, 
+                            apiKeys.openrouter,
+                            modelInstructions,
+                            selectedModel,
+                            selectedTone,
+                            sourceLang,
+                            targetLang,
+                            LANGUAGE_NAMES
+                        );
+                        break;
+                    case MODELS.ANTHROPIC:
+                        translatedResult = await translateWithOpenRouter(
+                            inputText, 
+                            selectedModel, 
+                            [], 
+                            controller.signal, 
+                            apiKeys.openrouter,
+                            modelInstructions,
+                            selectedModel,
+                            selectedTone,
+                            sourceLang,
+                            targetLang,
+                            LANGUAGE_NAMES
+                        );
+                        break;
+                    case MODELS.OPENAI:
+                        translatedResult = await translateWithOpenAI(
+                            inputText, 
+                            [], 
+                            controller.signal, 
+                            apiKeys.openai,
+                            modelInstructions,
+                            selectedModel,
+                            selectedTone,
+                            sourceLang,
+                            targetLang,
+                            LANGUAGE_NAMES
+                        );
+                        break;
+                    default:
+                        throw new Error('Invalid model selected');
                 }
+            }
 
-                // Inside handleTranslate, modify the history section:
-                if (saveHistory) {
-                    const newHistory = [
-                        {
-                            inputText,
-                            translatedText: translatedResult,
-                            model: selectedModel,
-                            timestamp: new Date().toISOString()
-                        },
-                        ...history
-                    ].slice(0, MAX_HISTORY_ITEMS);
+            if (!translatedResult) throw new Error('No translation result.');
 
-                    setHistory(newHistory);
-                    saveHistoryToStorage(newHistory, saveHistory);
-                }
+            if (isAdditional) {
+                setTranslations(prev => [...prev, { text: translatedResult, timestamp: new Date() }]);
+                setCurrentIndex(translations.length);
+            } else {
+                setTranslations([{ text: translatedResult, timestamp: new Date() }]);
+                setCurrentIndex(0);
+            }
 
-            } catch (err) {
-                throw err;
+            // Inside handleTranslate, modify the history section:
+            if (saveHistory) {
+                const newHistory = [
+                    {
+                        inputText,
+                        translatedText: translatedResult,
+                        model: selectedModel,
+                        timestamp: new Date().toISOString()
+                    },
+                    ...history
+                ].slice(0, MAX_HISTORY_ITEMS);
+
+                setHistory(newHistory);
+                saveHistoryToStorage(newHistory, saveHistory);
             }
 
         } catch (err) {
-            if (err.name === 'AbortError') {
-                // Don't set error for cancelled translations
-                return;
-            } else if (err.message.includes('SAFETY')) {
-                setShowSafetyWarning(true);
-            } else {
-                setError(err.message);
-            }
-        } finally {
-            setIsLoading(false);
-            setTranslationController(null);
-            setCopySuccess(false);
+            throw err;
         }
-    };
+
+    } catch (err) {
+        if (err.name === 'AbortError') {
+            // Don't set error for cancelled translations
+            return;
+        } else if (err.message.includes('SAFETY')) {
+            setShowSafetyWarning(true);
+        } else {
+            setError(err.message);
+        }
+    } finally {
+        setIsLoading(false);
+        setTranslationController(null);
+        setCopySuccess(false);
+    }
+};
 
     const handleCancelTranslation = () => {
         if (translationController) {
