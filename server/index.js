@@ -6,6 +6,7 @@ const { Server } = require('socket.io');
 const textToSpeech = require('@google-cloud/text-to-speech');
 const sdk = require('microsoft-cognitiveservices-speech-sdk');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -65,6 +66,16 @@ function initializeClients(credentials) {
         console.error('Error initializing clients:', error);
         return null;
     }
+}
+
+// Load credentials from file and initialize on startup
+try {
+    const credentialsPath = path.join(__dirname, 'tts-credentials.json');
+    const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
+    initializeClients(credentials);
+    console.log('TTS client initialized from credentials file');
+} catch (error) {
+    console.error('Error loading credentials file:', error);
 }
 
 // Helper function to get voice configuration
