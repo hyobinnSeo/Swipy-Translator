@@ -1,41 +1,14 @@
 import React, { useState } from 'react';
 import { X, Settings as SettingsIcon, Eye, EyeOff, Moon } from 'lucide-react';
+import DialogWrapper from './DialogWrapper';
 
-const DialogWrapper = ({ isOpen, onClose, children, className = '' }) => {
-  React.useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-      onClick={onClose}
-    >
-      <div
-        className={`bg-white rounded-lg shadow-xl max-h-[90vh] flex flex-col h-[90vh] ${className}`}
-        onClick={e => e.stopPropagation()}
-      >
-        {children}
-      </div>
-    </div>
-  );
-};
-
-const APIKeyField = ({ label, value, onChange, placeholder }) => {
+const APIKeyField = ({ label, value, onChange, placeholder, darkMode }) => {
   const [showKey, setShowKey] = useState(false);
 
   return (
     <div className="space-y-1">
-      <label className="block text-sm font-medium text-gray-700">
+      <label className={`block text-sm font-medium ${darkMode ? 'text-slate-300' : 'text-gray-700'
+        }`}>
         {label}
       </label>
       <div className="relative">
@@ -44,12 +17,18 @@ const APIKeyField = ({ label, value, onChange, placeholder }) => {
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full px-3 py-2 border rounded-lg focus:ring-3 focus:ring-blue-500 pr-10 bg-white"
+          className={`w-full px-3 py-2 rounded-lg focus:ring-3 pr-10 ${darkMode
+              ? 'bg-slate-700 border-slate-600 text-slate-100 focus:ring-blue-500/30 placeholder-slate-400'
+              : 'bg-white border focus:ring-blue-500'
+            }`}
         />
         <button
           type="button"
           onClick={() => setShowKey(!showKey)}
-          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+          className={`absolute inset-y-0 right-0 pr-3 flex items-center ${darkMode
+              ? 'text-slate-400 hover:text-slate-300'
+              : 'text-gray-400 hover:text-gray-600'
+            }`}
         >
           {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
         </button>
@@ -58,18 +37,21 @@ const APIKeyField = ({ label, value, onChange, placeholder }) => {
   );
 };
 
-const SectionTitle = ({ children }) => (
-  <h3 className="text-sm font-semibold text-gray-900 border-b pb-2 mb-4">
+const SectionTitle = ({ children, darkMode }) => (
+  <h3 className={`text-sm font-semibold border-b pb-2 mb-4 ${darkMode
+      ? 'text-slate-200 border-slate-700'
+      : 'text-gray-900'
+    }`}>
     {children}
   </h3>
 );
 
-const SettingsDialog = ({ 
-  isOpen, 
-  onClose, 
-  maxLength, 
-  onMaxLengthChange, 
-  saveHistory, 
+const SettingsDialog = ({
+  isOpen,
+  onClose,
+  maxLength,
+  onMaxLengthChange,
+  saveHistory,
   onSaveHistoryChange,
   darkMode,
   onDarkModeChange,
@@ -82,7 +64,12 @@ const SettingsDialog = ({
   const [localApiKeys, setLocalApiKeys] = useState({
     gemini: apiKeys.gemini || '',
     openrouter: apiKeys.openrouter || '',
-    openai: apiKeys.openai || ''
+    openai: apiKeys.openai || '',
+    googleCloud: {
+      projectId: apiKeys.googleCloud?.projectId || '',
+      privateKey: apiKeys.googleCloud?.privateKey || '',
+      clientEmail: apiKeys.googleCloud?.clientEmail || ''
+    }
   });
 
   const handleSave = () => {
@@ -94,17 +81,21 @@ const SettingsDialog = ({
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <DialogWrapper isOpen={isOpen} onClose={onClose}>
+    <DialogWrapper isOpen={isOpen} onClose={onClose} darkMode={darkMode}>
       <div className="w-full max-w-md flex flex-col h-full">
-        <div className="shrink-0 px-6 py-4 border-b flex items-center justify-between bg-gray-50">
+        <div className={`shrink-0 px-6 py-4 border-b flex items-center justify-between ${darkMode
+            ? 'bg-slate-800 border-slate-700'
+            : 'bg-gray-50'
+          }`}>
           <div className="flex items-center space-x-2">
-            <SettingsIcon className="w-5 h-5 text-gray-500" />
-            <h2 className="text-lg font-semibold text-gray-900">Settings</h2>
+            <SettingsIcon className={`w-5 h-5 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`} />
+            <h2 className={`text-lg font-semibold ${darkMode ? 'text-slate-100' : 'text-gray-900'}`}>Settings</h2>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+          <button
+            onClick={onClose}
+            className={darkMode ? 'text-slate-400 hover:text-slate-200' : 'text-gray-500 hover:text-gray-700'}
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -112,55 +103,56 @@ const SettingsDialog = ({
         <div className="flex-1 overflow-y-auto p-6 space-y-8">
           {/* General Settings Section */}
           <div>
-            <SectionTitle>General Settings</SectionTitle>
+            <SectionTitle darkMode={darkMode}>General Settings</SectionTitle>
             <div className="space-y-6">
-              <div className="bg-gray-50 p-4 rounded-lg">
+              <div className={`p-4 rounded-lg ${darkMode ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-2">
-                    <Moon className="h-4 w-4 text-gray-600" />
-                    <label className="text-sm font-medium text-gray-700">Dark Mode</label>
+                    <Moon className={`h-4 w-4 ${darkMode ? 'text-slate-400' : 'text-gray-600'}`} />
+                    <label className={`text-sm font-medium ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>
+                      Dark Mode
+                    </label>
                   </div>
                   <button
                     onClick={() => setLocalDarkMode(!localDarkMode)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      localDarkMode ? 'bg-navy-500' : 'bg-gray-200'
-                    }`}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${localDarkMode ? 'bg-navy-200' : darkMode ? 'bg-slate-600' : 'bg-gray-200'
+                      }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        localDarkMode ? 'translate-x-6' : 'translate-x-1'
-                      }`}
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${localDarkMode ? 'translate-x-6' : 'translate-x-1'
+                        }`}
                     />
                   </button>
                 </div>
-                <p className="text-sm text-gray-500">
+                <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
                   Enable dark mode for a more comfortable viewing experience in low-light conditions
                 </p>
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-lg">
+              <div className={`p-4 rounded-lg ${darkMode ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-gray-700">Save Translation History</label>
+                  <label className={`text-sm font-medium ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>
+                    Save Translation History
+                  </label>
                   <button
                     onClick={() => setLocalSaveHistory(!localSaveHistory)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      localSaveHistory ? 'bg-navy-500' : 'bg-gray-200'
-                    }`}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${localSaveHistory ? 'bg-navy-200' : darkMode ? 'bg-slate-600' : 'bg-gray-200'
+                      }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        localSaveHistory ? 'translate-x-6' : 'translate-x-1'
-                      }`}
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${localSaveHistory ? 'translate-x-6' : 'translate-x-1'
+                        }`}
                     />
                   </button>
                 </div>
-                <p className="text-sm text-gray-500">
+                <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
                   When disabled, your translation history will not be saved between sessions
                 </p>
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className={`p-4 rounded-lg ${darkMode ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
+                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-slate-300' : 'text-gray-700'
+                  }`}>
                   Maximum Input Length
                 </label>
                 <div>
@@ -169,9 +161,12 @@ const SettingsDialog = ({
                     min="1000"
                     value={localMaxLength}
                     onChange={(e) => setLocalMaxLength(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-3 focus:ring-blue-500 bg-white"
+                    className={`w-full px-3 py-2 rounded-lg focus:ring-3 ${darkMode
+                        ? 'bg-slate-700 border-slate-600 text-slate-100 focus:ring-blue-500/30'
+                        : 'bg-white border focus:ring-blue-500'
+                      }`}
                   />
-                  <p className="mt-2 text-sm text-gray-500">
+                  <p className={`mt-2 text-sm ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
                     Minimum allowed value is 1,000 characters
                   </p>
                 </div>
@@ -181,40 +176,95 @@ const SettingsDialog = ({
 
           {/* API Keys Section */}
           <div>
-            <SectionTitle>API Keys</SectionTitle>
-            <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+            <SectionTitle darkMode={darkMode}>API Keys</SectionTitle>
+            <div className={`space-y-4 p-4 rounded-lg ${darkMode ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
               <APIKeyField
                 label="Gemini API Key"
                 value={localApiKeys.gemini}
                 onChange={(value) => setLocalApiKeys(prev => ({ ...prev, gemini: value }))}
                 placeholder="Enter your Gemini API key"
+                darkMode={darkMode}
               />
               <APIKeyField
                 label="OpenRouter API Key"
                 value={localApiKeys.openrouter}
                 onChange={(value) => setLocalApiKeys(prev => ({ ...prev, openrouter: value }))}
                 placeholder="Enter your OpenRouter API key"
+                darkMode={darkMode}
               />
               <APIKeyField
                 label="OpenAI API Key"
                 value={localApiKeys.openai}
                 onChange={(value) => setLocalApiKeys(prev => ({ ...prev, openai: value }))}
                 placeholder="Enter your OpenAI API key"
+                darkMode={darkMode}
               />
+            </div>
+          </div>
+
+          {/* Google Cloud Section */}
+          <div>
+            <SectionTitle darkMode={darkMode}>Google Cloud Services</SectionTitle>
+            <div className={`space-y-4 p-4 rounded-lg ${darkMode ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
+              <p className={`text-sm mb-4 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+                These credentials are used for both Text-to-Speech and Speech-to-Text services
+              </p>
+              <APIKeyField
+                label="Project ID"
+                value={localApiKeys.googleCloud.projectId}
+                onChange={(value) => setLocalApiKeys(prev => ({
+                  ...prev,
+                  googleCloud: { ...prev.googleCloud, projectId: value }
+                }))}
+                placeholder="Enter your Google Cloud Project ID"
+                darkMode={darkMode}
+              />
+              <APIKeyField
+                label="Client Email"
+                value={localApiKeys.googleCloud.clientEmail}
+                onChange={(value) => setLocalApiKeys(prev => ({
+                  ...prev,
+                  googleCloud: { ...prev.googleCloud, clientEmail: value }
+                }))}
+                placeholder="Enter your service account client email"
+                darkMode={darkMode}
+              />
+              <APIKeyField
+                label="Private Key"
+                value={localApiKeys.googleCloud.privateKey}
+                onChange={(value) => setLocalApiKeys(prev => ({
+                  ...prev,
+                  googleCloud: { ...prev.googleCloud, privateKey: value }
+                }))}
+                placeholder="Enter your service account private key"
+                darkMode={darkMode}
+              />
+              <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+                These credentials can be found in your Google Cloud service account key file
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="shrink-0 px-6 py-4 border-t bg-gray-50 flex justify-end space-x-3">
+        <div className={`shrink-0 px-6 py-4 border-t flex justify-end space-x-3 ${darkMode
+            ? 'bg-slate-800 border-slate-700'
+            : 'bg-gray-50'
+          }`}>
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800"
+            className={`px-4 py-2 ${darkMode
+                ? 'text-slate-300 hover:text-slate-100'
+                : 'text-gray-600 hover:text-gray-800'
+              }`}
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-navy-500 text-white rounded-lg hover:bg-navy-600 shadow-sm"
+            className={`px-4 py-2 text-white rounded-lg shadow-sm ${darkMode
+                ? 'bg-navy-400 hover:bg-navy-500'
+                : 'bg-navy-500 hover:bg-navy-600'
+              }`}
           >
             Save Changes
           </button>

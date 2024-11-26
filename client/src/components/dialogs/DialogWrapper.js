@@ -1,6 +1,6 @@
 import React from 'react';
 
-const DialogWrapper = ({ isOpen, onClose, children, className = '' }) => {
+const DialogWrapper = ({ isOpen, onClose, children, className = '', darkMode }) => {
     if (!isOpen) return null;
 
     return (
@@ -9,11 +9,14 @@ const DialogWrapper = ({ isOpen, onClose, children, className = '' }) => {
                 {/* Backdrop */}
                 <div 
                     className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-                    onClick={onClose}
                 ></div>
 
                 {/* Modal */}
-                <div className={`relative bg-white rounded-lg shadow-xl ${className}`}>
+                <div className={`relative rounded-lg ${
+                    darkMode 
+                        ? 'bg-slate-800 shadow-xl shadow-black/20' 
+                        : 'bg-white shadow-xl'
+                } ${className}`}>
                     {children}
                 </div>
             </div>

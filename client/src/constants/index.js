@@ -25,6 +25,87 @@ export const LANGUAGE_NAMES = {
     'ar': 'Arabic / العربية'
 };
 
+// Default voice mapping for each language
+export const LANGUAGE_VOICE_MAPPING = {
+    'en': 'en-US-Journey-F',
+    'ko': 'ko-KR-Neural2-A',
+    'ja': 'ja-JP-Neural2-B',
+    'zh': 'cmn-TW-Wavenet-A',
+    'ar': 'ar-XA-Wavenet-A',
+    'fr': 'fr-FR-Journey-F',
+    'es': 'es-ES-Journey-F',
+    'it': 'it-IT-Journey-F',
+    'de': 'de-DE-Journey-F',
+    'pt': 'pt-BR-Neural2-A'
+};
+
+// Available voice options for each language
+export const VOICE_OPTIONS = {
+    'en': [
+        { id: 'en-US-Journey-D', name: 'Journey (Male)' },
+        { id: 'en-US-Journey-F', name: 'Journey (Female)' },
+        { id: 'en-US-Journey-O', name: 'Journey (Female 2)' },
+        { id: 'en-GB-Journey-D', name: 'Journey UK (Male)' },
+        { id: 'en-GB-Journey-F', name: 'Journey UK (Female)' },
+        { id: 'en-GB-Journey-O', name: 'Journey UK (Female 2)' },
+        { id: 'en-AU-Journey-D', name: 'Journey AU (Male)' },
+        { id: 'en-AU-Journey-F', name: 'Journey AU (Female)' },
+        { id: 'en-AU-Journey-O', name: 'Journey AU (Female 2)' }
+    ],
+    'ko': [
+        { id: 'ko-KR-Neural2-A', name: 'Neural2 A (여성)' },
+        { id: 'ko-KR-Neural2-B', name: 'Neural2 B (여성)' },
+        { id: 'ko-KR-Neural2-C', name: 'Neural2 C (남성)' }
+    ],
+    'ja': [
+        { id: 'ja-JP-Neural2-B', name: 'Neural2 B (女性)' },
+        { id: 'ja-JP-Neural2-C', name: 'Neural2 C (男性)' },
+        { id: 'ja-JP-Neural2-D', name: 'Neural2 D (男性)' }
+    ],
+    'zh': [
+        { id: 'cmn-TW-Wavenet-A', name: 'Wavenet A (女性)' },
+        { id: 'cmn-TW-Wavenet-B', name: 'Wavenet B (男性)' },
+        { id: 'cmn-TW-Wavenet-C', name: 'Wavenet C (男性)' }
+    ],
+    'fr': [
+        { id: 'fr-FR-Journey-D', name: 'Journey (Homme)' },
+        { id: 'fr-FR-Journey-F', name: 'Journey (Femme)' },
+        { id: 'fr-FR-Journey-O', name: 'Journey (Femme 2)' },
+        { id: 'fr-CA-Journey-D', name: 'Journey CA (Homme)' },
+        { id: 'fr-CA-Journey-F', name: 'Journey CA (Femme)' },
+        { id: 'fr-CA-Journey-O', name: 'Journey CA (Femme 2)' }
+    ],
+    'es': [
+        { id: 'es-ES-Journey-D', name: 'Journey (Hombre)' },
+        { id: 'es-ES-Journey-F', name: 'Journey (Mujer)' },
+        { id: 'es-ES-Journey-O', name: 'Journey (Mujer 2)' },
+        { id: 'es-US-Journey-D', name: 'Journey US (Hombre)' },
+        { id: 'es-US-Journey-F', name: 'Journey US (Mujer)' },
+        { id: 'es-US-Journey-O', name: 'Journey US (Mujer 2)' }
+    ],
+    'de': [
+        { id: 'de-DE-Journey-D', name: 'Journey (Männlich)' },
+        { id: 'de-DE-Journey-F', name: 'Journey (Weiblich)' },
+        { id: 'de-DE-Journey-O', name: 'Journey (Weiblich 2)' }
+    ],
+    'it': [
+        { id: 'it-IT-Journey-D', name: 'Journey (Uomo)' },
+        { id: 'it-IT-Journey-F', name: 'Journey (Donna)' },
+        { id: 'it-IT-Journey-O', name: 'Journey (Donna 2)' }
+    ],
+    'pt': [
+        { id: 'pt-BR-Neural2-A', name: 'Neural2 A (Feminino)' },
+        { id: 'pt-BR-Neural2-B', name: 'Neural2 B (Masculino)' },
+        { id: 'pt-BR-Neural2-C', name: 'Neural2 C (Feminino)' }
+    ],
+    'ar': [
+        { id: 'ar-XA-Wavenet-A', name: 'Wavenet A (أنثى)' },
+        { id: 'ar-XA-Wavenet-B', name: 'Wavenet B (ذكر)' },
+        { id: 'ar-XA-Wavenet-C', name: 'Wavenet C (ذكر)' },
+        { id: 'ar-XA-Wavenet-D', name: 'Wavenet D (أنثى)' }
+    ]
+};
+
 // Tone options for each model
 export const TONES = {
     [MODELS.GEMINI]: [
@@ -164,72 +245,6 @@ export const TONES = {
             name: '카디비 / Cardi B',
             description: 'Raw and direct street tone'
         }
-    ]
-};
-
-// Default voice mapping for each language
-export const LANGUAGE_VOICE_MAPPING = {
-    'en': 'en-US-JennyNeural',
-    'ko': 'ko-KR-SunHiNeural',
-    'ja': 'ja-JP-NanamiNeural',
-    'zh': 'zh-CN-XiaoxiaoNeural',
-    'ar': 'ar-SA-ZariyahNeural',
-    'fr': 'fr-FR-DeniseNeural',
-    'es': 'es-ES-ElviraNeural',
-    'it': 'it-IT-ElsaNeural',
-    'de': 'de-DE-KatjaNeural',
-    'pt': 'pt-BR-FranciscaNeural'
-};
-
-// Available voice options for each language
-export const VOICE_OPTIONS = {
-    'en': [
-        { id: 'en-US-AriaNeural', name: 'Aria (Female)' },
-        { id: 'en-US-GuyNeural', name: 'Guy (Male)' },
-        { id: 'en-US-JennyNeural', name: 'Jenny (Female)' },
-        { id: 'en-US-DavisNeural', name: 'Davis (Male)' }
-    ],
-    'ko': [
-        { id: 'ko-KR-SunHiNeural', name: '선희 (여성)' },
-        { id: 'ko-KR-InJoonNeural', name: '인준 (남성)' },
-        { id: 'ko-KR-JiMinNeural', name: '지민 (여성)' },
-        { id: 'ko-KR-BongJinNeural', name: '봉진 (남성)' }
-    ],
-    'ja': [
-        { id: 'ja-JP-NanamiNeural', name: '七海 (女性)' },
-        { id: 'ja-JP-KeitaNeural', name: '圭太 (男性)' },
-        { id: 'ja-JP-AoiNeural', name: '葵 (女性)' },
-        { id: 'ja-JP-DaichiNeural', name: '大智 (男性)' }
-    ],
-    'zh': [
-        { id: 'zh-CN-XiaoxiaoNeural', name: '晓晓 (女性)' },
-        { id: 'zh-CN-YunxiNeural', name: '云希 (男性)' },
-        { id: 'zh-CN-XiaoyiNeural', name: '晓伊 (女性)' },
-        { id: 'zh-CN-YunjianNeural', name: '云剑 (男性)' }
-    ],
-    'fr': [
-        { id: 'fr-FR-DeniseNeural', name: 'Denise (Femme)' },
-        { id: 'fr-FR-HenriNeural', name: 'Henri (Homme)' }
-    ],
-    'es': [
-        { id: 'es-ES-ElviraNeural', name: 'Elvira (Mujer)' },
-        { id: 'es-ES-AlvaroNeural', name: 'Alvaro (Hombre)' }
-    ],
-    'de': [
-        { id: 'de-DE-KatjaNeural', name: 'Katja (Weiblich)' },
-        { id: 'de-DE-ConradNeural', name: 'Conrad (Männlich)' }
-    ],
-    'it': [
-        { id: 'it-IT-ElsaNeural', name: 'Elsa (Donna)' },
-        { id: 'it-IT-DiegoNeural', name: 'Diego (Uomo)' }
-    ],
-    'pt': [
-        { id: 'pt-BR-FranciscaNeural', name: 'Francisca (Feminino)' },
-        { id: 'pt-BR-AntonioNeural', name: 'Antonio (Masculino)' }
-    ],
-    'ar': [
-        { id: 'ar-SA-ZariyahNeural', name: 'زارية (أنثى)' },
-        { id: 'ar-SA-HamedNeural', name: 'حامد (ذكر)' }
     ]
 };
 

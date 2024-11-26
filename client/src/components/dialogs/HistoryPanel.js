@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import ConfirmDialog from './ConfirmDialog';
 
-const HistoryPanel = ({ isOpen, onClose, history, onSelectHistory, onDeleteHistory, onClearHistory }) => {
+const HistoryPanel = ({ isOpen, onClose, history, onSelectHistory, onDeleteHistory, onClearHistory, darkMode }) => {
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
 
@@ -24,15 +24,21 @@ const HistoryPanel = ({ isOpen, onClose, history, onSelectHistory, onDeleteHisto
                 onClick={onClose}
             />
             <div
-                className={`fixed right-0 top-0 h-full w-80 bg-white shadow-lg transform 
+                className={`fixed right-0 top-0 h-full w-80 shadow-lg transform 
                 transition-transform z-30 ${isOpen ? 'translate-x-0' : 'translate-x-full'}
-                flex flex-col overflow-hidden`}
+                flex flex-col overflow-hidden
+                ${darkMode ? 'bg-slate-700 text-slate-100' : 'bg-white'}`}
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="p-4 border-b flex-shrink-0">
+                <div className={`p-4 border-b flex-shrink-0 ${darkMode ? 'border-slate-600' : ''}`}>
                     <div className="flex justify-between items-center">
                         <h2 className="text-xl font-semibold">Translation History</h2>
-                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                        <button 
+                            onClick={onClose} 
+                            className={`${darkMode 
+                                ? 'text-slate-400 hover:text-slate-200' 
+                                : 'text-gray-500 hover:text-gray-700'}`}
+                        >
                             <X className="h-5 w-5" />
                         </button>
                     </div>
@@ -43,7 +49,10 @@ const HistoryPanel = ({ isOpen, onClose, history, onSelectHistory, onDeleteHisto
                         {history.length > 0 && (
                             <button
                                 onClick={() => setShowConfirmDialog(true)}
-                                className="w-full px-4 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors mb-4"
+                                className={`w-full px-4 py-2 rounded-lg transition-colors mb-4
+                                    ${darkMode 
+                                        ? 'text-red-700 border-red-700/50 border hover:bg-red-900/20' 
+                                        : 'text-red-600 border-red-300 border hover:bg-red-50'}`}
                             >
                                 Clear All History
                             </button>
@@ -52,16 +61,21 @@ const HistoryPanel = ({ isOpen, onClose, history, onSelectHistory, onDeleteHisto
                         {history.map((item, index) => (
                             <div
                                 key={index}
-                                className="p-3 border rounded-lg hover:bg-gray-50 relative group"
+                                className={`p-3 rounded-lg relative group
+                                    ${darkMode 
+                                        ? 'border-slate-600 border hover:bg-slate-600/50' 
+                                        : 'border hover:bg-gray-50'}`}
                             >
                                 <div
                                     className="cursor-pointer"
                                     onClick={() => onSelectHistory(item)}
                                 >
-                                    <div className="text-sm font-medium text-gray-600 mb-1">
+                                    <div className={`text-sm font-medium mb-1
+                                        ${darkMode ? 'text-slate-300' : 'text-gray-600'}`}>
                                         {new Date(item.timestamp).toLocaleString()}
                                     </div>
-                                    <div className="text-sm text-gray-500 truncate pr-8">
+                                    <div className={`text-sm truncate pr-8
+                                        ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
                                         {item.inputText}
                                     </div>
                                 </div>
@@ -70,8 +84,11 @@ const HistoryPanel = ({ isOpen, onClose, history, onSelectHistory, onDeleteHisto
                                         setItemToDelete(index);
                                         setShowConfirmDialog(true);
                                     }}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 
-                                    hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                    className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 
+                                    opacity-0 group-hover:opacity-100 transition-all
+                                    ${darkMode 
+                                        ? 'text-slate-400 hover:text-red-400' 
+                                        : 'text-gray-400 hover:text-red-500'}`}
                                     title="Delete entry"
                                 >
                                     <Trash2 className="h-4 w-4" />
@@ -79,7 +96,8 @@ const HistoryPanel = ({ isOpen, onClose, history, onSelectHistory, onDeleteHisto
                             </div>
                         ))}
                         {history.length === 0 && (
-                            <div className="text-center text-gray-500 py-4">
+                            <div className={`text-center py-4
+                                ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
                                 No translation history yet
                             </div>
                         )}
@@ -106,6 +124,7 @@ const HistoryPanel = ({ isOpen, onClose, history, onSelectHistory, onDeleteHisto
                         ? "Are you sure you want to delete this translation entry?"
                         : "Are you sure you want to clear all translation history? This action cannot be undone."
                 }
+                darkMode={darkMode}
             />
         </>
     );

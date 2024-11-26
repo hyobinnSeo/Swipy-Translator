@@ -45,7 +45,7 @@ const LanguageSelector = ({
 
     const selectClasses = `w-full p-2 border rounded-lg focus:ring-2 focus:ring-gray-500 ${
         darkMode 
-            ? 'bg-gray-700 border-gray-600 text-gray-100' 
+            ? 'bg-navy-900 border-navy-800/50 text-gray-100' 
             : 'bg-white'
     }`;
 

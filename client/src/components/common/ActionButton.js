@@ -80,7 +80,9 @@ const ActionButton = ({
                     transition-all duration-300 relative overflow-hidden
                     ${(type === 'translate' || type === 'paraphrase')
                         ? (disabled && !isLoading
-                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            ? darkMode 
+                                ? 'bg-slate-700/50 text-slate-500 cursor-not-allowed'
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                             : 'bg-navy-500 text-white hover:bg-navy-600')
                         : isActive
                             ? 'bg-navy-500 text-white'

@@ -35,6 +35,8 @@ import {
     LANGUAGE_NAMES
 } from '../constants';
 
+import { updateTTSCredentials } from '../services/ttsService';
+
 const TranslatorApp = () => {
     // Settings and configuration state
     const [selectedModel, setSelectedModel] = useState(MODELS.GEMINI);
@@ -50,7 +52,12 @@ const TranslatorApp = () => {
     const [apiKeys, setApiKeys] = useState(() => ({
         gemini: localStorage.getItem('gemini_api_key') || '',
         openrouter: localStorage.getItem('openrouter_api_key') || '',
-        openai: localStorage.getItem('openai_api_key') || ''
+        openai: localStorage.getItem('openai_api_key') || '',
+        googleCloud: {
+            projectId: localStorage.getItem('google_cloud_project_id') || '',
+            privateKey: localStorage.getItem('google_cloud_private_key') || '',
+            clientEmail: localStorage.getItem('google_cloud_client_email') || ''
+        }
     }));
     const [selectedVoices, setSelectedVoices] = useState(() => {
         try {
@@ -158,11 +165,29 @@ const TranslatorApp = () => {
     }, [selectedModel, selectedTone]);
 
     // Settings handlers
-    const handleApiKeysChange = (newApiKeys) => {
+
+    const handleApiKeysChange = async (newApiKeys) => {
         setApiKeys(newApiKeys);
+
+        // Store API keys in localStorage
         localStorage.setItem('gemini_api_key', newApiKeys.gemini);
         localStorage.setItem('openrouter_api_key', newApiKeys.openrouter);
         localStorage.setItem('openai_api_key', newApiKeys.openai);
+
+        // Store Google Cloud credentials
+        if (newApiKeys.googleCloud) {
+            localStorage.setItem('google_cloud_project_id', newApiKeys.googleCloud.projectId);
+            localStorage.setItem('google_cloud_private_key', newApiKeys.googleCloud.privateKey);
+            localStorage.setItem('google_cloud_client_email', newApiKeys.googleCloud.clientEmail);
+
+            // Update TTS/STT credentials on the server
+            try {
+                await updateTTSCredentials(newApiKeys.googleCloud);
+            } catch (error) {
+                console.error('Failed to update Google Cloud credentials:', error);
+                // You might want to show an error message to the user here
+            }
+        }
     };
 
     const handleDarkModeChange = (newValue) => {
@@ -208,7 +233,7 @@ const TranslatorApp = () => {
     const baseUrl = process.env.PUBLIC_URL || '/';
 
     return (
-        <div className={`w-full min-h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
+        <div className={`w-full min-h-screen ${darkMode ? 'dark bg-gray-800' : 'bg-gray-50'}`}>
             <Helmet>
                 <title>Hoochoo Translator</title>
                 <meta name="description" content="Multi-language translation application" />
@@ -232,6 +257,7 @@ const TranslatorApp = () => {
                     setTranslations([]);
                     setCurrentIndex(0);
                 }}
+                darkMode={darkMode}
             />
 
             <HistoryPanel
@@ -246,6 +272,7 @@ const TranslatorApp = () => {
                 }}
                 onDeleteHistory={deleteHistoryItem}
                 onClearHistory={clearHistory}
+                darkMode={darkMode}
             />
 
             <SavedTranslationsDialog
@@ -259,6 +286,7 @@ const TranslatorApp = () => {
                 }}
                 onDeleteSaved={deleteSavedTranslation}
                 onClearAll={clearSavedTranslations}
+                darkMode={darkMode}
             />
 
             <InstructionsModal
@@ -268,6 +296,7 @@ const TranslatorApp = () => {
                 selectedModel={selectedModel}
                 setModelInstructions={setModelInstructions}
                 selectedTone={selectedTone}
+                darkMode={darkMode}
             />
 
             <VoiceSettingsModal
@@ -275,17 +304,20 @@ const TranslatorApp = () => {
                 onClose={closeVoiceSettings}
                 selectedVoices={selectedVoices}
                 onVoiceChange={handleVoiceChange}
+                darkMode={darkMode}
             />
 
             <RequestLogViewer
                 isOpen={isRequestLogOpen}
                 onClose={closeRequestLog}
                 requestLog={null}
+                darkMode={darkMode}
             />
 
             <SafetyWarningDialog
                 isOpen={showSafetyWarning}
                 onClose={() => setShowSafetyWarning(false)}
+                darkMode={darkMode}
             />
 
             <SettingsDialog
@@ -309,7 +341,7 @@ const TranslatorApp = () => {
 
             {/* Header */}
             <div className={`w-full border-b ${darkMode
-                ? 'bg-slate-800/50 border-slate-700/50 backdrop-blur-sm'
+                ? 'bg-slate-700/50 border-slate-700/50 backdrop-blur-sm'
                 : 'bg-white'
                 }`}>
                 <div className="max-w-7xl mx-auto">
@@ -351,7 +383,7 @@ const TranslatorApp = () => {
                                 setCurrentIndex(0);
                             }}
                             className={`w-[200px] p-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${darkMode
-                                ? 'bg-slate-800 border-slate-600 text-slate-100 hover:bg-slate-700'
+                                ? 'bg-navy-900 border-navy-800/50 text-slate-100 hover:bg-navy-800'
                                 : 'bg-white'
                                 } transition-colors`}
                         >
@@ -411,8 +443,7 @@ const TranslatorApp = () => {
                             selectedVoice={selectedVoices[sourceLang]}
                             isFixedSize={isFixedSize}
                             darkMode={darkMode}
-                            className={darkMode ? 'bg-slate-800/80 text-slate-100 border-slate-600 focus:border-blue-500 placeholder-slate-400'
-                                : ''}
+                            className={darkMode ? 'bg-navy-900/80 text-slate-100 border-slate-600 focus:border-blue-500 placeholder-slate-400' : ''}
                         />
 
                         <TextArea
@@ -451,7 +482,7 @@ const TranslatorApp = () => {
                             selectedVoice={selectedVoices[isParaphraserMode ? sourceLang : targetLang]}
                             isFixedSize={isFixedSize}
                             darkMode={darkMode}
-                            className={darkMode ? 'bg-slate-800/80 text-slate-100 border-slate-600 focus:border-blue-500 placeholder-slate-400'
+                            className={darkMode ? 'bg-navy-900/80 text-slate-100 border-slate-700/50 focus:border-blue-500 placeholder-slate-400'
                                 : ''}
                         />
                     </div>
