@@ -1,6 +1,20 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { X, Clipboard, ChevronLeft, ChevronRight, Volume2 } from 'lucide-react';
 
+// Default voice mapping for languages
+const LANGUAGE_VOICE_MAPPING = {
+    'en': 'en-US-AriaNeural',
+    'ko': 'ko-KR-SunHiNeural',
+    'ja': 'ja-JP-NanamiNeural',
+    'zh': 'zh-CN-XiaoxiaoNeural',
+    'fr': 'fr-FR-DeniseNeural',
+    'es': 'es-ES-ElviraNeural',
+    'de': 'de-DE-KatjaNeural',
+    'it': 'it-IT-ElsaNeural',
+    'pt': 'pt-BR-FranciscaNeural',
+    'ar': 'ar-SA-ZariyahNeural'
+};
+
 const TextArea = ({
     value,
     onChange,
@@ -20,7 +34,8 @@ const TextArea = ({
     isOutput = false,
     language = 'en',
     selectedVoice,
-    isFixedSize = false
+    isFixedSize = false,
+    darkMode = false
 }) => {
     const textareaRef = useRef(null);
     const resizeObserverRef = useRef(null);
@@ -246,15 +261,29 @@ const TextArea = ({
 
     const shouldShowSpeaker = showSpeaker && value && language !== 'auto';
 
+    const containerClasses = `relative rounded-lg border focus-within:ring-2 focus-within:ring-gray-600 focus-within:border-navy-600 transition-all overflow-hidden ${
+        darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white'
+    }`;
+
+    const textareaClasses = `w-full px-4 py-4 text-lg resize-none rounded-lg 
+        focus:outline-none border-0 ${
+            darkMode 
+                ? 'bg-gray-700 text-gray-100 placeholder-gray-400' 
+                : 'bg-white placeholder-gray-500'
+        } ${readOnly ? darkMode ? 'bg-gray-800' : 'bg-gray-50' : ''} ${className}`;
+
     return (
         <div className="relative flex-1" style={{ minWidth: 0 }}>
-            <div className="relative rounded-lg border focus-within:ring-2 focus-within:ring-gray-600 focus-within:border-navy-600 transition-all bg-white overflow-hidden">
+            <div className={containerClasses}>
                 {/* Clear button */}
                 {value && (
                     <button
                         onClick={onClear}
-                        className="absolute top-2 right-4 p-1.5 text-gray-400 hover:text-gray-600 
-                        hover:bg-gray-100 rounded-full transition-colors z-20"
+                        className={`absolute top-2 right-4 p-1.5 rounded-full transition-colors z-20 ${
+                            darkMode 
+                                ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-600' 
+                                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                        }`}
                         title="Clear text"
                     >
                         <X className="h-4 w-4" />
@@ -265,8 +294,11 @@ const TextArea = ({
                 {!isOutput && !readOnly && !value && (
                     <button
                         onClick={handlePasteFromClipboard}
-                        className="absolute top-2 right-4 px-3 py-1.5 text-gray-600 hover:text-gray-800 
-                        hover:bg-gray-100 rounded-lg transition-colors z-20 flex items-center gap-2"
+                        className={`absolute top-2 right-4 px-3 py-1.5 rounded-lg transition-colors z-20 flex items-center gap-2 ${
+                            darkMode 
+                                ? 'text-gray-300 hover:text-gray-100 hover:bg-gray-600' 
+                                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                        }`}
                         title="Paste from clipboard"
                     >
                         <Clipboard className="h-4 w-4" />
@@ -282,9 +314,7 @@ const TextArea = ({
                         onPaste={handlePaste}
                         placeholder={placeholder}
                         readOnly={readOnly}
-                        className={`w-full px-4 py-4 text-lg resize-none rounded-lg 
-                        focus:outline-none border-0 bg-white
-                        ${readOnly ? 'bg-gray-50' : ''} ${className}`}
+                        className={textareaClasses}
                         style={{
                             height: isFixedSize ? '12rem' : undefined,
                             minHeight: isFixedSize ? undefined : '12rem',
@@ -299,23 +329,38 @@ const TextArea = ({
 
                     {/* Translation navigation */}
                     {translations.length > 0 && (
-                        <div className="absolute bottom-0 left-0 right-0 h-12 bg-white border-t flex items-center justify-between px-4">
+                        <div className={`absolute bottom-0 left-0 right-0 h-12 border-t flex items-center justify-between px-4 ${
+                            darkMode 
+                                ? 'bg-gray-700 border-gray-600' 
+                                : 'bg-white'
+                        }`}>
                             <button
                                 onClick={onPrevious}
-                                className={`p-1.5 rounded-full hover:bg-gray-100 
-                                    ${currentIndex > 0 ? 'text-gray-500 hover:text-gray-700' : 'text-gray-300'}`}
+                                className={`p-1.5 rounded-full ${
+                                    currentIndex > 0 
+                                        ? darkMode
+                                            ? 'text-gray-300 hover:text-gray-100 hover:bg-gray-600'
+                                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                        : darkMode
+                                            ? 'text-gray-600'
+                                            : 'text-gray-300'
+                                }`}
                                 disabled={currentIndex === 0}
                             >
                                 <ChevronLeft className="h-5 w-5" />
                             </button>
 
-                            <div className="text-sm text-gray-500">
+                            <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                 {currentIndex + 1}/{translations.length}
                             </div>
 
                             <button
                                 onClick={onNext}
-                                className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+                                className={`p-1.5 rounded-full ${
+                                    darkMode
+                                        ? 'text-gray-300 hover:text-gray-100 hover:bg-gray-600'
+                                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                }`}
                             >
                                 <ChevronRight className="h-5 w-5" />
                             </button>
@@ -330,20 +375,24 @@ const TextArea = ({
                     {shouldShowSpeaker && (
                         <button
                             onClick={handleSpeak}
-                            className={`text-gray-500 hover:text-gray-700 ${isSpeaking ? 'text-navy-500' : ''}`}
+                            className={`${
+                                darkMode
+                                    ? 'text-gray-400 hover:text-gray-200'
+                                    : 'text-gray-500 hover:text-gray-700'
+                            } ${isSpeaking ? 'text-navy-500' : ''}`}
                             title={isSpeaking ? "Stop speaking" : "Text-to-speech"}
                         >
                             <Volume2 className={`h-5 w-5 ${isSpeaking ? 'animate-pulse' : ''}`} />
                         </button>
                     )}
                     {showSpeaker && value && language === 'auto' && (
-                        <span className="text-sm text-gray-400 italic">
+                        <span className={`text-sm italic ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                             TTS not available in auto-detect mode
                         </span>
                     )}
                 </div>
 
-                <div className="flex-shrink-0 text-sm text-gray-500">
+                <div className={`flex-shrink-0 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     {value.length}{!isOutput && maxLength && `/${maxLength}`}
                 </div>
             </div>

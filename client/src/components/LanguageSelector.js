@@ -11,7 +11,8 @@ const LanguageSelector = ({
     onInputTextChange,
     onTranslatedTextChange,
     onResetTranslations,
-    hideTargetLanguage
+    hideTargetLanguage,
+    darkMode
 }) => {
     const languages = [
         { code: 'auto', name: 'Auto Detect' },
@@ -42,13 +43,19 @@ const LanguageSelector = ({
 
     const isAutoDetect = sourceLang === 'auto';
 
+    const selectClasses = `w-full p-2 border rounded-lg focus:ring-2 focus:ring-gray-500 ${
+        darkMode 
+            ? 'bg-gray-700 border-gray-600 text-gray-100' 
+            : 'bg-white'
+    }`;
+
     return (
         <div className="flex items-center justify-between gap-2 mt-4 mb-2">
             <div className={hideTargetLanguage ? "w-full" : "flex-1"}>
                 <select
                     value={sourceLang}
                     onChange={(e) => onSourceChange(e.target.value)}
-                    className="w-full p-2 border rounded-lg bg-white focus:ring-2 focus:ring-gray-500"
+                    className={selectClasses}
                     dir={sourceLang === 'ar' ? 'rtl' : 'ltr'}
                 >
                     {languages.map(lang => (
@@ -64,10 +71,15 @@ const LanguageSelector = ({
                     <button
                         onClick={switchLanguages}
                         disabled={isAutoDetect}
-                        className={`p-2 rounded-full ${isAutoDetect
-                            ? 'text-gray-300 cursor-not-allowed'
-                            : 'hover:bg-gray-100 text-gray-600'
-                            }`}
+                        className={`p-2 rounded-full ${
+                            isAutoDetect
+                                ? darkMode 
+                                    ? 'text-gray-600 cursor-not-allowed' 
+                                    : 'text-gray-300 cursor-not-allowed'
+                                : darkMode
+                                    ? 'hover:bg-gray-600 text-gray-300'
+                                    : 'hover:bg-gray-100 text-gray-600'
+                        }`}
                         title={isAutoDetect ? "Language swap disabled during auto-detection" : "Switch languages"}
                     >
                         <ArrowLeftRight className="w-5 h-5" />
@@ -77,7 +89,7 @@ const LanguageSelector = ({
                         <select
                             value={targetLang}
                             onChange={(e) => onTargetChange(e.target.value)}
-                            className="w-full p-2 border rounded-lg bg-white focus:ring-2 focus:ring-gray-500"
+                            className={selectClasses}
                             dir={targetLang === 'ar' ? 'rtl' : 'ltr'}
                         >
                             {languages.filter(lang => lang.code !== 'auto').map(lang => (

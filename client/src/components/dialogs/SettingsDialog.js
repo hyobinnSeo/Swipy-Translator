@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Settings as SettingsIcon, Eye, EyeOff } from 'lucide-react';
+import { X, Settings as SettingsIcon, Eye, EyeOff, Moon } from 'lucide-react';
 
 const DialogWrapper = ({ isOpen, onClose, children, className = '' }) => {
   React.useEffect(() => {
@@ -71,11 +71,14 @@ const SettingsDialog = ({
   onMaxLengthChange, 
   saveHistory, 
   onSaveHistoryChange,
+  darkMode,
+  onDarkModeChange,
   apiKeys = {},
   onApiKeysChange
 }) => {
   const [localMaxLength, setLocalMaxLength] = useState(maxLength);
   const [localSaveHistory, setLocalSaveHistory] = useState(saveHistory);
+  const [localDarkMode, setLocalDarkMode] = useState(darkMode);
   const [localApiKeys, setLocalApiKeys] = useState({
     gemini: apiKeys.gemini || '',
     openrouter: apiKeys.openrouter || '',
@@ -86,6 +89,7 @@ const SettingsDialog = ({
     const newMaxLength = Math.max(1000, parseInt(localMaxLength) || 1000);
     onMaxLengthChange(newMaxLength);
     onSaveHistoryChange(localSaveHistory);
+    onDarkModeChange(localDarkMode);
     onApiKeysChange(localApiKeys);
     onClose();
   };
@@ -111,21 +115,27 @@ const SettingsDialog = ({
             <SectionTitle>General Settings</SectionTitle>
             <div className="space-y-6">
               <div className="bg-gray-50 p-4 rounded-lg">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Maximum Input Length
-                </label>
-                <div>
-                  <input
-                    type="number"
-                    min="1000"
-                    value={localMaxLength}
-                    onChange={(e) => setLocalMaxLength(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-3 focus:ring-blue-500 bg-white"
-                  />
-                  <p className="mt-2 text-sm text-gray-500">
-                    Minimum allowed value is 1,000 characters
-                  </p>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    <Moon className="h-4 w-4 text-gray-600" />
+                    <label className="text-sm font-medium text-gray-700">Dark Mode</label>
+                  </div>
+                  <button
+                    onClick={() => setLocalDarkMode(!localDarkMode)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      localDarkMode ? 'bg-navy-500' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        localDarkMode ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
                 </div>
+                <p className="text-sm text-gray-500">
+                  Enable dark mode for a more comfortable viewing experience in low-light conditions
+                </p>
               </div>
 
               <div className="bg-gray-50 p-4 rounded-lg">
@@ -147,6 +157,24 @@ const SettingsDialog = ({
                 <p className="text-sm text-gray-500">
                   When disabled, your translation history will not be saved between sessions
                 </p>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Maximum Input Length
+                </label>
+                <div>
+                  <input
+                    type="number"
+                    min="1000"
+                    value={localMaxLength}
+                    onChange={(e) => setLocalMaxLength(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-3 focus:ring-blue-500 bg-white"
+                  />
+                  <p className="mt-2 text-sm text-gray-500">
+                    Minimum allowed value is 1,000 characters
+                  </p>
+                </div>
               </div>
             </div>
           </div>

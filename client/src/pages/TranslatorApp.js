@@ -45,6 +45,7 @@ const TranslatorApp = () => {
     const [maxLength, setMaxLength] = useState(parseInt(localStorage.getItem('maxInputLength')) || 5000);
     const [isFixedSize, setIsFixedSize] = useState(JSON.parse(localStorage.getItem('isFixedSize') || 'false'));
     const [saveHistory, setSaveHistory] = useState(JSON.parse(localStorage.getItem('saveHistory') ?? 'true'));
+    const [darkMode, setDarkMode] = useState(JSON.parse(localStorage.getItem('darkMode') ?? 'false'));
     const [copySuccess, setCopySuccess] = useState(false);
     const [apiKeys, setApiKeys] = useState(() => ({
         gemini: localStorage.getItem('gemini_api_key') || '',
@@ -69,6 +70,15 @@ const TranslatorApp = () => {
             return {};
         }
     });
+
+    // Apply dark mode class to root element
+    useEffect(() => {
+        if (darkMode) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }, [darkMode]);
 
     // Custom hooks
     const {
@@ -155,6 +165,11 @@ const TranslatorApp = () => {
         localStorage.setItem('openai_api_key', newApiKeys.openai);
     };
 
+    const handleDarkModeChange = (newValue) => {
+        setDarkMode(newValue);
+        localStorage.setItem('darkMode', JSON.stringify(newValue));
+    };
+
     const handleToggleFixedSize = () => {
         setIsFixedSize(prev => {
             const newValue = !prev;
@@ -193,7 +208,7 @@ const TranslatorApp = () => {
     const baseUrl = process.env.PUBLIC_URL || '/';
 
     return (
-        <div className="w-full min-h-screen bg-gray-50">
+        <div className={`w-full min-h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
             <Helmet>
                 <title>Hoochoo Translator</title>
                 <meta name="description" content="Multi-language translation application" />
@@ -286,17 +301,19 @@ const TranslatorApp = () => {
                         clearHistory();
                     }
                 }}
+                darkMode={darkMode}
+                onDarkModeChange={handleDarkModeChange}
                 apiKeys={apiKeys}
                 onApiKeysChange={handleApiKeysChange}
             />
 
             {/* Header */}
-            <div className="w-full border-b bg-white">
+            <div className={`w-full border-b ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'}`}>
                 <div className="max-w-7xl mx-auto">
                     <div className="flex items-center p-4 space-x-4">
                         <button
                             onClick={openSidebar}
-                            className="text-gray-600 hover:text-gray-800 transition-colors"
+                            className={`${darkMode ? 'text-gray-300 hover:text-gray-100' : 'text-gray-600 hover:text-gray-800'} transition-colors`}
                             title="Menu"
                         >
                             <MenuIcon className="h-6 w-6" />
@@ -304,7 +321,7 @@ const TranslatorApp = () => {
 
                         <a
                             href={baseUrl}
-                            className="text-xl font-semibold text-gray-800 hover:text-gray-600 transition-colors cursor-pointer"
+                            className={`text-xl font-semibold ${darkMode ? 'text-gray-100 hover:text-gray-300' : 'text-gray-800 hover:text-gray-600'} transition-colors cursor-pointer`}
                         >
                             Hoochoo Translator
                         </a>
@@ -324,7 +341,9 @@ const TranslatorApp = () => {
                                 setTranslations([]);
                                 setCurrentIndex(0);
                             }}
-                            className="w-[200px] p-2 border rounded-md focus:ring-2 focus:ring-gray-500"
+                            className={`w-[200px] p-2 border rounded-md focus:ring-2 focus:ring-gray-500 ${
+                                darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white'
+                            }`}
                         >
                             {AVAILABLE_MODELS.map((model) => (
                                 <option key={model.id} value={model.id}>
@@ -353,6 +372,7 @@ const TranslatorApp = () => {
                                 setCurrentIndex(0);
                             }}
                             hideTargetLanguage={isParaphraserMode}
+                            darkMode={darkMode}
                         />
                     </div>
 
@@ -362,6 +382,7 @@ const TranslatorApp = () => {
                             selectedTone={selectedTone}
                             onToneChange={setSelectedTone}
                             selectedModel={selectedModel}
+                            darkMode={darkMode}
                         />
                     </div>
 
@@ -377,6 +398,8 @@ const TranslatorApp = () => {
                             language={sourceLang}
                             selectedVoice={selectedVoices[sourceLang]}
                             isFixedSize={isFixedSize}
+                            darkMode={darkMode}
+                            className={darkMode ? 'bg-gray-700 text-gray-100' : ''}
                         />
 
                         <TextArea
@@ -414,6 +437,8 @@ const TranslatorApp = () => {
                             language={isParaphraserMode ? sourceLang : targetLang}
                             selectedVoice={selectedVoices[isParaphraserMode ? sourceLang : targetLang]}
                             isFixedSize={isFixedSize}
+                            darkMode={darkMode}
+                            className={darkMode ? 'bg-gray-700 text-gray-100' : ''}
                         />
                     </div>
 
@@ -437,6 +462,7 @@ const TranslatorApp = () => {
                             disabled={!inputText}
                             isLoading={isLoading}
                             onCancel={handleCancelTranslation}
+                            darkMode={darkMode}
                         />
 
                         {translatedText && (
@@ -453,12 +479,14 @@ const TranslatorApp = () => {
                                         }
                                     }}
                                     isActive={copySuccess}
+                                    darkMode={darkMode}
                                 />
 
                                 <ActionButton
                                     type="save"
                                     onClick={() => saveTranslation(inputText, translatedText, selectedModel)}
                                     isActive={saveSuccess}
+                                    darkMode={darkMode}
                                 />
                             </>
                         )}

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Settings, ChevronDown } from 'lucide-react';
 import { TONES, MODELS } from '../constants';
 
-const ToneSelector = ({ selectedTone, onToneChange, selectedModel }) => {
+const ToneSelector = ({ selectedTone, onToneChange, selectedModel, darkMode }) => {
     const [showToneSelector, setShowToneSelector] = useState(false);
     const containerRef = useRef(null);
 
@@ -24,8 +24,11 @@ const ToneSelector = ({ selectedTone, onToneChange, selectedModel }) => {
         <div className="relative" ref={containerRef}>
             <button
                 onClick={() => setShowToneSelector(!showToneSelector)}
-                className="flex items-center gap-2 px-2 py-2 text-gray-600 hover:text-gray-800 
-                   hover:bg-gray-50 rounded-lg transition-colors"
+                className={`flex items-center gap-2 px-2 py-2 rounded-lg transition-colors ${
+                    darkMode
+                        ? 'text-gray-300 hover:text-gray-100 hover:bg-gray-600'
+                        : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50 bg-white'
+                }`}
             >
                 <Settings className="w-4 h-4" />
                 <span>Tone: {modelTones.find(t => t.id === selectedTone)?.name}</span>
@@ -33,7 +36,11 @@ const ToneSelector = ({ selectedTone, onToneChange, selectedModel }) => {
             </button>
 
             {showToneSelector && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50">
+                <div className={`absolute top-full left-0 right-0 mt-1 border rounded-lg shadow-lg z-50 ${
+                    darkMode
+                        ? 'bg-gray-700 border-gray-600'
+                        : 'bg-white border-gray-200'
+                }`}>
                     {modelTones.map((tone) => (
                         <button
                             key={tone.id}
@@ -41,11 +48,20 @@ const ToneSelector = ({ selectedTone, onToneChange, selectedModel }) => {
                                 onToneChange(tone.id);
                                 setShowToneSelector(false);
                             }}
-                            className={`w-full px-4 py-2 text-left hover:bg-gray-50 ${selectedTone === tone.id ? 'bg-gray-50' : ''
-                                }`}
+                            className={`w-full px-4 py-2 text-left ${
+                                darkMode
+                                    ? `${selectedTone === tone.id ? 'bg-gray-600' : ''} 
+                                       hover:bg-gray-600 text-gray-100`
+                                    : `${selectedTone === tone.id ? 'bg-gray-50' : ''} 
+                                       hover:bg-gray-50 text-gray-800`
+                            }`}
                         >
                             <div className="font-medium">{tone.name}</div>
-                            <div className="text-sm text-gray-500">{tone.description}</div>
+                            <div className={`text-sm ${
+                                darkMode ? 'text-gray-400' : 'text-gray-500'
+                            }`}>
+                                {tone.description}
+                            </div>
                         </button>
                     ))}
                 </div>

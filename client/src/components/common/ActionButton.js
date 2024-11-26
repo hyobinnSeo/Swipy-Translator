@@ -7,7 +7,8 @@ const ActionButton = ({
     isActive = false,
     isLoading = false,
     disabled = false,
-    onCancel
+    onCancel,
+    darkMode = false
 }) => {
     const getButtonContent = () => {
         switch (type) {
@@ -35,7 +36,7 @@ const ActionButton = ({
                         {isActive ? (
                             <ClipboardCheck className="h-4 w-4 mr-2 text-white" />
                         ) : (
-                            <ClipboardCopy className="h-4 w-4 mr-2" />
+                            <ClipboardCopy className={`h-4 w-4 mr-2 ${darkMode ? 'text-gray-300' : ''}`} />
                         )}
                         <span className="min-w-[40px] sm:min-w-[80px]">
                             {isActive ? 'Copied!' : 'Copy'}
@@ -48,7 +49,7 @@ const ActionButton = ({
                         {isActive ? (
                             <Check className="h-4 w-4 mr-2" />
                         ) : (
-                            <BookmarkIcon className="h-4 w-4 mr-2" />
+                            <BookmarkIcon className={`h-4 w-4 mr-2 ${darkMode ? 'text-gray-300' : ''}`} />
                         )}
                         <span className="min-w-[40px] sm:min-w-[80px]">
                             {isActive ? 'Saved!' : 'Save'}
@@ -83,7 +84,9 @@ const ActionButton = ({
                             : 'bg-navy-500 text-white hover:bg-navy-600')
                         : isActive
                             ? 'bg-navy-500 text-white'
-                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                            : darkMode
+                                ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                     }
                 `}
             >
@@ -94,7 +97,7 @@ const ActionButton = ({
 
             {/* Cancel instruction */}
             {isLoading && (type === 'translate' || type === 'paraphrase') && (
-                <div className="mt-2 text-sm text-gray-600">
+                <div className={`mt-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     Tap again to cancel
                 </div>
             )}
