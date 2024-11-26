@@ -4,25 +4,25 @@ import { Helmet } from 'react-helmet';
 import { MenuIcon } from 'lucide-react';
 
 // Import components
-import Alert from './components/common/Alert';
-import ActionButton from './components/common/ActionButton';
-import LanguageSelector from './components/LanguageSelector';
-import ToneSelector from './components/ToneSelector';
-import TextArea from './components/TextArea';
-import Sidebar from './components/Sidebar';
-import VoiceSettingsModal from './components/dialogs/VoiceSettingsModal';
-import InstructionsModal from './components/dialogs/InstructionsModal';
-import RequestLogViewer from './components/dialogs/RequestLogViewer';
-import SettingsDialog from './components/dialogs/SettingsDialog';
-import HistoryPanel from './components/dialogs/HistoryPanel';
-import SavedTranslationsDialog from './components/dialogs/SavedTranslationsDialog';
-import SafetyWarningDialog from './components/dialogs/SafetyWarningDialog';
+import Alert from '../components/common/Alert';
+import ActionButton from '../components/common/ActionButton';
+import LanguageSelector from '../components/LanguageSelector';
+import ToneSelector from '../components/ToneSelector';
+import TextArea from '../components/TextArea';
+import Sidebar from '../components/Sidebar';
+import VoiceSettingsModal from '../components/dialogs/VoiceSettingsModal';
+import InstructionsModal from '../components/dialogs/InstructionsModal';
+import RequestLogViewer from '../components/dialogs/RequestLogViewer';
+import SettingsDialog from '../components/dialogs/SettingsDialog';
+import HistoryPanel from '../components/dialogs/HistoryPanel';
+import SavedTranslationsDialog from '../components/dialogs/SavedTranslationsDialog';
+import SafetyWarningDialog from '../components/dialogs/SafetyWarningDialog';
 
 // Import hooks
-import useTranslation from './hooks/useTranslation';
-import useTranslationStorage from './hooks/useTranslationStorage';
-import useDialogs from './hooks/useDialogs';
-import useSwipe from './hooks/useSwipe';
+import useTranslation from '../hooks/useTranslation';
+import useTranslationStorage from '../hooks/useTranslationStorage';
+import useDialogs from '../hooks/useDialogs';
+import useSwipe from '../hooks/useSwipe';
 
 // Import constants
 import {
@@ -33,7 +33,7 @@ import {
     MIN_SECURE_VERSION,
     AVAILABLE_MODELS,
     LANGUAGE_NAMES
-} from './constants';
+} from '../constants';
 
 const TranslatorApp = () => {
     // Settings and configuration state

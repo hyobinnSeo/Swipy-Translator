@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import TranslatorApp from './TranslatorApp';
-import PasswordProtection from './PasswordProtection';
+import TranslatorApp from '../pages/TranslatorApp';
+import PasswordProtection from '../pages/PasswordProtection';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
