@@ -152,11 +152,32 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
         }
     }, [currentIndex]);
 
-    const handleNext = useCallback(() => {
+    const handleNext = useCallback(async (
+        selectedModel,
+        apiKeys,
+        modelInstructions,
+        selectedTone,
+        sourceLang,
+        targetLang,
+        LANGUAGE_NAMES
+    ) => {
         if (currentIndex < translations.length - 1) {
+            // If we have more translations in history, just move to the next one
             setCurrentIndex(currentIndex + 1);
+        } else if (inputText) {
+            // If we're at the last translation and have input text, request a new alternative translation
+            await handleTranslate(
+                true, // isAdditional = true to keep previous translations
+                selectedModel,
+                apiKeys,
+                modelInstructions,
+                selectedTone,
+                sourceLang,
+                targetLang,
+                LANGUAGE_NAMES
+            );
         }
-    }, [currentIndex, translations.length]);
+    }, [currentIndex, translations.length, inputText, handleTranslate]);
 
     return {
         inputText,

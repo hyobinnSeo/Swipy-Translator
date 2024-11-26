@@ -126,7 +126,15 @@ const TranslatorApp = () => {
         closeSettings
     } = useDialogs();
 
-    const swipeHandlers = useSwipe(handleNext, handlePrevious);
+    const swipeHandlers = useSwipe(() => handleNext(
+        selectedModel,
+        apiKeys,
+        modelInstructions,
+        selectedTone,
+        sourceLang,
+        targetLang,
+        LANGUAGE_NAMES
+    ), handlePrevious);
 
     // Effects
     useEffect(() => {
@@ -381,7 +389,15 @@ const TranslatorApp = () => {
                             translations={translations}
                             currentIndex={currentIndex}
                             onPrevious={handlePrevious}
-                            onNext={handleNext}
+                            onNext={() => handleNext(
+                                selectedModel,
+                                apiKeys,
+                                modelInstructions,
+                                selectedTone,
+                                sourceLang,
+                                targetLang,
+                                LANGUAGE_NAMES
+                            )}
                             onClear={() => {
                                 setTranslations([]);
                                 setCurrentIndex(0);
