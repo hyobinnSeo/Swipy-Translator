@@ -26,8 +26,8 @@ app.use(express.json());
 // Initialize TTS client and Azure config
 let ttsClient = null;
 let azureConfig = {
-    subscriptionKey: process.env.AZURE_SPEECH_KEY || '',
-    region: process.env.AZURE_SPEECH_REGION || ''
+    subscriptionKey: '',
+    region: ''
 };
 
 function initializeClients(credentials) {
@@ -68,14 +68,23 @@ function initializeClients(credentials) {
     }
 }
 
-// Load credentials from file and initialize on startup
+// Load credentials from files and initialize on startup
 try {
-    const credentialsPath = path.join(__dirname, 'tts-credentials.json');
-    const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
-    initializeClients(credentials);
+    // Load Google TTS credentials
+    const ttsCredentialsPath = path.join(__dirname, 'tts-credentials.json');
+    const ttsCredentials = JSON.parse(fs.readFileSync(ttsCredentialsPath, 'utf8'));
+    initializeClients(ttsCredentials);
     console.log('TTS client initialized from credentials file');
+
+    // Load Azure STT credentials
+    const azureCredentialsPath = path.join(__dirname, 'azure-credentials.json');
+    const azureCreds = JSON.parse(fs.readFileSync(azureCredentialsPath, 'utf8'));
+    if (azureCreds.subscriptionKey && azureCreds.region) {
+        azureConfig = azureCreds;
+        console.log('Azure Speech config initialized from credentials file');
+    }
 } catch (error) {
-    console.error('Error loading credentials file:', error);
+    console.error('Error loading credentials files:', error);
 }
 
 // Helper function to get voice configuration
@@ -113,6 +122,18 @@ async function synthesizeSpeech(text, targetLang, voiceId) {
         return response.audioContent;
     } catch (error) {
         console.error('TTS error:', error);
+        throw error;
+    }
+}
+
+// Function to save Azure credentials to file
+function saveAzureCredentials(credentials) {
+    try {
+        const azureCredentialsPath = path.join(__dirname, 'azure-credentials.json');
+        fs.writeFileSync(azureCredentialsPath, JSON.stringify(credentials, null, 2));
+        console.log('Azure credentials saved to file');
+    } catch (error) {
+        console.error('Error saving Azure credentials:', error);
         throw error;
     }
 }
@@ -222,10 +243,14 @@ io.on('connection', (socket) => {
                 throw new Error('Missing required Azure credentials');
             }
 
+            // Update in-memory config
             azureConfig = {
                 subscriptionKey: credentials.subscriptionKey,
                 region: credentials.region
             };
+
+            // Save to file
+            saveAzureCredentials(azureConfig);
 
             console.log('Azure credentials updated successfully');
             socket.emit('stt-credentials-updated', { success: true });
