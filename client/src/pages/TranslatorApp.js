@@ -87,7 +87,9 @@ const TranslatorApp = () => {
         handleClear,
         handlePrevious,
         handleNext,
-        translatedText
+        translatedText,
+        isParaphraserMode,
+        setIsParaphraserMode
     } = useTranslation(saveHistory, (historyItem) => addToHistory(historyItem));
 
     const {
@@ -209,6 +211,12 @@ const TranslatorApp = () => {
                 onOpenSettings={openSettings}
                 isFixedSize={isFixedSize}
                 onToggleFixedSize={handleToggleFixedSize}
+                isParaphraserMode={isParaphraserMode}
+                onToggleParaphraserMode={() => {
+                    setIsParaphraserMode(prev => !prev);
+                    setTranslations([]);
+                    setCurrentIndex(0);
+                }}
             />
 
             <HistoryPanel
@@ -344,6 +352,7 @@ const TranslatorApp = () => {
                                 setTranslations([]);
                                 setCurrentIndex(0);
                             }}
+                            hideTargetLanguage={isParaphraserMode}
                         />
                     </div>
 
@@ -383,7 +392,7 @@ const TranslatorApp = () => {
                                     )
                                 );
                             }}
-                            placeholder="Translation will appear here..."
+                            placeholder={isParaphraserMode ? "Paraphrased text will appear here..." : "Translation will appear here..."}
                             showSpeaker={true}
                             {...swipeHandlers}
                             translations={translations}
@@ -402,8 +411,8 @@ const TranslatorApp = () => {
                                 setTranslations([]);
                                 setCurrentIndex(0);
                             }}
-                            language={targetLang}
-                            selectedVoice={selectedVoices[targetLang]}
+                            language={isParaphraserMode ? sourceLang : targetLang}
+                            selectedVoice={selectedVoices[isParaphraserMode ? sourceLang : targetLang]}
                             isFixedSize={isFixedSize}
                         />
                     </div>
@@ -414,7 +423,7 @@ const TranslatorApp = () => {
                     {/* Action buttons */}
                     <div className="flex flex-col sm:flex-row justify-center gap-3">
                         <ActionButton
-                            type="translate"
+                            type={isParaphraserMode ? "paraphrase" : "translate"}
                             onClick={() => handleTranslate(
                                 false,
                                 selectedModel,

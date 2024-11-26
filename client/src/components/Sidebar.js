@@ -11,7 +11,9 @@ const Sidebar = ({
     onOpenVoiceSettings,
     onOpenSettings,
     isFixedSize,
-    onToggleFixedSize
+    onToggleFixedSize,
+    isParaphraserMode,
+    onToggleParaphraserMode
 }) => {
     useEffect(() => {
         if (isOpen) {
@@ -49,7 +51,20 @@ const Sidebar = ({
 
                 <div className="flex-1 overflow-y-auto overscroll-contain p-4">
                     <div className="space-y-2">
-                        {/* Add the toggle button for fixed size */}
+                        {/* Paraphraser Mode Toggle */}
+                        <div className="flex items-center justify-between px-4 py-2">
+                            <span className="text-sm">Paraphraser Mode</span>
+                            <button
+                                onClick={onToggleParaphraserMode}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isParaphraserMode ? 'bg-navy-500' : 'bg-gray-200'}`}
+                            >
+                                <span
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isParaphraserMode ? 'translate-x-6' : 'translate-x-1'}`}
+                                />
+                            </button>
+                        </div>
+
+                        {/* Fixed Size Toggle */}
                         <div className="flex items-center justify-between px-4 py-2">
                             <span className="text-sm">Fixed Size Text Areas</span>
                             <button

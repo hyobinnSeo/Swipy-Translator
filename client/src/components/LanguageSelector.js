@@ -10,7 +10,8 @@ const LanguageSelector = ({
     translatedText,
     onInputTextChange,
     onTranslatedTextChange,
-    onResetTranslations
+    onResetTranslations,
+    hideTargetLanguage
 }) => {
     const languages = [
         { code: 'auto', name: 'Auto Detect' },
@@ -43,7 +44,7 @@ const LanguageSelector = ({
 
     return (
         <div className="flex items-center justify-between gap-2 mt-4 mb-2">
-            <div className="flex-1">
+            <div className={hideTargetLanguage ? "w-full" : "flex-1"}>
                 <select
                     value={sourceLang}
                     onChange={(e) => onSourceChange(e.target.value)}
@@ -58,32 +59,36 @@ const LanguageSelector = ({
                 </select>
             </div>
 
-            <button
-                onClick={switchLanguages}
-                disabled={isAutoDetect}
-                className={`p-2 rounded-full ${isAutoDetect
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'hover:bg-gray-100 text-gray-600'
-                    }`}
-                title={isAutoDetect ? "Language swap disabled during auto-detection" : "Switch languages"}
-            >
-                <ArrowLeftRight className="w-5 h-5" />
-            </button>
+            {!hideTargetLanguage && (
+                <>
+                    <button
+                        onClick={switchLanguages}
+                        disabled={isAutoDetect}
+                        className={`p-2 rounded-full ${isAutoDetect
+                            ? 'text-gray-300 cursor-not-allowed'
+                            : 'hover:bg-gray-100 text-gray-600'
+                            }`}
+                        title={isAutoDetect ? "Language swap disabled during auto-detection" : "Switch languages"}
+                    >
+                        <ArrowLeftRight className="w-5 h-5" />
+                    </button>
 
-            <div className="flex-1">
-                <select
-                    value={targetLang}
-                    onChange={(e) => onTargetChange(e.target.value)}
-                    className="w-full p-2 border rounded-lg bg-white focus:ring-2 focus:ring-gray-500"
-                    dir={targetLang === 'ar' ? 'rtl' : 'ltr'}
-                >
-                    {languages.filter(lang => lang.code !== 'auto').map(lang => (
-                        <option key={lang.code} value={lang.code}>
-                            {lang.name}
-                        </option>
-                    ))}
-                </select>
-            </div>
+                    <div className="flex-1">
+                        <select
+                            value={targetLang}
+                            onChange={(e) => onTargetChange(e.target.value)}
+                            className="w-full p-2 border rounded-lg bg-white focus:ring-2 focus:ring-gray-500"
+                            dir={targetLang === 'ar' ? 'rtl' : 'ltr'}
+                        >
+                            {languages.filter(lang => lang.code !== 'auto').map(lang => (
+                                <option key={lang.code} value={lang.code}>
+                                    {lang.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </>
+            )}
         </div>
     );
 };

@@ -10,6 +10,7 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
     const [error, setError] = useState('');
     const [translationController, setTranslationController] = useState(null);
     const [showSafetyWarning, setShowSafetyWarning] = useState(false);
+    const [isParaphraserMode, setIsParaphraserMode] = useState(false);
 
     const validateLanguageSupport = (sourceLang, targetLang) => {
         const supportedLanguages = ['auto', 'en', 'fr', 'es', 'it', 'de', 'pt', 'ja', 'ko', 'zh', 'ar'];
@@ -44,6 +45,17 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
 
             let translatedResult;
             try {
+                // Modify the instructions based on paraphraser mode
+                const modifiedInstructions = {
+                    ...modelInstructions,
+                    [selectedModel]: {
+                        ...modelInstructions[selectedModel],
+                        'pre-instruction': isParaphraserMode 
+                            ? 'You are a professional paraphraser. Rewrite the text in a different way while maintaining its original meaning and tone.'
+                            : modelInstructions[selectedModel]['pre-instruction']
+                    }
+                };
+
                 switch (selectedModel) {
                     case MODELS.GEMINI:
                         translatedResult = await translateWithGemini(
@@ -51,11 +63,11 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
                             isAdditional ? translations : [],
                             controller.signal,
                             apiKeys.gemini,
-                            modelInstructions,
+                            modifiedInstructions,
                             selectedModel,
                             selectedTone,
                             sourceLang,
-                            targetLang,
+                            isParaphraserMode ? sourceLang : targetLang,
                             LANGUAGE_NAMES
                         );
                         break;
@@ -67,11 +79,11 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
                             isAdditional ? translations : [],
                             controller.signal,
                             apiKeys.openrouter,
-                            modelInstructions,
+                            modifiedInstructions,
                             selectedModel,
                             selectedTone,
                             sourceLang,
-                            targetLang,
+                            isParaphraserMode ? sourceLang : targetLang,
                             LANGUAGE_NAMES
                         );
                         break;
@@ -81,11 +93,11 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
                             isAdditional ? translations : [],
                             controller.signal,
                             apiKeys.openai,
-                            modelInstructions,
+                            modifiedInstructions,
                             selectedModel,
                             selectedTone,
                             sourceLang,
-                            targetLang,
+                            isParaphraserMode ? sourceLang : targetLang,
                             LANGUAGE_NAMES
                         );
                         break;
@@ -195,7 +207,9 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
         handleClear,
         handlePrevious,
         handleNext,
-        translatedText: translations[currentIndex]?.text || ''
+        translatedText: translations[currentIndex]?.text || '',
+        isParaphraserMode,
+        setIsParaphraserMode
     };
 };
 

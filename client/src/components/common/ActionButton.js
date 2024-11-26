@@ -20,6 +20,15 @@ const ActionButton = ({
                         </span>
                     </>
                 );
+            case 'paraphrase':
+                return (
+                    <>
+                        <ArrowLeftRight className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                        <span className="min-w-[60px] sm:min-w-[80px]">
+                            {isLoading ? 'Paraphrasing...' : 'Paraphrase'}
+                        </span>
+                    </>
+                );
             case 'copy':
                 return (
                     <>
@@ -52,7 +61,7 @@ const ActionButton = ({
     };
 
     const handleClick = () => {
-        if (type === 'translate' && isLoading) {
+        if ((type === 'translate' || type === 'paraphrase') && isLoading) {
             onCancel?.();
         } else {
             onClick?.();
@@ -68,7 +77,7 @@ const ActionButton = ({
                     px-4 sm:px-6 py-2 rounded-lg flex items-center justify-center
                     w-full sm:w-auto sm:min-w-[140px] md:min-w-[160px] 
                     transition-all duration-300 relative overflow-hidden
-                    ${type === 'translate'
+                    ${(type === 'translate' || type === 'paraphrase')
                         ? (disabled && !isLoading
                             ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                             : 'bg-navy-500 text-white hover:bg-navy-600')
@@ -84,7 +93,7 @@ const ActionButton = ({
             </button>
 
             {/* Cancel instruction */}
-            {isLoading && type === 'translate' && (
+            {isLoading && (type === 'translate' || type === 'paraphrase') && (
                 <div className="mt-2 text-sm text-gray-600">
                     Tap again to cancel
                 </div>
