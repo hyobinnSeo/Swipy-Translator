@@ -44,37 +44,50 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
 
             let translatedResult;
             try {
-                const translationParams = {
-                    inputText,
-                    translations: isAdditional ? translations : [],
-                    signal: controller.signal,
-                    modelInstructions,
-                    selectedModel,
-                    selectedTone,
-                    sourceLang,
-                    targetLang,
-                    LANGUAGE_NAMES
-                };
-
                 switch (selectedModel) {
                     case MODELS.GEMINI:
-                        translatedResult = await translateWithGemini({
-                            ...translationParams,
-                            apiKey: apiKeys.gemini
-                        });
+                        translatedResult = await translateWithGemini(
+                            inputText,
+                            isAdditional ? translations : [],
+                            controller.signal,
+                            apiKeys.gemini,
+                            modelInstructions,
+                            selectedModel,
+                            selectedTone,
+                            sourceLang,
+                            targetLang,
+                            LANGUAGE_NAMES
+                        );
                         break;
                     case MODELS.COMMAND:
                     case MODELS.ANTHROPIC:
-                        translatedResult = await translateWithOpenRouter({
-                            ...translationParams,
-                            apiKey: apiKeys.openrouter
-                        });
+                        translatedResult = await translateWithOpenRouter(
+                            inputText,
+                            selectedModel,
+                            isAdditional ? translations : [],
+                            controller.signal,
+                            apiKeys.openrouter,
+                            modelInstructions,
+                            selectedModel,
+                            selectedTone,
+                            sourceLang,
+                            targetLang,
+                            LANGUAGE_NAMES
+                        );
                         break;
                     case MODELS.OPENAI:
-                        translatedResult = await translateWithOpenAI({
-                            ...translationParams,
-                            apiKey: apiKeys.openai
-                        });
+                        translatedResult = await translateWithOpenAI(
+                            inputText,
+                            isAdditional ? translations : [],
+                            controller.signal,
+                            apiKeys.openai,
+                            modelInstructions,
+                            selectedModel,
+                            selectedTone,
+                            sourceLang,
+                            targetLang,
+                            LANGUAGE_NAMES
+                        );
                         break;
                     default:
                         throw new Error('Invalid model selected');
