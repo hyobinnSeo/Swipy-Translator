@@ -1,4 +1,4 @@
-# Flipify Translator
+# Swify Translator
 
 A full-stack web application that provides translation services with additional features like text-to-speech and speech-to-text capabilities.
 
