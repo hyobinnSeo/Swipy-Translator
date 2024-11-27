@@ -158,8 +158,10 @@ io.on('connection', (socket) => {
     let isStreamActive = false;
     let streamRestartTimeout;
     let totalDurationTimeout;
+    let silenceTimeout = null;
     const STREAM_TIMEOUT = 240000; // 4 minutes
     const TOTAL_DURATION_LIMIT = 7200000; // 2 hours
+    const SILENCE_TIMEOUT = 1500; // 1.5 seconds of silence before finalizing
 
     // Function to create a new recognize stream
     const createRecognizeStream = (sourceLanguage = null) => {
@@ -174,11 +176,17 @@ io.on('connection', (socket) => {
             sampleRateHertz: 16000,
             model: 'default',
             useEnhanced: true,
+            enableAutomaticPunctuation: true,
             metadata: {
                 interactionType: 'DICTATION',
                 microphoneDistance: 'NEARFIELD',
                 recordingDeviceType: 'PC_MIC',
-            }
+            },
+            enableWordTimeOffsets: true,
+            speechContexts: [{
+                phrases: [".", "!", "?", ",", ";", ":", "\n", "\n\n"],
+                boost: 20
+            }]
         };
 
         // If sourceLanguage is null (auto-detect) or 'auto', enable language detection
@@ -197,6 +205,8 @@ io.on('connection', (socket) => {
             config,
             interimResults: true
         };
+
+        let lastTranscriptTime = Date.now();
 
         recognizeStream = speechClient
             .streamingRecognize(request)
@@ -217,15 +227,37 @@ io.on('connection', (socket) => {
                     const isFinal = data.results[0].isFinal;
                     const detectedLanguage = data.results[0].languageCode;
                     
+                    lastTranscriptTime = Date.now();
+                    
+                    // Clear any existing silence timeout
+                    if (silenceTimeout) {
+                        clearTimeout(silenceTimeout);
+                        silenceTimeout = null;
+                    }
+                    
                     socket.emit('transcription', {
                         text: transcript,
                         isFinal: isFinal,
                         detectedLanguage: detectedLanguage
                     });
+
+                    // Set a new silence timeout if this is not a final result
+                    if (!isFinal) {
+                        silenceTimeout = setTimeout(() => {
+                            if (Date.now() - lastTranscriptTime >= SILENCE_TIMEOUT) {
+                                // Force the current transcription to be finalized
+                                recognizeStream.end();
+                                createRecognizeStream(sourceLanguage);
+                            }
+                        }, SILENCE_TIMEOUT);
+                    }
                 }
             })
             .on('end', () => {
                 console.log('Recognize stream ended');
+                if (isStreamActive) {
+                    createRecognizeStream(sourceLanguage);
+                }
             });
 
         // Set up automatic stream restart before timeout
@@ -248,6 +280,7 @@ io.on('connection', (socket) => {
             isStreamActive = false;
             clearTimeout(streamRestartTimeout);
             clearTimeout(totalDurationTimeout);
+            clearTimeout(silenceTimeout);
             recognizeStream.end();
             socket.emit('recordingStopped', { reason: reason });
             console.log('Recording stopped:', reason);

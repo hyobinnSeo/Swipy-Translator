@@ -8,8 +8,6 @@ let processor = null;
 let mediaStream = null;
 const bufferSize = 2048;
 let isRecording = false;
-let finalTranscript = '';
-let interimTranscript = '';
 
 // Initialize socket connection
 const initializeSocket = () => {
@@ -20,28 +18,6 @@ const initializeSocket = () => {
             reconnectionDelay: 1000
         });
         console.log('Socket connection initialized for STT');
-        
-        // Set up transcription handler
-        socket.on('transcription', (data) => {
-            console.log('Received transcription:', data);
-            
-            if (data.isFinal) {
-                // Add to final transcript with two new lines between sentences
-                finalTranscript += (finalTranscript ? '\n\n' : '') + data.text;
-                interimTranscript = '';
-            } else {
-                // Update interim transcript
-                interimTranscript = data.text;
-            }
-            
-            // Emit combined transcript through callback
-            if (socket) {
-                socket.emit('transcriptionUpdate', {
-                    text: finalTranscript + (interimTranscript ? ' ' + interimTranscript : ''),
-                    isFinal: data.isFinal
-                });
-            }
-        });
     }
     return socket;
 };
@@ -107,10 +83,6 @@ export const startRecording = (sourceLanguage = null) => {
                 await audioContext.resume();
             }
             
-            // Reset transcripts
-            finalTranscript = '';
-            interimTranscript = '';
-            
             audioInput.connect(processor);
             processor.connect(audioContext.destination);
 
@@ -155,19 +127,7 @@ export const stopRecording = () => {
             }
 
             isRecording = false;
-            
-            // Add any remaining interim transcript to final if it exists
-            if (interimTranscript) {
-                finalTranscript += (finalTranscript ? '\n\n' : '') + interimTranscript;
-                interimTranscript = '';
-            }
-            
-            // Return the final transcription result
-            resolve(finalTranscript || '');
-            
-            // Reset transcripts after resolving
-            finalTranscript = '';
-            interimTranscript = '';
+            resolve();
         } catch (error) {
             reject(error);
         }
@@ -177,8 +137,8 @@ export const stopRecording = () => {
 // Subscribe to transcription updates
 export const onTranscription = (callback) => {
     const socket = initializeSocket();
-    socket.on('transcriptionUpdate', callback);
-    return () => socket.off('transcriptionUpdate', callback);
+    socket.on('transcription', callback);
+    return () => socket.off('transcription', callback);
 };
 
 // Subscribe to recording stopped events

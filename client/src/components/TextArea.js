@@ -4,7 +4,7 @@ import { synthesizeSpeech, stopTTS } from '../services/ttsService';
 import { startRecording, stopRecording, onTranscription } from '../services/sttService';
 
 const TextArea = ({
-    value = '', // Add default empty string here
+    value = '',
     onChange,
     placeholder,
     readOnly = false,
@@ -30,16 +30,34 @@ const TextArea = ({
     const adjustmentTimeoutRef = useRef(null);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
+    const [currentTranscript, setCurrentTranscript] = useState('');
+    const [interimTranscript, setInterimTranscript] = useState('');
 
     // Subscribe to transcription updates
     useEffect(() => {
         if (isRecording) {
             const unsubscribe = onTranscription((data) => {
                 if (data && data.text) {
-                    onChange({ target: { value: data.text } });
+                    if (data.isFinal) {
+                        // For final results, append to the current transcript
+                        setCurrentTranscript(prev => {
+                            const newTranscript = prev ? `${prev}\n${data.text}` : data.text;
+                            onChange({ target: { value: newTranscript } });
+                            return newTranscript;
+                        });
+                        setInterimTranscript('');
+                    } else {
+                        // For interim results, update the interim transcript
+                        setInterimTranscript(data.text);
+                    }
                 }
             });
-            return () => unsubscribe();
+            return () => {
+                unsubscribe();
+                setInterimTranscript('');
+            };
+        } else {
+            setInterimTranscript('');
         }
     }, [isRecording, onChange]);
 
@@ -66,15 +84,17 @@ const TextArea = ({
         if (isRecording) {
             try {
                 setIsRecording(false);
-                const transcription = await stopRecording();
-                onChange({ target: { value: transcription } });
+                await stopRecording();
+                // Final transcript is already in the value prop due to onChange calls
+                setInterimTranscript('');
             } catch (error) {
                 console.error('Voice input error:', error);
             }
         } else {
             try {
-                // Pass the language to startRecording, but only if it's not 'auto'
                 const sourceLanguage = language === 'auto' ? null : language;
+                setCurrentTranscript('');
+                onChange({ target: { value: '' } });
                 await startRecording(sourceLanguage);
                 setIsRecording(true);
             } catch (error) {
@@ -125,7 +145,6 @@ const TextArea = ({
             if (adjustmentTimeoutRef.current) {
                 cancelAnimationFrame(adjustmentTimeoutRef.current);
             }
-            // Stop any ongoing TTS when component unmounts
             stopTTS();
         };
     }, [adjustHeight]);
@@ -149,7 +168,7 @@ const TextArea = ({
         if (readOnly) return;
 
         const pastedText = e.clipboardData.getData('text');
-        const currentValue = value || ''; // Ensure value is not undefined
+        const currentValue = value || '';
         const availableSpace = maxLength - currentValue.length + (e.target.selectionEnd - e.target.selectionStart);
 
         if (pastedText.length > availableSpace) {
@@ -186,10 +205,14 @@ const TextArea = ({
             : 'bg-white placeholder-gray-500'
         } ${readOnly ? darkMode ? 'bg-gray-800' : 'bg-gray-50' : ''} ${className}`;
 
+    // Combine the current value with interim transcript for display
+    const displayValue = isRecording 
+        ? (currentTranscript + (interimTranscript ? '\n' + interimTranscript : ''))
+        : value;
+
     return (
         <div className="relative flex-1" style={{ minWidth: 0 }}>
             <div className={containerClasses}>
-                {/* Clear button */}
                 {value && (
                     <button
                         onClick={onClear}
@@ -203,7 +226,6 @@ const TextArea = ({
                     </button>
                 )}
 
-                {/* Paste button - only show if not output and no value */}
                 {!isOutput && !readOnly && !value && (
                     <button
                         onClick={handlePasteFromClipboard}
@@ -221,7 +243,7 @@ const TextArea = ({
                 <div className="relative">
                     <textarea
                         ref={textareaRef}
-                        value={value}
+                        value={displayValue}
                         onChange={handleInput}
                         onPaste={handlePaste}
                         placeholder={placeholder}
@@ -239,7 +261,6 @@ const TextArea = ({
                         onTouchEnd={onTouchEnd}
                     />
 
-                    {/* Translation navigation */}
                     {translations.length > 0 && (
                         <div className={`absolute bottom-0 left-0 right-0 h-12 border-t flex items-center justify-between px-4 ${darkMode
                                 ? 'bg-gray-700 border-gray-700'
@@ -278,7 +299,6 @@ const TextArea = ({
                 </div>
             </div>
 
-            {/* Bottom toolbar */}
             <div className="h-8 mt-1 mb-4 relative flex items-center justify-between px-2">
                 <div className="flex-shrink-0 flex items-center gap-2">
                     {!isOutput && !readOnly && (
@@ -316,6 +336,12 @@ const TextArea = ({
                     {(value || '').length}{!isOutput && maxLength && `/${maxLength}`}
                 </div>
             </div>
+
+            <style jsx global>{`
+                textarea::placeholder {
+                    opacity: 0.5;
+                }
+            `}</style>
         </div>
     );
 };
