@@ -36,9 +36,24 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Serve static files in production
+// Serve static files in production with cache control
 if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.join(__dirname, 'client/build')));
+    app.use(express.static(path.join(__dirname, 'client/build'), {
+        etag: true, // Enable ETag
+        lastModified: true, // Enable Last-Modified
+        setHeaders: (res, path) => {
+            // For HTML files - no cache
+            if (path.endsWith('.html')) {
+                res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+                res.setHeader('Pragma', 'no-cache');
+                res.setHeader('Expires', '0');
+            }
+            // For JS, CSS, and other static assets - cache for 1 hour but validate
+            else {
+                res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+            }
+        }
+    }));
 }
 
 // Initialize clients
@@ -410,6 +425,10 @@ app.get('/api/test', (req, res) => {
 // Handle all other routes in production - serve React app
 if (process.env.NODE_ENV === 'production') {
     app.get('*', (req, res) => {
+        // Add cache control headers for index.html
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
         res.sendFile(path.join(__dirname, 'client/build/index.html'));
     });
 }

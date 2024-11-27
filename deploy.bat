@@ -1,10 +1,12 @@
 @echo off
-echo Building client...
+echo Cleaning up previous build...
 cd client
+rd /s /q build
 call npm run build
 cd ..
 
 echo Copying build files to server...
+rd /s /q server\client\build
 mkdir server\client
 xcopy /E /I /Y client\build server\client\build
 
