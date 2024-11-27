@@ -2,55 +2,120 @@ import io from 'socket.io-client';
 
 let socket = null;
 let mediaRecorder = null;
-let recordedChunks = [];
+let audioContext = null;
+let audioInput = null;
+let processor = null;
+let mediaStream = null;
+const bufferSize = 2048;
+let isRecording = false;
+let finalTranscript = '';
+let interimTranscript = '';
 
 // Initialize socket connection
 const initializeSocket = () => {
     if (!socket) {
-        socket = io('http://localhost:5000');
+        socket = io('http://localhost:5000', {
+            transports: ['websocket', 'polling'],
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000
+        });
         console.log('Socket connection initialized for STT');
+        
+        // Set up transcription handler
+        socket.on('transcription', (data) => {
+            console.log('Received transcription:', data);
+            
+            if (data.isFinal) {
+                // Add to final transcript with two new lines between sentences
+                finalTranscript += (finalTranscript ? '\n\n' : '') + data.text;
+                interimTranscript = '';
+            } else {
+                // Update interim transcript
+                interimTranscript = data.text;
+            }
+            
+            // Emit combined transcript through callback
+            if (socket) {
+                socket.emit('transcriptionUpdate', {
+                    text: finalTranscript + (interimTranscript ? ' ' + interimTranscript : ''),
+                    isFinal: data.isFinal
+                });
+            }
+        });
     }
     return socket;
 };
 
-// Update Azure credentials on the server
-export const updateSTTCredentials = async (credentials) => {
-    const socket = initializeSocket();
-    return new Promise((resolve, reject) => {
-        socket.emit('update-stt-credentials', credentials);
+// Initialize audio context
+async function initAudioContext() {
+    try {
+        console.log('Requesting microphone access...');
+        mediaStream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                channelCount: 1,
+                sampleRate: 16000,
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            } 
+        });
+        console.log('Microphone access granted');
         
-        const onSuccess = () => {
-            socket.off('stt-credentials-updated');
-            socket.off('stt-credentials-error');
-            resolve();
+        audioContext = new (window.AudioContext || window.webkitAudioContext)({
+            sampleRate: 16000,
+            latencyHint: 'interactive'
+        });
+        
+        audioInput = audioContext.createMediaStreamSource(mediaStream);
+        processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
+
+        processor.onaudioprocess = (e) => {
+            const inputData = e.inputBuffer.getChannelData(0);
+            
+            // Convert Float32Array to Int16Array
+            const int16Data = new Int16Array(inputData.length);
+            for (let i = 0; i < inputData.length; i++) {
+                // Convert float to int16
+                const s = Math.max(-1, Math.min(1, inputData[i]));
+                int16Data[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            }
+            
+            // Send the buffer
+            if (socket && isRecording) {
+                socket.emit('audioData', int16Data.buffer);
+            }
         };
 
-        const onError = (error) => {
-            socket.off('stt-credentials-updated');
-            socket.off('stt-credentials-error');
-            reject(new Error(error.message));
-        };
-
-        socket.on('stt-credentials-updated', onSuccess);
-        socket.on('stt-credentials-error', onError);
-    });
-};
+        audioInput.connect(processor);
+        processor.connect(audioContext.destination);
+        console.log('Audio context initialized with sample rate:', audioContext.sampleRate);
+    } catch (err) {
+        console.error('Error accessing microphone:', err);
+        throw new Error('Error accessing microphone. Please ensure microphone permissions are granted.');
+    }
+}
 
 // Start recording audio
-export const startRecording = () => {
+export const startRecording = (sourceLanguage = null) => {
     return new Promise(async (resolve, reject) => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            recordedChunks = [];
+            const socket = initializeSocket();
+            
+            if (!audioContext) {
+                await initAudioContext();
+            } else if (audioContext.state === 'suspended') {
+                await audioContext.resume();
+            }
+            
+            // Reset transcripts
+            finalTranscript = '';
+            interimTranscript = '';
+            
+            audioInput.connect(processor);
+            processor.connect(audioContext.destination);
 
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    recordedChunks.push(event.data);
-                }
-            };
-
-            mediaRecorder.start();
+            socket.emit('startGoogleCloudStream', { sourceLanguage });
+            isRecording = true;
             resolve();
         } catch (error) {
             reject(error);
@@ -58,45 +123,81 @@ export const startRecording = () => {
     });
 };
 
-// Stop recording and transcribe
+// Stop recording
 export const stopRecording = () => {
     return new Promise((resolve, reject) => {
-        if (!mediaRecorder) {
-            reject(new Error('No recording in progress'));
-            return;
+        try {
+            if (!isRecording) {
+                reject(new Error('No recording in progress'));
+                return;
+            }
+
+            const socket = initializeSocket();
+            socket.emit('endGoogleCloudStream');
+
+            if (audioInput && processor) {
+                audioInput.disconnect(processor);
+                processor.disconnect(audioContext.destination);
+            }
+
+            // Stop all tracks in the media stream
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => {
+                    track.stop();
+                });
+                mediaStream = null;
+            }
+
+            // Reset audio context
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+
+            isRecording = false;
+            
+            // Add any remaining interim transcript to final if it exists
+            if (interimTranscript) {
+                finalTranscript += (finalTranscript ? '\n\n' : '') + interimTranscript;
+                interimTranscript = '';
+            }
+            
+            // Return the final transcription result
+            resolve(finalTranscript || '');
+            
+            // Reset transcripts after resolving
+            finalTranscript = '';
+            interimTranscript = '';
+        } catch (error) {
+            reject(error);
         }
-
-        const socket = initializeSocket();
-
-        mediaRecorder.onstop = async () => {
-            const audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
-            const reader = new FileReader();
-
-            reader.onload = () => {
-                const base64Audio = reader.result.split(',')[1];
-                socket.emit('transcribe-speech', { audioData: base64Audio });
-            };
-
-            reader.readAsDataURL(audioBlob);
-        };
-
-        const onTranscription = (result) => {
-            socket.off('transcription-result', onTranscription);
-            socket.off('transcription-error', onTranscriptionError);
-            resolve(result.text);
-        };
-
-        const onTranscriptionError = (error) => {
-            socket.off('transcription-result', onTranscription);
-            socket.off('transcription-error', onTranscriptionError);
-            reject(new Error(error.message));
-        };
-
-        socket.on('transcription-result', onTranscription);
-        socket.on('transcription-error', onTranscriptionError);
-
-        mediaRecorder.stop();
-        mediaRecorder.stream.getTracks().forEach(track => track.stop());
-        mediaRecorder = null;
     });
+};
+
+// Subscribe to transcription updates
+export const onTranscription = (callback) => {
+    const socket = initializeSocket();
+    socket.on('transcriptionUpdate', callback);
+    return () => socket.off('transcriptionUpdate', callback);
+};
+
+// Subscribe to recording stopped events
+export const onRecordingStopped = (callback) => {
+    const socket = initializeSocket();
+    socket.on('recordingStopped', callback);
+    return () => socket.off('recordingStopped', callback);
+};
+
+// Subscribe to time remaining updates
+export const onTimeRemaining = (callback) => {
+    const socket = initializeSocket();
+    socket.on('timeRemaining', callback);
+    return () => socket.off('timeRemaining', callback);
+};
+
+// Subscribe to error events
+export const onError = (callback) => {
+    const socket = initializeSocket();
+    socket.on('error', callback);
+    return () => socket.off('error', callback);
 };

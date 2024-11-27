@@ -36,7 +36,7 @@ import {
 } from '../constants';
 
 import { updateTTSCredentials } from '../services/ttsService';
-import { updateSTTCredentials } from '../services/sttService';
+// Remove Azure STT import since we're using Google Cloud now
 
 const TranslatorApp = () => {
     // Settings and configuration state
@@ -50,6 +50,24 @@ const TranslatorApp = () => {
     const [saveHistory, setSaveHistory] = useState(JSON.parse(localStorage.getItem('saveHistory') ?? 'true'));
     const [darkMode, setDarkMode] = useState(JSON.parse(localStorage.getItem('darkMode') ?? 'false'));
     const [copySuccess, setCopySuccess] = useState(false);
+    const [selectedVoices, setSelectedVoices] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('voiceSettings')) || {
+                'en': 'en-US-Journey-F',
+                'ko': 'ko-KR-Neural2-A',
+                'ja': 'ja-JP-Neural2-B',
+                'zh': 'cmn-TW-Wavenet-A',
+                'fr': 'fr-FR-Journey-F',
+                'es': 'es-ES-Journey-F',
+                'de': 'de-DE-Journey-F',
+                'it': 'it-IT-Journey-F',
+                'pt': 'pt-BR-Neural2-A',
+                'ar': 'ar-XA-Wavenet-A'
+            };
+        } catch {
+            return {};
+        }
+    });
     const [apiKeys, setApiKeys] = useState(() => ({
         gemini: localStorage.getItem('gemini_api_key') || '',
         openrouter: localStorage.getItem('openrouter_api_key') || '',
@@ -58,30 +76,9 @@ const TranslatorApp = () => {
             projectId: localStorage.getItem('google_cloud_project_id') || '',
             privateKey: localStorage.getItem('google_cloud_private_key') || '',
             clientEmail: localStorage.getItem('google_cloud_client_email') || ''
-        },
-        azure: {
-            subscriptionKey: localStorage.getItem('azure_speech_key') || '',
-            region: localStorage.getItem('azure_speech_region') || ''
         }
+        // Remove Azure credentials since we're using Google Cloud now
     }));
-    const [selectedVoices, setSelectedVoices] = useState(() => {
-        try {
-            return JSON.parse(localStorage.getItem('voiceSettings')) || {
-                'en': 'en-US-AriaNeural',
-                'ko': 'ko-KR-SunHiNeural',
-                'ja': 'ja-JP-NanamiNeural',
-                'zh': 'zh-CN-XiaoxiaoNeural',
-                'fr': 'fr-FR-DeniseNeural',
-                'es': 'es-ES-ElviraNeural',
-                'de': 'de-DE-KatjaNeural',
-                'it': 'it-IT-ElsaNeural',
-                'pt': 'pt-BR-FranciscaNeural',
-                'ar': 'ar-SA-ZariyahNeural'
-            };
-        } catch {
-            return {};
-        }
-    });
 
     // Apply dark mode class to root element
     useEffect(() => {
@@ -170,7 +167,6 @@ const TranslatorApp = () => {
     }, [selectedModel, selectedTone]);
 
     // Settings handlers
-
     const handleApiKeysChange = async (newApiKeys) => {
         setApiKeys(newApiKeys);
 
@@ -190,19 +186,6 @@ const TranslatorApp = () => {
                 await updateTTSCredentials(newApiKeys.googleCloud);
             } catch (error) {
                 console.error('Failed to update Google Cloud credentials:', error);
-            }
-        }
-
-        // Store and update Azure credentials
-        if (newApiKeys.azure) {
-            localStorage.setItem('azure_speech_key', newApiKeys.azure.subscriptionKey);
-            localStorage.setItem('azure_speech_region', newApiKeys.azure.region);
-
-            // Update STT credentials on the server
-            try {
-                await updateSTTCredentials(newApiKeys.azure);
-            } catch (error) {
-                console.error('Failed to update Azure credentials:', error);
             }
         }
     };

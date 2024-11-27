@@ -4,7 +4,7 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 const textToSpeech = require('@google-cloud/text-to-speech');
-const sdk = require('microsoft-cognitiveservices-speech-sdk');
+const speech = require('@google-cloud/speech');
 const path = require('path');
 const fs = require('fs');
 
@@ -12,7 +12,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:3000",
+        origin: ["http://localhost:3000", "http://localhost:5000"],
         methods: ["GET", "POST"]
     }
 });
@@ -23,11 +23,22 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Initialize TTS client and Azure config
+// Initialize clients
 let ttsClient = null;
-let azureConfig = {
-    subscriptionKey: '',
-    region: ''
+let speechClient = null;
+
+// Language code mapping for Google Cloud Speech-to-Text
+const languageCodeMap = {
+    'en': 'en-US',
+    'fr': 'fr-FR',
+    'es': 'es-ES',
+    'it': 'it-IT',
+    'de': 'de-DE',
+    'pt': 'pt-BR',
+    'ja': 'ja-JP',
+    'ko': 'ko-KR',
+    'zh': 'zh-CN',
+    'ar': 'ar-SA'
 };
 
 function initializeClients(credentials) {
@@ -41,7 +52,7 @@ function initializeClients(credentials) {
             return null;
         }
 
-        // Create credentials object for Google TTS
+        // Create credentials object for Google Cloud
         const googleCredentials = {
             type: "service_account",
             project_id: credentials.projectId,
@@ -59,30 +70,26 @@ function initializeClients(credentials) {
         ttsClient = new textToSpeech.TextToSpeechClient({
             credentials: googleCredentials
         });
+
+        // Initialize Speech client with credentials
+        speechClient = new speech.SpeechClient({
+            credentials: googleCredentials
+        });
         
         console.log('Successfully initialized clients');
-        return { ttsClient };
+        return { ttsClient, speechClient };
     } catch (error) {
         console.error('Error initializing clients:', error);
         return null;
     }
 }
 
-// Load credentials from files and initialize on startup
+// Load TTS credentials from file and initialize on startup
 try {
-    // Load Google TTS credentials
     const ttsCredentialsPath = path.join(__dirname, 'tts-credentials.json');
     const ttsCredentials = JSON.parse(fs.readFileSync(ttsCredentialsPath, 'utf8'));
     initializeClients(ttsCredentials);
-    console.log('TTS client initialized from credentials file');
-
-    // Load Azure STT credentials
-    const azureCredentialsPath = path.join(__dirname, 'azure-credentials.json');
-    const azureCreds = JSON.parse(fs.readFileSync(azureCredentialsPath, 'utf8'));
-    if (azureCreds.subscriptionKey && azureCreds.region) {
-        azureConfig = azureCreds;
-        console.log('Azure Speech config initialized from credentials file');
-    }
+    console.log('Clients initialized from credentials file');
 } catch (error) {
     console.error('Error loading credentials files:', error);
 }
@@ -126,76 +133,13 @@ async function synthesizeSpeech(text, targetLang, voiceId) {
     }
 }
 
-// Function to save Azure credentials to file
-function saveAzureCredentials(credentials) {
-    try {
-        const azureCredentialsPath = path.join(__dirname, 'azure-credentials.json');
-        fs.writeFileSync(azureCredentialsPath, JSON.stringify(credentials, null, 2));
-        console.log('Azure credentials saved to file');
-    } catch (error) {
-        console.error('Error saving Azure credentials:', error);
-        throw error;
-    }
-}
-
-// Function to transcribe speech using Azure
-async function transcribeSpeech(audioContent) {
-    if (!azureConfig.subscriptionKey || !azureConfig.region) {
-        throw new Error('Azure Speech config not initialized. Please check credentials in settings.');
-    }
-
-    return new Promise((resolve, reject) => {
-        try {
-            // Create the push stream
-            const pushStream = sdk.AudioInputStream.createPushStream();
-
-            // Convert base64 to buffer and push to stream
-            const audioBuffer = Buffer.from(audioContent, 'base64');
-            pushStream.write(audioBuffer);
-            pushStream.close();
-
-            // Create the audio config from the stream
-            const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
-            
-            // Create the speech config
-            const speechConfig = sdk.SpeechConfig.fromSubscription(
-                azureConfig.subscriptionKey,
-                azureConfig.region
-            );
-
-            // Create the speech recognizer
-            const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
-
-            // Start recognition
-            recognizer.recognizeOnceAsync(
-                result => {
-                    if (result.text) {
-                        resolve(result.text);
-                    } else {
-                        reject(new Error('No speech detected'));
-                    }
-                    recognizer.close();
-                },
-                error => {
-                    console.error('Speech recognition error:', error);
-                    recognizer.close();
-                    reject(error);
-                }
-            );
-        } catch (error) {
-            console.error('Error in speech transcription setup:', error);
-            reject(error);
-        }
-    });
-}
-
 // Function to get default voice for a language
 function getDefaultVoice(targetLang) {
     const defaultVoices = {
         'en': 'en-US-Journey-F',
         'ko': 'ko-KR-Neural2-A',
         'ja': 'ja-JP-Neural2-B',
-        'zh': 'cmn-TW-Wavenet-A',
+        'zh': 'zh-CN-Wavenet-A',
         'ar': 'ar-XA-Wavenet-A',
         'fr': 'fr-FR-Journey-F',
         'es': 'es-ES-Journey-F',
@@ -209,14 +153,166 @@ function getDefaultVoice(targetLang) {
 // Socket.IO connection handling
 io.on('connection', (socket) => {
     console.log('Client connected');
+    
+    let recognizeStream = null;
+    let isStreamActive = false;
+    let streamRestartTimeout;
+    let totalDurationTimeout;
+    const STREAM_TIMEOUT = 240000; // 4 minutes
+    const TOTAL_DURATION_LIMIT = 7200000; // 2 hours
 
-    // Handle credentials update
+    // Function to create a new recognize stream
+    const createRecognizeStream = (sourceLanguage = null) => {
+        console.log('Starting new recognize stream...');
+        
+        if (!speechClient) {
+            throw new Error('Speech client not initialized. Please provide valid credentials in settings.');
+        }
+
+        const config = {
+            encoding: 'LINEAR16',
+            sampleRateHertz: 16000,
+            model: 'default',
+            useEnhanced: true,
+            metadata: {
+                interactionType: 'DICTATION',
+                microphoneDistance: 'NEARFIELD',
+                recordingDeviceType: 'PC_MIC',
+            }
+        };
+
+        // If sourceLanguage is null (auto-detect) or 'auto', enable language detection
+        if (!sourceLanguage || sourceLanguage === 'auto') {
+            console.log('Using automatic language detection');
+            config.languageCode = 'en-US';  // Required default even with auto-detection
+            config.alternativeLanguageCodes = Object.values(languageCodeMap);
+        } else {
+            // Use specific language if provided
+            const languageCode = languageCodeMap[sourceLanguage] || 'en-US';
+            console.log('Using specific language:', languageCode);
+            config.languageCode = languageCode;
+        }
+
+        const request = {
+            config,
+            interimResults: true
+        };
+
+        recognizeStream = speechClient
+            .streamingRecognize(request)
+            .on('error', (error) => {
+                console.error('Error in recognize stream:', error);
+                socket.emit('error', 'Speech recognition error: ' + error.message);
+                
+                if (error.code === 11 && isStreamActive) {
+                    console.log('Stream timed out, restarting...');
+                    createRecognizeStream(sourceLanguage);
+                } else {
+                    isStreamActive = false;
+                }
+            })
+            .on('data', (data) => {
+                if (data.results[0] && data.results[0].alternatives[0]) {
+                    const transcript = data.results[0].alternatives[0].transcript;
+                    const isFinal = data.results[0].isFinal;
+                    const detectedLanguage = data.results[0].languageCode;
+                    
+                    socket.emit('transcription', {
+                        text: transcript,
+                        isFinal: isFinal,
+                        detectedLanguage: detectedLanguage
+                    });
+                }
+            })
+            .on('end', () => {
+                console.log('Recognize stream ended');
+            });
+
+        // Set up automatic stream restart before timeout
+        clearTimeout(streamRestartTimeout);
+        streamRestartTimeout = setTimeout(() => {
+            if (isStreamActive) {
+                console.log('Preemptively restarting stream before timeout...');
+                const oldStream = recognizeStream;
+                createRecognizeStream(sourceLanguage); // Create new stream first
+                oldStream.end(); // Then end the old stream
+            }
+        }, STREAM_TIMEOUT);
+
+        return recognizeStream;
+    };
+
+    // Function to stop recording
+    const stopRecording = (reason) => {
+        if (recognizeStream && isStreamActive) {
+            isStreamActive = false;
+            clearTimeout(streamRestartTimeout);
+            clearTimeout(totalDurationTimeout);
+            recognizeStream.end();
+            socket.emit('recordingStopped', { reason: reason });
+            console.log('Recording stopped:', reason);
+        }
+    };
+
+    socket.on('startGoogleCloudStream', async (data) => {
+        try {
+            isStreamActive = true;
+            const sourceLanguage = data?.sourceLanguage || null;
+            createRecognizeStream(sourceLanguage);
+            console.log('Successfully created recognize stream');
+
+            // Set up total duration limit
+            clearTimeout(totalDurationTimeout);
+            totalDurationTimeout = setTimeout(() => {
+                stopRecording('Recording limit of 2 hours reached');
+            }, TOTAL_DURATION_LIMIT);
+
+            // Emit time remaining updates every minute
+            let timeRemaining = TOTAL_DURATION_LIMIT;
+            const updateInterval = setInterval(() => {
+                if (!isStreamActive) {
+                    clearInterval(updateInterval);
+                    return;
+                }
+                timeRemaining -= 60000; // Subtract one minute
+                const minutesRemaining = Math.floor(timeRemaining / 60000);
+                if (minutesRemaining <= 5) {
+                    socket.emit('timeRemaining', { minutes: minutesRemaining });
+                }
+            }, 60000);
+
+        } catch (error) {
+            console.error('Error creating recognize stream:', error);
+            socket.emit('error', 'Failed to start speech recognition: ' + error.message);
+            isStreamActive = false;
+        }
+    });
+
+    socket.on('audioData', (data) => {
+        if (recognizeStream && isStreamActive && !recognizeStream.destroyed) {
+            try {
+                const buffer = Buffer.from(data);
+                recognizeStream.write(buffer);
+            } catch (error) {
+                console.error('Error writing to recognize stream:', error);
+                socket.emit('error', 'Error processing audio: ' + error.message);
+                isStreamActive = false;
+            }
+        }
+    });
+
+    socket.on('endGoogleCloudStream', () => {
+        stopRecording('Recording manually stopped');
+    });
+
+    // Handle TTS credentials update
     socket.on('update-tts-credentials', (credentials) => {
         try {
             console.log('Received credentials update request');
             const clients = initializeClients(credentials);
             if (clients) {
                 ttsClient = clients.ttsClient;
+                speechClient = clients.speechClient;
                 console.log('Clients initialized successfully');
                 socket.emit('tts-credentials-updated', { success: true });
             } else {
@@ -229,34 +325,6 @@ io.on('connection', (socket) => {
         } catch (error) {
             console.error('Error updating credentials:', error);
             socket.emit('tts-credentials-updated', { 
-                success: false, 
-                error: error.message 
-            });
-        }
-    });
-
-    // Handle Azure STT credentials update
-    socket.on('update-stt-credentials', (credentials) => {
-        try {
-            console.log('Received Azure credentials update request');
-            if (!credentials.subscriptionKey || !credentials.region) {
-                throw new Error('Missing required Azure credentials');
-            }
-
-            // Update in-memory config
-            azureConfig = {
-                subscriptionKey: credentials.subscriptionKey,
-                region: credentials.region
-            };
-
-            // Save to file
-            saveAzureCredentials(azureConfig);
-
-            console.log('Azure credentials updated successfully');
-            socket.emit('stt-credentials-updated', { success: true });
-        } catch (error) {
-            console.error('Error updating Azure credentials:', error);
-            socket.emit('stt-credentials-error', { 
                 success: false, 
                 error: error.message 
             });
@@ -277,21 +345,9 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('transcribe-speech', async (data) => {
-        try {
-            console.log('Received transcribe-speech request');
-            const { audioData } = data;
-            const transcription = await transcribeSpeech(audioData);
-            console.log('Transcription completed:', transcription);
-            socket.emit('transcription-result', { text: transcription });
-        } catch (error) {
-            console.error('Error in speech transcription:', error);
-            socket.emit('transcription-error', { message: error.message || 'Failed to transcribe speech' });
-        }
-    });
-
     socket.on('disconnect', () => {
         console.log('Client disconnected');
+        stopRecording('Client disconnected');
     });
 });
 

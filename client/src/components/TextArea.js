@@ -4,7 +4,7 @@ import { synthesizeSpeech, stopTTS } from '../services/ttsService';
 import { startRecording, stopRecording } from '../services/sttService';
 
 const TextArea = ({
-    value,
+    value = '', // Add default empty string here
     onChange,
     placeholder,
     readOnly = false,
@@ -61,13 +61,15 @@ const TextArea = ({
             }
         } else {
             try {
-                await startRecording();
+                // Pass the language to startRecording, but only if it's not 'auto'
+                const sourceLanguage = language === 'auto' ? null : language;
+                await startRecording(sourceLanguage);
                 setIsRecording(true);
             } catch (error) {
                 console.error('Failed to start recording:', error);
             }
         }
-    }, [isRecording, onChange]);
+    }, [isRecording, onChange, language]);
 
     // Height adjustment logic
     const adjustHeight = useCallback(() => {
@@ -135,13 +137,14 @@ const TextArea = ({
         if (readOnly) return;
 
         const pastedText = e.clipboardData.getData('text');
-        const availableSpace = maxLength - value.length + (e.target.selectionEnd - e.target.selectionStart);
+        const currentValue = value || ''; // Ensure value is not undefined
+        const availableSpace = maxLength - currentValue.length + (e.target.selectionEnd - e.target.selectionStart);
 
         if (pastedText.length > availableSpace) {
             e.preventDefault();
-            const newText = value.slice(0, e.target.selectionStart) +
+            const newText = currentValue.slice(0, e.target.selectionStart) +
                 pastedText.slice(0, availableSpace) +
-                value.slice(e.target.selectionEnd);
+                currentValue.slice(e.target.selectionEnd);
             onChange({ target: { value: newText } });
         }
     };
@@ -298,7 +301,7 @@ const TextArea = ({
                 </div>
 
                 <div className={`flex-shrink-0 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {value.length}{!isOutput && maxLength && `/${maxLength}`}
+                    {(value || '').length}{!isOutput && maxLength && `/${maxLength}`}
                 </div>
             </div>
         </div>
