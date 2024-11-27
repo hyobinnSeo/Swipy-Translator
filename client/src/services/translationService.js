@@ -1,42 +1,47 @@
 // Translation service for different models
-const translateWithGemini = async (text, previousTranslations = [], signal, apiKey, modelInstructions, selectedModel, selectedTone, sourceLang, targetLang, LANGUAGE_NAMES) => {
+const translateWithGemini = async (text, previousTranslations = [], signal, apiKey, modelInstructions, selectedModel, selectedTone, sourceLang, targetLang, LANGUAGE_NAMES, isParaphrase = false) => {
     if (!apiKey) {
         throw new Error('Please enter your Gemini API key in settings');
     }
     try {
         // Get base instructions
-        const basePreInstruction = modelInstructions[selectedModel]['pre-instruction'];
-        const postInstruction = modelInstructions[selectedModel]['post-instruction'];
-        const toneInstructions = getToneInstructions(selectedTone, modelInstructions, selectedModel);
-
-        // Get language settings
-        const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
-        const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
+        const basePreInstruction = isParaphrase 
+            ? modelInstructions[selectedModel]['pre-instruction-paraphrase']
+            : modelInstructions[selectedModel]['pre-instruction'];
+        const postInstruction = isParaphrase
+            ? modelInstructions[selectedModel]['post-instruction-paraphrase']
+            : modelInstructions[selectedModel]['post-instruction'];
+        const toneInstructions = getToneInstructions(selectedTone, modelInstructions, selectedModel, isParaphrase);
 
         // Construct the prompt
         let prompt = `Instructions:\n${basePreInstruction}\n\n`;
 
-        // Add Language settings
-        prompt += `Language:\n`;
-        if (sourceLang === 'auto') {
-            prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
-        } else {
-            prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
+        // Add Language settings if not in paraphrase mode
+        if (!isParaphrase) {
+            const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
+            const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
+            
+            prompt += `Language:\n`;
+            if (sourceLang === 'auto') {
+                prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
+            } else {
+                prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
+            }
         }
 
         // Add Tone settings
-        prompt += `Tone:\n${toneInstructions.instruction}\n\n`;
+        prompt += `${isParaphrase ? 'Paraphrasing Style' : 'Tone'}:\n${toneInstructions.instruction}\n\n`;
 
-        // Add text to translate
-        prompt += `Text to be translated:\n${text}\n\n`;
+        // Add text to process
+        prompt += `${isParaphrase ? 'Text to paraphrase' : 'Text to be translated'}:\n${text}\n\n`;
 
-        // Add previous translations if any
+        // Add previous translations/paraphrases if any
         if (previousTranslations.length > 0) {
-            prompt += "Previous translations to avoid repeating:\n";
+            prompt += `Previous ${isParaphrase ? 'paraphrases' : 'translations'} to avoid repeating:\n`;
             previousTranslations.forEach((trans, index) => {
                 prompt += `${index + 1}: ${trans.text}\n`;
             });
-            prompt += "\nNote: Provide a fresh translation different from the above versions.\n\n";
+            prompt += `\nNote: Provide a fresh ${isParaphrase ? 'paraphrase' : 'translation'} different from the above versions.\n\n`;
         }
 
         // Add post instructions
@@ -77,7 +82,7 @@ const translateWithGemini = async (text, previousTranslations = [], signal, apiK
     }
 };
 
-const translateWithOpenRouter = async (text, modelId, previousTranslations = [], signal, apiKey, modelInstructions, selectedModel, selectedTone, sourceLang, targetLang, LANGUAGE_NAMES) => {
+const translateWithOpenRouter = async (text, modelId, previousTranslations = [], signal, apiKey, modelInstructions, selectedModel, selectedTone, sourceLang, targetLang, LANGUAGE_NAMES, isParaphrase = false) => {
     if (!apiKey) {
         throw new Error('Please enter your OpenRouter API key in settings');
     }
@@ -86,38 +91,43 @@ const translateWithOpenRouter = async (text, modelId, previousTranslations = [],
         : 'cohere/command-r-08-2024';
 
     // Get base instructions
-    const basePreInstruction = modelInstructions[selectedModel]['pre-instruction'];
-    const postInstruction = modelInstructions[selectedModel]['post-instruction'];
-    const toneInstructions = getToneInstructions(selectedTone, modelInstructions, selectedModel);
-
-    // Get language settings
-    const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
-    const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
+    const basePreInstruction = isParaphrase 
+        ? modelInstructions[selectedModel]['pre-instruction-paraphrase']
+        : modelInstructions[selectedModel]['pre-instruction'];
+    const postInstruction = isParaphrase
+        ? modelInstructions[selectedModel]['post-instruction-paraphrase']
+        : modelInstructions[selectedModel]['post-instruction'];
+    const toneInstructions = getToneInstructions(selectedTone, modelInstructions, selectedModel, isParaphrase);
 
     // Construct the prompt for system message
     let prompt = `Instructions:\n${basePreInstruction}\n\n`;
 
-    // Add Language settings
-    prompt += `Language:\n`;
-    if (sourceLang === 'auto') {
-        prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
-    } else {
-        prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
+    // Add Language settings if not in paraphrase mode
+    if (!isParaphrase) {
+        const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
+        const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
+        
+        prompt += `Language:\n`;
+        if (sourceLang === 'auto') {
+            prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
+        } else {
+            prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
+        }
     }
 
     // Add Tone settings
-    prompt += `Tone:\n${toneInstructions.instruction}\n\n`;
+    prompt += `${isParaphrase ? 'Paraphrasing Style' : 'Tone'}:\n${toneInstructions.instruction}\n\n`;
 
-    // Create user message with the text to translate
-    prompt += `Text to be translated:\n${text}\n\n`;
+    // Add text to process
+    prompt += `${isParaphrase ? 'Text to paraphrase' : 'Text to be translated'}:\n${text}\n\n`;
 
-    // Add previous translations if any
+    // Add previous translations/paraphrases if any
     if (previousTranslations.length > 0) {
-        prompt += "Previous translations to avoid repeating:\n";
+        prompt += `Previous ${isParaphrase ? 'paraphrases' : 'translations'} to avoid repeating:\n`;
         previousTranslations.forEach((trans, index) => {
             prompt += `${index + 1}: ${trans.text}\n`;
         });
-        prompt += "\nNote: Provide a fresh translation different from the above versions.\n\n";
+        prompt += `\nNote: Provide a fresh ${isParaphrase ? 'paraphrase' : 'translation'} different from the above versions.\n\n`;
     }
 
     try {
@@ -152,44 +162,49 @@ const translateWithOpenRouter = async (text, modelId, previousTranslations = [],
     }
 };
 
-const translateWithOpenAI = async (text, previousTranslations = [], signal, apiKey, modelInstructions, selectedModel, selectedTone, sourceLang, targetLang, LANGUAGE_NAMES) => {
+const translateWithOpenAI = async (text, previousTranslations = [], signal, apiKey, modelInstructions, selectedModel, selectedTone, sourceLang, targetLang, LANGUAGE_NAMES, isParaphrase = false) => {
     if (!apiKey) {
         throw new Error('Please enter your OpenAI API key in settings');
     }
     try {
         // Get base instructions
-        const basePreInstruction = modelInstructions[selectedModel]['pre-instruction'];
-        const postInstruction = modelInstructions[selectedModel]['post-instruction'];
-        const toneInstructions = getToneInstructions(selectedTone, modelInstructions, selectedModel);
-
-        // Get language settings
-        const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
-        const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
+        const basePreInstruction = isParaphrase 
+            ? modelInstructions[selectedModel]['pre-instruction-paraphrase']
+            : modelInstructions[selectedModel]['pre-instruction'];
+        const postInstruction = isParaphrase
+            ? modelInstructions[selectedModel]['post-instruction-paraphrase']
+            : modelInstructions[selectedModel]['post-instruction'];
+        const toneInstructions = getToneInstructions(selectedTone, modelInstructions, selectedModel, isParaphrase);
 
         // Construct the prompt
         let prompt = `Instructions:\n${basePreInstruction}\n\n`;
 
-        // Add Language settings
-        prompt += `Language:\n`;
-        if (sourceLang === 'auto') {
-            prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
-        } else {
-            prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
+        // Add Language settings if not in paraphrase mode
+        if (!isParaphrase) {
+            const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
+            const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
+            
+            prompt += `Language:\n`;
+            if (sourceLang === 'auto') {
+                prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
+            } else {
+                prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
+            }
         }
 
         // Add Tone settings
-        prompt += `Tone:\n${toneInstructions.instruction}\n\n`;
+        prompt += `${isParaphrase ? 'Paraphrasing Style' : 'Tone'}:\n${toneInstructions.instruction}\n\n`;
 
-        // Add text to translate
-        prompt += `Text to be translated:\n${text}\n\n`;
+        // Add text to process
+        prompt += `${isParaphrase ? 'Text to paraphrase' : 'Text to be translated'}:\n${text}\n\n`;
 
-        // Add previous translations if any
+        // Add previous translations/paraphrases if any
         if (previousTranslations.length > 0) {
-            prompt += "Previous translations to avoid repeating:\n";
+            prompt += `Previous ${isParaphrase ? 'paraphrases' : 'translations'} to avoid repeating:\n`;
             previousTranslations.forEach((trans, index) => {
                 prompt += `${index + 1}: ${trans.text}\n`;
             });
-            prompt += "\nNote: Provide a fresh translation different from the above versions.\n\n";
+            prompt += `\nNote: Provide a fresh ${isParaphrase ? 'paraphrase' : 'translation'} different from the above versions.\n\n`;
         }
 
         // Add post instructions
@@ -230,8 +245,10 @@ const translateWithOpenAI = async (text, previousTranslations = [], signal, apiK
 };
 
 // Helper function for getting tone instructions
-const getToneInstructions = (tone, modelInstructions, selectedModel) => {
-    const toneInstructions = modelInstructions[selectedModel]['tone-instructions'];
+const getToneInstructions = (tone, modelInstructions, selectedModel, isParaphrase = false) => {
+    const toneInstructions = isParaphrase 
+        ? modelInstructions[selectedModel]['tone-instructions-paraphrase']
+        : modelInstructions[selectedModel]['tone-instructions'];
     return {
         instruction: toneInstructions[tone] || toneInstructions['standard']
     };

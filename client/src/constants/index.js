@@ -252,7 +252,9 @@ export const TONES = {
 export const DEFAULT_INSTRUCTIONS = {
     [MODELS.GEMINI]: {
         'pre-instruction': "You are a professional translator who specializes in providing accurate and natural translations. Your task is to create translations that convey the complete meaning, nuances, and cultural context of the source text while maintaining the linguistic features of the target language.",
+        'pre-instruction-paraphrase': "You are a skilled language expert specializing in paraphrasing. Your task is to rewrite the given text while maintaining its core meaning but using different words and sentence structures. Focus on preserving the original message while providing a fresh perspective and natural flow.",
         'post-instruction': "Note: Provide only the translated text. Do not include quotes, emojis, explanations or any additional comments.",
+        'post-instruction-paraphrase': "Note: Provide only the paraphrased text. Do not include quotes, emojis, explanations or any additional comments.",
         'tone-instructions': {
             'standard': `Tone and Style:
 - Maintain a neutral and clear tone
@@ -299,11 +301,57 @@ export const DEFAULT_INSTRUCTIONS = {
 - Focus on aesthetic quality
 - Keep the elegant and refined style
 - Adapt cultural references appropriately`
+        },
+        'tone-instructions-paraphrase': {
+            'standard': `Paraphrasing Style:
+- Maintain the original meaning while using different words
+- Use clear and natural language
+- Restructure sentences while preserving core ideas
+- Keep a balanced and neutral tone
+- Ensure smooth flow and readability`,
+            'casual': `Paraphrasing Style:
+- Use relaxed, conversational language
+- Incorporate everyday expressions
+- Make it sound more informal and friendly
+- Use contractions and casual phrases
+- Keep it natural and easy-going`,
+            'formal': `Paraphrasing Style:
+- Elevate the language to a more formal register
+- Use sophisticated vocabulary appropriately
+- Structure sentences in a more academic style
+- Maintain professional tone throughout
+- Focus on precision and clarity`,
+            'humorous': `Paraphrasing Style:
+- Add a light-hearted twist to the content
+- Incorporate playful language choices
+- Use creative and entertaining expressions
+- Keep the core message while adding humor
+- Make it fun while staying appropriate`,
+            'business': `Paraphrasing Style:
+- Use professional business terminology
+- Focus on clarity and conciseness
+- Maintain a professional tone
+- Structure content for business context
+- Emphasize key points effectively`,
+            'kid_friendly': `Paraphrasing Style:
+- Simplify complex concepts
+- Use fun and engaging language
+- Make it easy to understand
+- Keep sentences short and clear
+- Use familiar words and expressions`,
+            'literary': `Paraphrasing Style:
+- Use rich, descriptive language
+- Incorporate literary devices
+- Maintain artistic quality
+- Focus on elegant expression
+- Create vivid imagery through words`
         }
     },
     [MODELS.COMMAND]: {
         'pre-instruction': "You are a professional translator who specializes in providing accurate and natural translations. Your task is to create translations that convey the complete meaning, nuances, and cultural context of the source text while maintaining the linguistic features of the target language.",
+        'pre-instruction-paraphrase': "You are a skilled language expert specializing in paraphrasing. Your task is to rewrite the given text while maintaining its core meaning but using different words and sentence structures. Focus on preserving the original message while providing a fresh perspective and natural flow.",
         'post-instruction': "Note: Provide only the translated text. Do not include quotes, emojis, explanations or any additional comments.",
+        'post-instruction-paraphrase': "Note: Provide only the paraphrased text. Do not include quotes, emojis, explanations or any additional comments.",
         'tone-instructions': {
             'standard': `Tone and Style:
 - Maintain a neutral and clear tone
@@ -341,11 +389,45 @@ export const DEFAULT_INSTRUCTIONS = {
 - Use deliberate grammar/spelling variations for effect
 - Adapt street idioms appropriately
 - Mix casual profanity for emphasis`
+        },
+        'tone-instructions-paraphrase': {
+            'standard': `Paraphrasing Style:
+- Maintain the original meaning while using different words
+- Use clear and natural language
+- Restructure sentences while preserving core ideas
+- Keep a balanced and neutral tone
+- Ensure smooth flow and readability`,
+            'casual': `Paraphrasing Style:
+- Use relaxed, conversational language
+- Incorporate everyday expressions
+- Make it sound more informal and friendly
+- Use contractions and casual phrases
+- Keep it natural and easy-going`,
+            'formal': `Paraphrasing Style:
+- Elevate the language to a more formal register
+- Use sophisticated vocabulary appropriately
+- Structure sentences in a more academic style
+- Maintain professional tone throughout
+- Focus on precision and clarity`,
+            'humorous': `Paraphrasing Style:
+- Add a light-hearted twist to the content
+- Incorporate playful language choices
+- Use creative and entertaining expressions
+- Keep the core message while adding humor
+- Make it fun while staying appropriate`,
+            'cardi_B': `Paraphrasing Style:
+- Flip the script with street style
+- Keep it 100 with the message
+- Use current slang and street expressions
+- Make it sound raw and authentic
+- Add that bold, unfiltered energy`
         }
     },
     [MODELS.ANTHROPIC]: {
         'pre-instruction': "You are a professional translator who specializes in providing accurate and natural translations. Your task is to create translations that convey the complete meaning, nuances, and cultural context of the source text while maintaining the linguistic features of the target language.",
+        'pre-instruction-paraphrase': "You are a skilled language expert specializing in paraphrasing. Your task is to rewrite the given text while maintaining its core meaning but using different words and sentence structures. Focus on preserving the original message while providing a fresh perspective and natural flow.",
         'post-instruction': "Note: Provide only the translated text. Do not include quotes, emojis, explanations or any additional comments.",
+        'post-instruction-paraphrase': "Note: Provide only the paraphrased text. Do not include quotes, emojis, explanations or any additional comments.",
         'tone-instructions': {
             'standard': `Tone and Style:
 - Maintain a neutral and clear tone
@@ -390,11 +472,51 @@ export const DEFAULT_INSTRUCTIONS = {
 - Use deliberate grammar/spelling variations for effect
 - Adapt street idioms appropriately
 - Mix casual profanity for emphasis`
+        },
+        'tone-instructions-paraphrase': {
+            'standard': `Paraphrasing Style:
+- Maintain the original meaning while using different words
+- Use clear and natural language
+- Restructure sentences while preserving core ideas
+- Keep a balanced and neutral tone
+- Ensure smooth flow and readability`,
+            'casual': `Paraphrasing Style:
+- Use relaxed, conversational language
+- Incorporate everyday expressions
+- Make it sound more informal and friendly
+- Use contractions and casual phrases
+- Keep it natural and easy-going`,
+            'formal': `Paraphrasing Style:
+- Elevate the language to a more formal register
+- Use sophisticated vocabulary appropriately
+- Structure sentences in a more academic style
+- Maintain professional tone throughout
+- Focus on precision and clarity`,
+            'humorous': `Paraphrasing Style:
+- Add a light-hearted twist to the content
+- Incorporate playful language choices
+- Use creative and entertaining expressions
+- Keep the core message while adding humor
+- Make it fun while staying appropriate`,
+            'literary': `Paraphrasing Style:
+- Use rich, descriptive language
+- Incorporate literary devices
+- Maintain artistic quality
+- Focus on elegant expression
+- Create vivid imagery through words`,
+            'cardi_B': `Paraphrasing Style:
+- Flip the script with street style
+- Keep it 100 with the message
+- Use current slang and street expressions
+- Make it sound raw and authentic
+- Add that bold, unfiltered energy`
         }
     },
     [MODELS.OPENAI]: {
         'pre-instruction': "You are a professional translator who specializes in providing accurate and natural translations. Your task is to create translations that convey the complete meaning, nuances, and cultural context of the source text while maintaining the linguistic features of the target language.",
+        'pre-instruction-paraphrase': "You are a skilled language expert specializing in paraphrasing. Your task is to rewrite the given text while maintaining its core meaning but using different words and sentence structures. Focus on preserving the original message while providing a fresh perspective and natural flow.",
         'post-instruction': "Note: Provide only the translated text. Do not include quotes, emojis, explanations or any additional comments.",
+        'post-instruction-paraphrase': "Note: Provide only the paraphrased text. Do not include quotes, emojis, explanations or any additional comments.",
         'tone-instructions': {
             'standard': `Tone and Style:
 - Maintain a neutral and clear tone
@@ -450,6 +572,56 @@ export const DEFAULT_INSTRUCTIONS = {
 - Use deliberate grammar/spelling variations for effect
 - Adapt street idioms appropriately
 - Mix casual profanity for emphasis`
+        },
+        'tone-instructions-paraphrase': {
+            'standard': `Paraphrasing Style:
+- Maintain the original meaning while using different words
+- Use clear and natural language
+- Restructure sentences while preserving core ideas
+- Keep a balanced and neutral tone
+- Ensure smooth flow and readability`,
+            'casual': `Paraphrasing Style:
+- Use relaxed, conversational language
+- Incorporate everyday expressions
+- Make it sound more informal and friendly
+- Use contractions and casual phrases
+- Keep it natural and easy-going`,
+            'formal': `Paraphrasing Style:
+- Elevate the language to a more formal register
+- Use sophisticated vocabulary appropriately
+- Structure sentences in a more academic style
+- Maintain professional tone throughout
+- Focus on precision and clarity`,
+            'humorous': `Paraphrasing Style:
+- Add a light-hearted twist to the content
+- Incorporate playful language choices
+- Use creative and entertaining expressions
+- Keep the core message while adding humor
+- Make it fun while staying appropriate`,
+            'business': `Paraphrasing Style:
+- Use professional business terminology
+- Focus on clarity and conciseness
+- Maintain a professional tone
+- Structure content for business context
+- Emphasize key points effectively`,
+            'kid_friendly': `Paraphrasing Style:
+- Simplify complex concepts
+- Use fun and engaging language
+- Make it easy to understand
+- Keep sentences short and clear
+- Use familiar words and expressions`,
+            'literary': `Paraphrasing Style:
+- Use rich, descriptive language
+- Incorporate literary devices
+- Maintain artistic quality
+- Focus on elegant expression
+- Create vivid imagery through words`,
+            'cardi_B': `Paraphrasing Style:
+- Flip the script with street style
+- Keep it 100 with the message
+- Use current slang and street expressions
+- Make it sound raw and authentic
+- Add that bold, unfiltered energy`
         }
     }
 };
@@ -469,8 +641,10 @@ export const MAX_HISTORY_ITEMS = 10;
 export const MAX_SAVED_TRANSLATIONS = 50;
 
 // Helper function for getting tone instructions
-export const getToneInstructions = (tone, modelInstructions, selectedModel) => {
-    const toneInstructions = modelInstructions[selectedModel]['tone-instructions'];
+export const getToneInstructions = (tone, modelInstructions, selectedModel, isParaphrase = false) => {
+    const toneInstructions = isParaphrase 
+        ? modelInstructions[selectedModel]['tone-instructions-paraphrase']
+        : modelInstructions[selectedModel]['tone-instructions'];
     return {
         instruction: toneInstructions[tone] || toneInstructions['standard']
     };
