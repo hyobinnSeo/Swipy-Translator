@@ -290,7 +290,7 @@ export const DEFAULT_INSTRUCTIONS = {
 - Use appropriate business formalities
 - Keep a professional yet accessible tone
 - Focus on clarity and efficiency in communication`,
-            'kid_friendly': `Tone and Style: Kid-Friendly
+            'kid_friendly': `Tone and Style:
 - Use simple, friendly words
 - Make sure everything is easy to understand
 - Keep the tone encouraging and playful`,
@@ -301,50 +301,6 @@ export const DEFAULT_INSTRUCTIONS = {
 - Focus on aesthetic quality
 - Keep the elegant and refined style
 - Adapt cultural references appropriately`
-        },
-        'tone-instructions-paraphrase': {
-            'standard': `Paraphrasing Style:
-- Maintain the original meaning while using different words
-- Use clear and natural language
-- Restructure sentences while preserving core ideas
-- Keep a balanced and neutral tone
-- Ensure smooth flow and readability`,
-            'casual': `Paraphrasing Style:
-- Use relaxed, conversational language
-- Incorporate everyday expressions
-- Make it sound more informal and friendly
-- Use contractions and casual phrases
-- Keep it natural and easy-going`,
-            'formal': `Paraphrasing Style:
-- Elevate the language to a more formal register
-- Use sophisticated vocabulary appropriately
-- Structure sentences in a more academic style
-- Maintain professional tone throughout
-- Focus on precision and clarity`,
-            'humorous': `Paraphrasing Style:
-- Add a light-hearted twist to the content
-- Incorporate playful language choices
-- Use creative and entertaining expressions
-- Keep the core message while adding humor
-- Make it fun while staying appropriate`,
-            'business': `Paraphrasing Style:
-- Use professional business terminology
-- Focus on clarity and conciseness
-- Maintain a professional tone
-- Structure content for business context
-- Emphasize key points effectively`,
-            'kid_friendly': `Paraphrasing Style:
-- Simplify complex concepts
-- Use fun and engaging language
-- Make it easy to understand
-- Keep sentences short and clear
-- Use familiar words and expressions`,
-            'literary': `Paraphrasing Style:
-- Use rich, descriptive language
-- Incorporate literary devices
-- Maintain artistic quality
-- Focus on elegant expression
-- Create vivid imagery through words`
         }
     },
     [MODELS.COMMAND]: {
@@ -389,38 +345,6 @@ export const DEFAULT_INSTRUCTIONS = {
 - Use deliberate grammar/spelling variations for effect
 - Adapt street idioms appropriately
 - Mix casual profanity for emphasis`
-        },
-        'tone-instructions-paraphrase': {
-            'standard': `Paraphrasing Style:
-- Maintain the original meaning while using different words
-- Use clear and natural language
-- Restructure sentences while preserving core ideas
-- Keep a balanced and neutral tone
-- Ensure smooth flow and readability`,
-            'casual': `Paraphrasing Style:
-- Use relaxed, conversational language
-- Incorporate everyday expressions
-- Make it sound more informal and friendly
-- Use contractions and casual phrases
-- Keep it natural and easy-going`,
-            'formal': `Paraphrasing Style:
-- Elevate the language to a more formal register
-- Use sophisticated vocabulary appropriately
-- Structure sentences in a more academic style
-- Maintain professional tone throughout
-- Focus on precision and clarity`,
-            'humorous': `Paraphrasing Style:
-- Add a light-hearted twist to the content
-- Incorporate playful language choices
-- Use creative and entertaining expressions
-- Keep the core message while adding humor
-- Make it fun while staying appropriate`,
-            'cardi_B': `Paraphrasing Style:
-- Flip the script with street style
-- Keep it 100 with the message
-- Use current slang and street expressions
-- Make it sound raw and authentic
-- Add that bold, unfiltered energy`
         }
     },
     [MODELS.ANTHROPIC]: {
@@ -472,44 +396,6 @@ export const DEFAULT_INSTRUCTIONS = {
 - Use deliberate grammar/spelling variations for effect
 - Adapt street idioms appropriately
 - Mix casual profanity for emphasis`
-        },
-        'tone-instructions-paraphrase': {
-            'standard': `Paraphrasing Style:
-- Maintain the original meaning while using different words
-- Use clear and natural language
-- Restructure sentences while preserving core ideas
-- Keep a balanced and neutral tone
-- Ensure smooth flow and readability`,
-            'casual': `Paraphrasing Style:
-- Use relaxed, conversational language
-- Incorporate everyday expressions
-- Make it sound more informal and friendly
-- Use contractions and casual phrases
-- Keep it natural and easy-going`,
-            'formal': `Paraphrasing Style:
-- Elevate the language to a more formal register
-- Use sophisticated vocabulary appropriately
-- Structure sentences in a more academic style
-- Maintain professional tone throughout
-- Focus on precision and clarity`,
-            'humorous': `Paraphrasing Style:
-- Add a light-hearted twist to the content
-- Incorporate playful language choices
-- Use creative and entertaining expressions
-- Keep the core message while adding humor
-- Make it fun while staying appropriate`,
-            'literary': `Paraphrasing Style:
-- Use rich, descriptive language
-- Incorporate literary devices
-- Maintain artistic quality
-- Focus on elegant expression
-- Create vivid imagery through words`,
-            'cardi_B': `Paraphrasing Style:
-- Flip the script with street style
-- Keep it 100 with the message
-- Use current slang and street expressions
-- Make it sound raw and authentic
-- Add that bold, unfiltered energy`
         }
     },
     [MODELS.OPENAI]: {
@@ -572,56 +458,6 @@ export const DEFAULT_INSTRUCTIONS = {
 - Use deliberate grammar/spelling variations for effect
 - Adapt street idioms appropriately
 - Mix casual profanity for emphasis`
-        },
-        'tone-instructions-paraphrase': {
-            'standard': `Paraphrasing Style:
-- Maintain the original meaning while using different words
-- Use clear and natural language
-- Restructure sentences while preserving core ideas
-- Keep a balanced and neutral tone
-- Ensure smooth flow and readability`,
-            'casual': `Paraphrasing Style:
-- Use relaxed, conversational language
-- Incorporate everyday expressions
-- Make it sound more informal and friendly
-- Use contractions and casual phrases
-- Keep it natural and easy-going`,
-            'formal': `Paraphrasing Style:
-- Elevate the language to a more formal register
-- Use sophisticated vocabulary appropriately
-- Structure sentences in a more academic style
-- Maintain professional tone throughout
-- Focus on precision and clarity`,
-            'humorous': `Paraphrasing Style:
-- Add a light-hearted twist to the content
-- Incorporate playful language choices
-- Use creative and entertaining expressions
-- Keep the core message while adding humor
-- Make it fun while staying appropriate`,
-            'business': `Paraphrasing Style:
-- Use professional business terminology
-- Focus on clarity and conciseness
-- Maintain a professional tone
-- Structure content for business context
-- Emphasize key points effectively`,
-            'kid_friendly': `Paraphrasing Style:
-- Simplify complex concepts
-- Use fun and engaging language
-- Make it easy to understand
-- Keep sentences short and clear
-- Use familiar words and expressions`,
-            'literary': `Paraphrasing Style:
-- Use rich, descriptive language
-- Incorporate literary devices
-- Maintain artistic quality
-- Focus on elegant expression
-- Create vivid imagery through words`,
-            'cardi_B': `Paraphrasing Style:
-- Flip the script with street style
-- Keep it 100 with the message
-- Use current slang and street expressions
-- Make it sound raw and authentic
-- Add that bold, unfiltered energy`
         }
     }
 };
@@ -642,9 +478,7 @@ export const MAX_SAVED_TRANSLATIONS = 50;
 
 // Helper function for getting tone instructions
 export const getToneInstructions = (tone, modelInstructions, selectedModel, isParaphrase = false) => {
-    const toneInstructions = isParaphrase 
-        ? modelInstructions[selectedModel]['tone-instructions-paraphrase']
-        : modelInstructions[selectedModel]['tone-instructions'];
+    const toneInstructions = modelInstructions[selectedModel]['tone-instructions'];
     return {
         instruction: toneInstructions[tone] || toneInstructions['standard']
     };
