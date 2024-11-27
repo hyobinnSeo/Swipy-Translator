@@ -1,0 +1,28 @@
+# Exclude git history and configuration.
+.git
+.gitignore
+
+# Node.js dependencies:
+node_modules/
+
+# Environment variables
+.env
+.env.*
+
+# Development files
+*.log
+*.test.js
+*.spec.js
+jest.config.js
+.eslintrc*
+.prettierrc*
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# System files
+.DS_Store
+Thumbs.db

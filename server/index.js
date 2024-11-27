@@ -10,18 +10,36 @@ const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
+
+// Configure CORS based on environment
+const corsOrigins = process.env.NODE_ENV === 'production' 
+    ? ['https://swipy-translator.du.r.appspot.com']
+    : ['http://localhost:3000', 'http://localhost:5000'];
+
 const io = new Server(server, {
     cors: {
-        origin: ["http://localhost:3000", "http://localhost:5000"],
-        methods: ["GET", "POST"]
-    }
+        origin: corsOrigins,
+        methods: ['GET', 'POST'],
+        credentials: true
+    },
+    transports: ['websocket', 'polling'],
+    pingTimeout: 60000,
+    pingInterval: 25000
 });
 
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: corsOrigins,
+    credentials: true
+}));
 app.use(express.json());
+
+// Serve static files in production
+if (process.env.NODE_ENV === 'production') {
+    app.use(express.static(path.join(__dirname, 'client/build')));
+}
 
 // Initialize clients
 let ttsClient = null;
@@ -388,6 +406,13 @@ io.on('connection', (socket) => {
 app.get('/api/test', (req, res) => {
     res.json({ message: 'Server is running successfully!' });
 });
+
+// Handle all other routes in production - serve React app
+if (process.env.NODE_ENV === 'production') {
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(__dirname, 'client/build/index.html'));
+    });
+}
 
 // Start server
 server.listen(PORT, () => {

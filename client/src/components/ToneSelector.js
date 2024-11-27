@@ -26,7 +26,7 @@ const ToneSelector = ({ selectedTone, onToneChange, selectedModel, darkMode }) =
                 onClick={() => setShowToneSelector(!showToneSelector)}
                 className={`flex items-center gap-2 px-2 py-2 rounded-lg transition-colors ${
                     darkMode
-                        ? 'text-gray-300 hover:text-gray-100 hover:bg-gray-600'
+                        ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
                         : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50 bg-white'
                 }`}
             >

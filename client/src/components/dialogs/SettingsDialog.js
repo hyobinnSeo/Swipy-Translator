@@ -237,7 +237,7 @@ const SettingsDialog = ({
             <SectionTitle darkMode={previewDarkMode}>Google Cloud Services</SectionTitle>
             <div className={`space-y-4 p-4 rounded-lg ${previewDarkMode ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
               <p className={`text-sm mb-4 ${previewDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-                These credentials are used for Text-to-Speech services
+                These credentials are used for Google Cloud Services
               </p>
               <APIKeyField
                 label="Project ID"

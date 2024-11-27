@@ -234,7 +234,7 @@ const TextArea = ({
                     <button
                         onClick={handlePasteFromClipboard}
                         className={`absolute top-2 right-4 px-3 py-1.5 rounded-lg transition-colors z-20 flex items-center gap-2 ${darkMode
-                                ? 'text-gray-300 hover:text-gray-100 hover:bg-gray-600'
+                                ? 'text-gray-500 hover:text-gray-100 hover:bg-gray-600'
                                 : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
                             }`}
                         title="Paste from clipboard"

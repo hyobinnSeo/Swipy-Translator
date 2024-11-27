@@ -1,4 +1,5 @@
 import io from 'socket.io-client';
+import config from '../config';
 
 let socket = null;
 let mediaRecorder = null;
@@ -12,7 +13,7 @@ let isRecording = false;
 // Initialize socket connection
 const initializeSocket = () => {
     if (!socket) {
-        socket = io('http://localhost:5000', {
+        socket = io(config.serverUrl, {
             transports: ['websocket', 'polling'],
             reconnectionAttempts: 5,
             reconnectionDelay: 1000

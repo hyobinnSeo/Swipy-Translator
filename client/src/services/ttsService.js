@@ -1,6 +1,7 @@
 // Initialize socket.io client
 import io from 'socket.io-client';
 import { LANGUAGE_VOICE_MAPPING } from '../constants';
+import config from '../config';
 
 let socket = null;
 let playbackContext = null;
@@ -9,7 +10,7 @@ let currentAudioSource = null;
 // Initialize socket connection
 export const initializeSocket = () => {
     if (!socket) {
-        socket = io('http://localhost:5000');
+        socket = io(config.serverUrl);
         console.log('Socket connection initialized');
     }
     return socket;
