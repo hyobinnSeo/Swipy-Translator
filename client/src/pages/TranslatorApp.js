@@ -229,7 +229,7 @@ const TranslatorApp = () => {
     return (
         <div className={`w-full min-h-screen ${darkMode ? 'dark bg-gray-800' : 'bg-gray-50'}`}>
             <Helmet>
-                <title>Hoochoo Translator</title>
+                <title>Swipy</title>
                 <meta name="description" content="Multi-language translation application" />
             </Helmet>
 
@@ -350,7 +350,7 @@ const TranslatorApp = () => {
                                 : 'text-gray-800 hover:text-gray-600'
                                 } transition-colors cursor-pointer`}
                         >
-                            Hoochoo Translator
+                            Swipy
                         </a>
                     </div>
                 </div>
