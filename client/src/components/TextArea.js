@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { X, Clipboard, ChevronLeft, ChevronRight, Volume2, Mic } from 'lucide-react';
 import { synthesizeSpeech, stopTTS } from '../services/ttsService';
-import { startRecording, stopRecording } from '../services/sttService';
+import { startRecording, stopRecording, onTranscription } from '../services/sttService';
 
 const TextArea = ({
     value = '', // Add default empty string here
@@ -30,6 +30,18 @@ const TextArea = ({
     const adjustmentTimeoutRef = useRef(null);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
+
+    // Subscribe to transcription updates
+    useEffect(() => {
+        if (isRecording) {
+            const unsubscribe = onTranscription((data) => {
+                if (data && data.text) {
+                    onChange({ target: { value: data.text } });
+                }
+            });
+            return () => unsubscribe();
+        }
+    }, [isRecording, onChange]);
 
     const handleSpeak = useCallback(async () => {
         if (!value) return;
