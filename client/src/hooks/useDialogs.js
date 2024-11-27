@@ -5,7 +5,6 @@ const useDialogs = () => {
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
     const [isSavedOpen, setIsSavedOpen] = useState(false);
-    const [isRequestLogOpen, setIsRequestLogOpen] = useState(false);
     const [isVoiceSettingsOpen, setIsVoiceSettingsOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [showSafetyWarning, setShowSafetyWarning] = useState(false);
@@ -22,9 +21,6 @@ const useDialogs = () => {
     const openSaved = useCallback(() => setIsSavedOpen(true), []);
     const closeSaved = useCallback(() => setIsSavedOpen(false), []);
 
-    const openRequestLog = useCallback(() => setIsRequestLogOpen(true), []);
-    const closeRequestLog = useCallback(() => setIsRequestLogOpen(false), []);
-
     const openVoiceSettings = useCallback(() => setIsVoiceSettingsOpen(true), []);
     const closeVoiceSettings = useCallback(() => setIsVoiceSettingsOpen(false), []);
 
@@ -40,7 +36,6 @@ const useDialogs = () => {
         setIsHistoryOpen(false);
         setIsInstructionsOpen(false);
         setIsSavedOpen(false);
-        setIsRequestLogOpen(false);
         setIsVoiceSettingsOpen(false);
         setIsSettingsOpen(false);
         setShowSafetyWarning(false);
@@ -52,7 +47,6 @@ const useDialogs = () => {
         isHistoryOpen,
         isInstructionsOpen,
         isSavedOpen,
-        isRequestLogOpen,
         isVoiceSettingsOpen,
         isSettingsOpen,
         showSafetyWarning,
@@ -62,7 +56,6 @@ const useDialogs = () => {
         openHistory,
         openInstructions,
         openSaved,
-        openRequestLog,
         openVoiceSettings,
         openSettings,
         openSafetyWarning,
@@ -72,7 +65,6 @@ const useDialogs = () => {
         closeHistory,
         closeInstructions,
         closeSaved,
-        closeRequestLog,
         closeVoiceSettings,
         closeSettings,
         closeSafetyWarning,

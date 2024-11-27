@@ -12,7 +12,6 @@ import TextArea from '../components/TextArea';
 import Sidebar from '../components/Sidebar';
 import VoiceSettingsModal from '../components/dialogs/VoiceSettingsModal';
 import InstructionsModal from '../components/dialogs/InstructionsModal';
-import RequestLogViewer from '../components/dialogs/RequestLogViewer';
 import SettingsDialog from '../components/dialogs/SettingsDialog';
 import HistoryPanel from '../components/dialogs/HistoryPanel';
 import SavedTranslationsDialog from '../components/dialogs/SavedTranslationsDialog';
@@ -36,7 +35,6 @@ import {
 } from '../constants';
 
 import { updateTTSCredentials } from '../services/ttsService';
-// Remove Azure STT import since we're using Google Cloud now
 
 const TranslatorApp = () => {
     // Settings and configuration state
@@ -77,7 +75,6 @@ const TranslatorApp = () => {
             privateKey: localStorage.getItem('google_cloud_private_key') || '',
             clientEmail: localStorage.getItem('google_cloud_client_email') || ''
         }
-        // Remove Azure credentials since we're using Google Cloud now
     }));
 
     // Apply dark mode class to root element
@@ -128,7 +125,6 @@ const TranslatorApp = () => {
         isHistoryOpen,
         isInstructionsOpen,
         isSavedOpen,
-        isRequestLogOpen,
         isVoiceSettingsOpen,
         isSettingsOpen,
         openSidebar,
@@ -139,8 +135,6 @@ const TranslatorApp = () => {
         closeInstructions,
         openSaved,
         closeSaved,
-        openRequestLog,
-        closeRequestLog,
         openVoiceSettings,
         closeVoiceSettings,
         openSettings,
@@ -246,7 +240,6 @@ const TranslatorApp = () => {
                 onOpenHistory={openHistory}
                 onOpenInstructions={openInstructions}
                 onOpenSaved={openSaved}
-                onOpenRequestLog={openRequestLog}
                 onOpenVoiceSettings={openVoiceSettings}
                 onOpenSettings={openSettings}
                 isFixedSize={isFixedSize}
@@ -304,13 +297,6 @@ const TranslatorApp = () => {
                 onClose={closeVoiceSettings}
                 selectedVoices={selectedVoices}
                 onVoiceChange={handleVoiceChange}
-                darkMode={darkMode}
-            />
-
-            <RequestLogViewer
-                isOpen={isRequestLogOpen}
-                onClose={closeRequestLog}
-                requestLog={null}
                 darkMode={darkMode}
             />
 

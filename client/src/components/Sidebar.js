@@ -1,12 +1,11 @@
 import React, { useEffect } from 'react';
-import { X, History, BookmarkIcon, Volume2, Settings, FileText } from 'lucide-react';
+import { X, History, BookmarkIcon, Volume2, Settings } from 'lucide-react';
 
 const Sidebar = ({
     isOpen,
     onClose,
     onOpenInstructions,
     onOpenSaved,
-    onOpenRequestLog,
     onOpenHistory,
     onOpenVoiceSettings,
     onOpenSettings,
@@ -139,20 +138,6 @@ const Sidebar = ({
                         >
                             <Settings className="h-4 w-4 mr-2" />
                             Instructions
-                        </button>
-
-                        <button
-                            onClick={() => {
-                                onOpenRequestLog();
-                                onClose();
-                            }}
-                            className={`w-full text-left px-4 py-2 rounded-lg flex items-center transition-colors
-                                ${darkMode 
-                                    ? 'hover:bg-slate-700' 
-                                    : 'hover:bg-gray-100'}`}
-                        >
-                            <FileText className="h-4 w-4 mr-2" />
-                            Last API Request
                         </button>
 
                         <button
