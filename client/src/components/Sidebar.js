@@ -62,7 +62,9 @@ const Sidebar = ({
                             <span className="text-sm">Paraphraser Mode</span>
                             <button
                                 onClick={onToggleParaphraserMode}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isParaphraserMode ? 'bg-navy-200' : darkMode ? 'bg-slate-600' : 'bg-gray-200'}`}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                    isParaphraserMode ? (darkMode ? 'bg-navy-800' : 'bg-navy-400') : (darkMode ? 'bg-slate-600' : 'bg-gray-300')
+                                }`}
                             >
                                 <span
                                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isParaphraserMode ? 'translate-x-6' : 'translate-x-1'}`}
@@ -75,7 +77,9 @@ const Sidebar = ({
                             <span className="text-sm">Fixed Size Text Areas</span>
                             <button
                                 onClick={onToggleFixedSize}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isFixedSize ? 'bg-navy-200' : darkMode ? 'bg-slate-600' : 'bg-gray-200'}`}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                    isFixedSize ? (darkMode ? 'bg-navy-800' : 'bg-navy-400') : (darkMode ? 'bg-slate-600' : 'bg-gray-300')
+                                  }`}
                             >
                                 <span
                                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isFixedSize ? 'translate-x-6' : 'translate-x-1'}`}

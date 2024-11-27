@@ -145,7 +145,8 @@ const SettingsDialog = ({
                   </div>
                   <button
                     onClick={() => setPreviewDarkMode(!previewDarkMode)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${previewDarkMode ? 'bg-navy-200' : previewDarkMode ? 'bg-slate-600' : 'bg-gray-200'
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      previewDarkMode ? (previewDarkMode ? 'bg-navy-900' : 'bg-navy-400') : (previewDarkMode ? 'bg-slate-600' : 'bg-gray-300')
                       }`}
                   >
                     <span
@@ -166,7 +167,8 @@ const SettingsDialog = ({
                   </label>
                   <button
                     onClick={() => setLocalSaveHistory(!localSaveHistory)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${localSaveHistory ? 'bg-navy-200' : previewDarkMode ? 'bg-slate-600' : 'bg-gray-200'
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      localSaveHistory ? (previewDarkMode ? 'bg-navy-900' : 'bg-navy-400') : (previewDarkMode ? 'bg-slate-600' : 'bg-gray-300')
                       }`}
                   >
                     <span
