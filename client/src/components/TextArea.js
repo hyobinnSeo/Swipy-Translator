@@ -83,9 +83,13 @@ const TextArea = ({
     const handleVoiceInput = useCallback(async () => {
         if (isRecording) {
             try {
+                // Save the current transcript and any interim transcript before stopping
+                const finalTranscript = currentTranscript + (interimTranscript ? '\n' + interimTranscript : '');
                 setIsRecording(false);
                 await stopRecording();
-                // Final transcript is already in the value prop due to onChange calls
+                // Update the value with the saved transcript
+                onChange({ target: { value: finalTranscript } });
+                setCurrentTranscript(finalTranscript);
                 setInterimTranscript('');
             } catch (error) {
                 console.error('Voice input error:', error);
@@ -101,7 +105,7 @@ const TextArea = ({
                 console.error('Failed to start recording:', error);
             }
         }
-    }, [isRecording, onChange, language]);
+    }, [isRecording, onChange, language, currentTranscript, interimTranscript]);
 
     // Height adjustment logic
     const adjustHeight = useCallback(() => {
