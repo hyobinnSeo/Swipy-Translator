@@ -129,7 +129,7 @@ const SettingsDialog = ({
     }
   });
 
-  const verifyApiKey = async (service) => {
+const verifyApiKey = async (service) => {
     setVerifying(prev => ({ ...prev, [service]: true }));
     setVerificationStatus(prev => ({ ...prev, [service]: null }));
     setVerificationMessage(prev => ({ ...prev, [service]: null }));
@@ -143,12 +143,23 @@ const SettingsDialog = ({
           );
           break;
         case 'openrouter':
-          response = await fetch('https://openrouter.ai/api/v1/models', {
+          response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
             headers: {
               'Authorization': `Bearer ${localApiKeys.openrouter}`,
-              'HTTP-Referer': window.location.origin
-            }
+              'HTTP-Referer': window.location.origin,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model: "openai/gpt-3.5-turbo",
+              messages: [{ role: "user", content: "test" }]
+            })
           });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || 'Invalid API key');
+          }
           break;
         case 'openai':
           response = await fetch('https://api.openai.com/v1/models', {
@@ -166,6 +177,7 @@ const SettingsDialog = ({
       setVerificationStatus(prev => ({ ...prev, [service]: 'valid' }));
       setVerificationMessage(prev => ({ ...prev, [service]: 'API key is valid' }));
     } catch (error) {
+      console.error(`${service} validation error:`, error);
       setVerificationStatus(prev => ({ ...prev, [service]: 'invalid' }));
       setVerificationMessage(prev => ({ ...prev, [service]: error.message }));
     } finally {
