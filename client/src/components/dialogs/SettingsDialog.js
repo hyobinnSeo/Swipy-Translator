@@ -100,9 +100,24 @@ const SettingsDialog = ({
   const [localSaveHistory, setLocalSaveHistory] = useState(saveHistory);
   const [localDarkMode, setLocalDarkMode] = useState(darkMode);
   const [previewDarkMode, setPreviewDarkMode] = useState(darkMode);
-  const [verifying, setVerifying] = useState(false);
-  const [verificationStatus, setVerificationStatus] = useState(null);
-  const [verificationMessage, setVerificationMessage] = useState(null);
+  const [verifying, setVerifying] = useState({
+    googleCloud: false,
+    gemini: false,
+    openrouter: false,
+    openai: false
+  });
+  const [verificationStatus, setVerificationStatus] = useState({
+    googleCloud: null,
+    gemini: null,
+    openrouter: null,
+    openai: null
+  });
+  const [verificationMessage, setVerificationMessage] = useState({
+    googleCloud: null,
+    gemini: null,
+    openrouter: null,
+    openai: null
+  });
   const [localApiKeys, setLocalApiKeys] = useState({
     gemini: apiKeys.gemini || '',
     openrouter: apiKeys.openrouter || '',
@@ -114,20 +129,69 @@ const SettingsDialog = ({
     }
   });
 
+  const verifyApiKey = async (service) => {
+    setVerifying(prev => ({ ...prev, [service]: true }));
+    setVerificationStatus(prev => ({ ...prev, [service]: null }));
+    setVerificationMessage(prev => ({ ...prev, [service]: null }));
+
+    try {
+      let response;
+      switch (service) {
+        case 'gemini':
+          response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash?key=${localApiKeys.gemini}`
+          );
+          break;
+        case 'openrouter':
+          response = await fetch('https://openrouter.ai/api/v1/models', {
+            headers: {
+              'Authorization': `Bearer ${localApiKeys.openrouter}`,
+              'HTTP-Referer': window.location.origin
+            }
+          });
+          break;
+        case 'openai':
+          response = await fetch('https://api.openai.com/v1/models', {
+            headers: {
+              'Authorization': `Bearer ${localApiKeys.openai}`
+            }
+          });
+          break;
+      }
+
+      if (!response.ok) {
+        throw new Error('Invalid API key');
+      }
+
+      setVerificationStatus(prev => ({ ...prev, [service]: 'valid' }));
+      setVerificationMessage(prev => ({ ...prev, [service]: 'API key is valid' }));
+    } catch (error) {
+      setVerificationStatus(prev => ({ ...prev, [service]: 'invalid' }));
+      setVerificationMessage(prev => ({ ...prev, [service]: error.message }));
+    } finally {
+      setVerifying(prev => ({ ...prev, [service]: false }));
+    }
+  };
+
   const handleVerifyGoogleCredentials = async () => {
     const { projectId, privateKey, clientEmail } = localApiKeys.googleCloud;
     if (!projectId || !privateKey || !clientEmail) {
-      setVerificationMessage('All Google Cloud fields are required');
-      setVerificationStatus('invalid');
+      setVerificationMessage(prev => ({
+        ...prev,
+        googleCloud: 'All Google Cloud fields are required'
+      }));
+      setVerificationStatus(prev => ({
+        ...prev,
+        googleCloud: 'invalid'
+      }));
       return;
     }
     
-    setVerifying(true);
-    setVerificationStatus(null);
-    setVerificationMessage(null);
+    setVerifying(prev => ({ ...prev, googleCloud: true }));
+    setVerificationStatus(prev => ({ ...prev, googleCloud: null }));
+    setVerificationMessage(prev => ({ ...prev, googleCloud: null }));
     
     try {
-      // Replace escaped newlines with actual newlines
       const formattedPrivateKey = privateKey.replace(/\\n/g, '\n');
       
       await updateTTSCredentials({
@@ -137,28 +201,36 @@ const SettingsDialog = ({
           clientEmail
         }
       });
-      setVerificationStatus('valid');
-      setVerificationMessage('Credentials verified successfully');
+      setVerificationStatus(prev => ({ ...prev, googleCloud: 'valid' }));
+      setVerificationMessage(prev => ({ ...prev, googleCloud: 'Credentials verified successfully' }));
     } catch (error) {
       console.error('Verification error:', error);
-      setVerificationStatus('invalid');
-      setVerificationMessage(error.message || 'Failed to verify credentials');
+      setVerificationStatus(prev => ({ ...prev, googleCloud: 'invalid' }));
+      setVerificationMessage(prev => ({ ...prev, googleCloud: error.message || 'Failed to verify credentials' }));
     } finally {
-      setVerifying(false);
+      setVerifying(prev => ({ ...prev, googleCloud: false }));
     }
   };
 
-  // Reset local state when dialog opens
   useEffect(() => {
     if (isOpen) {
       setLocalDarkMode(darkMode);
       setPreviewDarkMode(darkMode);
-      setVerificationStatus(null);
-      setVerificationMessage(null);
+      setVerificationStatus({
+        googleCloud: null,
+        gemini: null,
+        openrouter: null,
+        openai: null
+      });
+      setVerificationMessage({
+        googleCloud: null,
+        gemini: null,
+        openrouter: null,
+        openai: null
+      });
     }
   }, [isOpen, darkMode]);
 
-  // Apply preview dark mode
   useEffect(() => {
     if (isOpen) {
       if (previewDarkMode) {
@@ -175,7 +247,6 @@ const SettingsDialog = ({
     onSaveHistoryChange(localSaveHistory);
     onDarkModeChange(previewDarkMode);
     
-    // Format private key before saving
     const formattedApiKeys = {
       ...localApiKeys,
       googleCloud: {
@@ -189,7 +260,6 @@ const SettingsDialog = ({
   };
 
   const handleCancel = () => {
-    // Revert dark mode to original state
     if (darkMode) {
       document.documentElement.classList.add('dark');
     } else {
@@ -306,6 +376,11 @@ const SettingsDialog = ({
                 onChange={(value) => setLocalApiKeys(prev => ({ ...prev, gemini: value }))}
                 placeholder="Enter your Gemini API key"
                 darkMode={previewDarkMode}
+                showVerify={true}
+                onVerify={() => verifyApiKey('gemini')}
+                verificationStatus={verificationStatus.gemini}
+                verificationMessage={verificationMessage.gemini}
+                verifying={verifying.gemini}
               />
               <APIKeyField
                 label="OpenRouter API Key"
@@ -313,6 +388,11 @@ const SettingsDialog = ({
                 onChange={(value) => setLocalApiKeys(prev => ({ ...prev, openrouter: value }))}
                 placeholder="Enter your OpenRouter API key"
                 darkMode={previewDarkMode}
+                showVerify={true}
+                onVerify={() => verifyApiKey('openrouter')}
+                verificationStatus={verificationStatus.openrouter}
+                verificationMessage={verificationMessage.openrouter}
+                verifying={verifying.openrouter}
               />
               <APIKeyField
                 label="OpenAI API Key"
@@ -320,6 +400,11 @@ const SettingsDialog = ({
                 onChange={(value) => setLocalApiKeys(prev => ({ ...prev, openai: value }))}
                 placeholder="Enter your OpenAI API key"
                 darkMode={previewDarkMode}
+                showVerify={true}
+                onVerify={() => verifyApiKey('openai')}
+                verificationStatus={verificationStatus.openai}
+                verificationMessage={verificationMessage.openai}
+                verifying={verifying.openai}
               />
             </div>
           </div>
@@ -342,9 +427,9 @@ const SettingsDialog = ({
                 darkMode={previewDarkMode}
                 showVerify={true}
                 onVerify={handleVerifyGoogleCredentials}
-                verificationStatus={verificationStatus}
-                verificationMessage={verificationMessage}
-                verifying={verifying}
+                verificationStatus={verificationStatus.googleCloud}
+                verificationMessage={verificationMessage.googleCloud}
+                verifying={verifying.googleCloud}
               />
               <APIKeyField
                 label="Client Email"
