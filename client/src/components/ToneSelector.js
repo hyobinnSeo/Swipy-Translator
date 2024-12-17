@@ -27,7 +27,7 @@ const ToneSelector = ({ selectedTone, onToneChange, selectedModel, darkMode }) =
                 className={`flex items-center gap-2 px-2 py-2 rounded-lg transition-colors ${
                     darkMode
                         ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
-                        : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50 bg-white'
+                        : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                 }`}
             >
                 <Settings className="w-4 h-4" />
