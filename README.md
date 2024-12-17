@@ -1,6 +1,6 @@
-# Swify Translator
+# Swipy Translator
 
-A cutting-edge AI-powered translation platform that goes beyond simple text conversion. Swify Translator leverages multiple AI models to provide context-aware translations while preserving the original tone and cultural nuances of your content.
+A cutting-edge AI-powered translation platform that goes beyond simple text conversion. Swipy Translator leverages multiple AI models to provide context-aware translations while preserving the original tone and cultural nuances of your content.
 
 ## Key Features
 

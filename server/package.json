@@ -1,14 +1,13 @@
 {
-  "name": "flipify-translator-server",
+  "name": "swipy-translator-server",
   "version": "1.0.0",
-  "description": "Server for Flipify Translator",
+  "description": "Server for Swipy Translator",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
   "dependencies": {
-    "@google-cloud/speech": "^6.7.0",
     "@google-cloud/text-to-speech": "^5.6.0",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",

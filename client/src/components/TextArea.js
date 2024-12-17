@@ -31,33 +31,20 @@ const TextArea = ({
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
     const [currentTranscript, setCurrentTranscript] = useState('');
-    const [interimTranscript, setInterimTranscript] = useState('');
 
     // Subscribe to transcription updates
     useEffect(() => {
         if (isRecording) {
             const unsubscribe = onTranscription((data) => {
-                if (data && data.text) {
-                    if (data.isFinal) {
-                        // For final results, append to the current transcript
-                        setCurrentTranscript(prev => {
-                            const newTranscript = prev ? `${prev}\n${data.text}` : data.text;
-                            onChange({ target: { value: newTranscript } });
-                            return newTranscript;
-                        });
-                        setInterimTranscript('');
-                    } else {
-                        // For interim results, update the interim transcript
-                        setInterimTranscript(data.text);
-                    }
+                if (data && data.transcript) {
+                    // Update the current transcript and trigger onChange
+                    setCurrentTranscript(data.transcript);
+                    onChange({ target: { value: data.transcript } });
                 }
             });
             return () => {
                 unsubscribe();
-                setInterimTranscript('');
             };
-        } else {
-            setInterimTranscript('');
         }
     }, [isRecording, onChange]);
 
@@ -83,14 +70,8 @@ const TextArea = ({
     const handleVoiceInput = useCallback(async () => {
         if (isRecording) {
             try {
-                // Save the current transcript and any interim transcript before stopping
-                const finalTranscript = currentTranscript + (interimTranscript ? '\n' + interimTranscript : '');
                 setIsRecording(false);
                 await stopRecording();
-                // Update the value with the saved transcript
-                onChange({ target: { value: finalTranscript } });
-                setCurrentTranscript(finalTranscript);
-                setInterimTranscript('');
             } catch (error) {
                 console.error('Voice input error:', error);
             }
@@ -103,9 +84,13 @@ const TextArea = ({
                 setIsRecording(true);
             } catch (error) {
                 console.error('Failed to start recording:', error);
+                // Show browser compatibility error if needed
+                if (error.message.includes('not supported')) {
+                    alert('Speech recognition is not supported in this browser. Please try using Chrome, Edge, or Safari.');
+                }
             }
         }
-    }, [isRecording, onChange, language, currentTranscript, interimTranscript]);
+    }, [isRecording, onChange, language]);
 
     // Height adjustment logic
     const adjustHeight = useCallback(() => {
@@ -209,11 +194,6 @@ const TextArea = ({
             : 'bg-white placeholder-gray-500'
         } ${readOnly ? darkMode ? 'bg-gray-800' : 'bg-gray-50' : ''} ${className}`;
 
-    // Combine the current value with interim transcript for display
-    const displayValue = isRecording 
-        ? (currentTranscript + (interimTranscript ? '\n' + interimTranscript : ''))
-        : value;
-
     return (
         <div className="relative flex-1" style={{ minWidth: 0 }}>
             <div className={containerClasses}>
@@ -247,7 +227,7 @@ const TextArea = ({
                 <div className="relative">
                     <textarea
                         ref={textareaRef}
-                        value={displayValue}
+                        value={value}
                         onChange={handleInput}
                         onPaste={handlePaste}
                         placeholder={placeholder}

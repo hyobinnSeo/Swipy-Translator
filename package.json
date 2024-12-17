@@ -1,7 +1,7 @@
 {
-  "name": "flipify-translator",
+  "name": "swipy-translator",
   "version": "1.0.0",
-  "description": "Flipify Translator with separate client and server",
+  "description": "Swipy Translator with separate client and server",
   "scripts": {
     "client": "cd client && npm start",
     "server": "cd server && npm run dev",
