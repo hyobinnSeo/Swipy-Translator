@@ -1,47 +1,85 @@
 import React, { useState, useEffect } from 'react';
 import { X, Settings as SettingsIcon, Eye, EyeOff, Moon } from 'lucide-react';
 import DialogWrapper from './DialogWrapper';
+import { updateTTSCredentials } from '../../services/ttsService';
 
-const APIKeyField = ({ label, value, onChange, placeholder, darkMode }) => {
+const APIKeyField = ({ 
+  label, 
+  value, 
+  onChange, 
+  placeholder, 
+  darkMode, 
+  showVerify = false,
+  onVerify,
+  verificationStatus,
+  verificationMessage,
+  verifying
+}) => {
   const [showKey, setShowKey] = useState(false);
 
   return (
     <div className="space-y-1">
-      <label className={`block text-sm font-medium ${darkMode ? 'text-slate-300' : 'text-gray-700'
-        }`}>
+      <label className={`block text-sm font-medium ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>
         {label}
       </label>
-      <div className="relative">
-        <input
-          type={showKey ? "text" : "password"}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className={`w-full px-3 py-2 rounded-lg focus:ring-3 pr-10 ${darkMode
-              ? 'bg-slate-700 border-slate-600 text-slate-100 focus:ring-blue-500/30 placeholder-slate-400'
-              : 'bg-white border focus:ring-blue-500'
+      <div className="relative flex gap-2">
+        <div className="relative flex-1">
+          <input
+            type={showKey ? "text" : "password"}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            className={`w-full px-3 py-2 rounded-lg focus:ring-3 pr-10 ${
+              darkMode
+                ? 'bg-slate-700 border-slate-600 text-slate-100 focus:ring-blue-500/30 placeholder-slate-400'
+                : 'bg-white border focus:ring-blue-500'
             }`}
-        />
-        <button
-          type="button"
-          onClick={() => setShowKey(!showKey)}
-          className={`absolute inset-y-0 right-0 pr-3 flex items-center ${darkMode
-              ? 'text-slate-400 hover:text-slate-300'
-              : 'text-gray-400 hover:text-gray-600'
+          />
+          <button
+            type="button"
+            onClick={() => setShowKey(!showKey)}
+            className={`absolute inset-y-0 right-0 pr-3 flex items-center ${
+              darkMode
+                ? 'text-slate-400 hover:text-slate-300'
+                : 'text-gray-400 hover:text-gray-600'
             }`}
-        >
-          {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </button>
+          >
+            {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+        {showVerify && onVerify && (
+          <button
+            onClick={onVerify}
+            disabled={!value || verifying}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              darkMode
+                ? 'bg-slate-600 hover:bg-slate-500 text-slate-200'
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+            } ${(!value || verifying) && 'opacity-50 cursor-not-allowed'}`}
+          >
+            {verifying ? 'Verifying...' : 'Verify'}
+          </button>
+        )}
       </div>
+      {verificationStatus && (
+        <p className={`text-sm mt-1 ${
+          verificationStatus === 'valid' 
+            ? 'text-green-500' 
+            : 'text-red-500'
+        }`}>
+          {verificationMessage || (verificationStatus === 'valid' 
+            ? 'API key is valid' 
+            : 'Invalid API key')}
+        </p>
+      )}
     </div>
   );
 };
 
 const SectionTitle = ({ children, darkMode }) => (
-  <h3 className={`text-sm font-semibold border-b pb-2 mb-4 ${darkMode
-      ? 'text-slate-200 border-slate-700'
-      : 'text-gray-900'
-    }`}>
+  <h3 className={`text-sm font-semibold border-b pb-2 mb-4 ${
+    darkMode ? 'text-slate-200 border-slate-700' : 'text-gray-900'
+  }`}>
     {children}
   </h3>
 );
@@ -62,6 +100,9 @@ const SettingsDialog = ({
   const [localSaveHistory, setLocalSaveHistory] = useState(saveHistory);
   const [localDarkMode, setLocalDarkMode] = useState(darkMode);
   const [previewDarkMode, setPreviewDarkMode] = useState(darkMode);
+  const [verifying, setVerifying] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState(null);
+  const [verificationMessage, setVerificationMessage] = useState(null);
   const [localApiKeys, setLocalApiKeys] = useState({
     gemini: apiKeys.gemini || '',
     openrouter: apiKeys.openrouter || '',
@@ -73,11 +114,47 @@ const SettingsDialog = ({
     }
   });
 
+  const handleVerifyGoogleCredentials = async () => {
+    const { projectId, privateKey, clientEmail } = localApiKeys.googleCloud;
+    if (!projectId || !privateKey || !clientEmail) {
+      setVerificationMessage('All Google Cloud fields are required');
+      setVerificationStatus('invalid');
+      return;
+    }
+    
+    setVerifying(true);
+    setVerificationStatus(null);
+    setVerificationMessage(null);
+    
+    try {
+      // Replace escaped newlines with actual newlines
+      const formattedPrivateKey = privateKey.replace(/\\n/g, '\n');
+      
+      await updateTTSCredentials({
+        googleCloud: {
+          projectId,
+          privateKey: formattedPrivateKey,
+          clientEmail
+        }
+      });
+      setVerificationStatus('valid');
+      setVerificationMessage('Credentials verified successfully');
+    } catch (error) {
+      console.error('Verification error:', error);
+      setVerificationStatus('invalid');
+      setVerificationMessage(error.message || 'Failed to verify credentials');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   // Reset local state when dialog opens
   useEffect(() => {
     if (isOpen) {
       setLocalDarkMode(darkMode);
       setPreviewDarkMode(darkMode);
+      setVerificationStatus(null);
+      setVerificationMessage(null);
     }
   }, [isOpen, darkMode]);
 
@@ -97,7 +174,17 @@ const SettingsDialog = ({
     onMaxLengthChange(newMaxLength);
     onSaveHistoryChange(localSaveHistory);
     onDarkModeChange(previewDarkMode);
-    onApiKeysChange(localApiKeys);
+    
+    // Format private key before saving
+    const formattedApiKeys = {
+      ...localApiKeys,
+      googleCloud: {
+        ...localApiKeys.googleCloud,
+        privateKey: localApiKeys.googleCloud.privateKey.replace(/\\n/g, '\n')
+      }
+    };
+    
+    onApiKeysChange(formattedApiKeys);
     onClose();
   };
 
@@ -114,10 +201,9 @@ const SettingsDialog = ({
   return (
     <DialogWrapper isOpen={isOpen} onClose={handleCancel} darkMode={previewDarkMode}>
       <div className="w-full max-w-md flex flex-col h-full">
-        <div className={`shrink-0 px-6 py-4 border-b flex items-center justify-between ${previewDarkMode
-            ? 'bg-slate-800 border-slate-700'
-            : 'bg-gray-50'
-          }`}>
+        <div className={`shrink-0 px-6 py-4 border-b flex items-center justify-between ${
+          previewDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50'
+        }`}>
           <div className="flex items-center space-x-2">
             <SettingsIcon className={`w-5 h-5 ${previewDarkMode ? 'text-slate-400' : 'text-gray-500'}`} />
             <h2 className={`text-lg font-semibold ${previewDarkMode ? 'text-slate-100' : 'text-gray-900'}`}>Settings</h2>
@@ -147,11 +233,12 @@ const SettingsDialog = ({
                     onClick={() => setPreviewDarkMode(!previewDarkMode)}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                       previewDarkMode ? (previewDarkMode ? 'bg-navy-900' : 'bg-navy-400') : (previewDarkMode ? 'bg-slate-600' : 'bg-gray-300')
-                      }`}
+                    }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${previewDarkMode ? 'translate-x-6' : 'translate-x-1'
-                        }`}
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        previewDarkMode ? 'translate-x-6' : 'translate-x-1'
+                      }`}
                     />
                   </button>
                 </div>
@@ -169,11 +256,12 @@ const SettingsDialog = ({
                     onClick={() => setLocalSaveHistory(!localSaveHistory)}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                       localSaveHistory ? (previewDarkMode ? 'bg-navy-900' : 'bg-navy-400') : (previewDarkMode ? 'bg-slate-600' : 'bg-gray-300')
-                      }`}
+                    }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${localSaveHistory ? 'translate-x-6' : 'translate-x-1'
-                        }`}
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        localSaveHistory ? 'translate-x-6' : 'translate-x-1'
+                      }`}
                     />
                   </button>
                 </div>
@@ -183,8 +271,9 @@ const SettingsDialog = ({
               </div>
 
               <div className={`p-4 rounded-lg ${previewDarkMode ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
-                <label className={`block text-sm font-medium mb-2 ${previewDarkMode ? 'text-slate-300' : 'text-gray-700'
-                  }`}>
+                <label className={`block text-sm font-medium mb-2 ${
+                  previewDarkMode ? 'text-slate-300' : 'text-gray-700'
+                }`}>
                   Maximum Input Length
                 </label>
                 <div>
@@ -193,10 +282,11 @@ const SettingsDialog = ({
                     min="1000"
                     value={localMaxLength}
                     onChange={(e) => setLocalMaxLength(e.target.value)}
-                    className={`w-full px-3 py-2 rounded-lg focus:ring-3 ${previewDarkMode
+                    className={`w-full px-3 py-2 rounded-lg focus:ring-3 ${
+                      previewDarkMode
                         ? 'bg-slate-700 border-slate-600 text-slate-100 focus:ring-blue-500/30'
                         : 'bg-white border focus:ring-blue-500'
-                      }`}
+                    }`}
                   />
                   <p className={`mt-2 text-sm ${previewDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
                     Minimum allowed value is 1,000 characters
@@ -250,6 +340,11 @@ const SettingsDialog = ({
                 }))}
                 placeholder="Enter your Google Cloud Project ID"
                 darkMode={previewDarkMode}
+                showVerify={true}
+                onVerify={handleVerifyGoogleCredentials}
+                verificationStatus={verificationStatus}
+                verificationMessage={verificationMessage}
+                verifying={verifying}
               />
               <APIKeyField
                 label="Client Email"
@@ -272,31 +367,32 @@ const SettingsDialog = ({
                 darkMode={previewDarkMode}
               />
               <p className={`text-sm ${previewDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-                These credentials can be found in your Google Cloud service account key file
+                These credentials can be found in your Google Cloud service account key file. Make sure to paste the private key exactly as it appears in the JSON file, including newlines.
               </p>
             </div>
           </div>
         </div>
 
-        <div className={`shrink-0 px-6 py-4 border-t flex justify-end space-x-3 ${previewDarkMode
-            ? 'bg-slate-800 border-slate-700'
-            : 'bg-gray-50'
-          }`}>
+        <div className={`shrink-0 px-6 py-4 border-t flex justify-end space-x-3 ${
+          previewDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50'
+        }`}>
           <button
             onClick={handleCancel}
-            className={`px-4 py-2 ${previewDarkMode
+            className={`px-4 py-2 ${
+              previewDarkMode
                 ? 'text-slate-300 hover:text-slate-100'
                 : 'text-gray-600 hover:text-gray-800'
-              }`}
+            }`}
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className={`px-4 py-2 text-white rounded-lg shadow-sm ${previewDarkMode
+            className={`px-4 py-2 text-white rounded-lg shadow-sm ${
+              previewDarkMode
                 ? 'bg-navy-400 hover:bg-navy-500'
                 : 'bg-navy-500 hover:bg-navy-600'
-              }`}
+            }`}
           >
             Save Changes
           </button>

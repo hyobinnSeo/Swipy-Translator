@@ -47,7 +47,22 @@ export const updateTTSCredentials = (credentials) => {
             }
         };
 
-        socket.on('tts-credentials-updated', onCredentialsUpdated);
+        // Add timeout to prevent hanging
+        const timeout = setTimeout(() => {
+            socket.off('tts-credentials-updated', onCredentialsUpdated);
+            reject(new Error('Verification timeout - no response from server'));
+        }, 10000);
+
+        socket.on('tts-credentials-updated', (response) => {
+            clearTimeout(timeout);
+            onCredentialsUpdated(response);
+        });
+
+        // Format private key before sending
+        if (credentials.googleCloud?.privateKey) {
+            credentials.googleCloud.privateKey = credentials.googleCloud.privateKey.replace(/\\n/g, '\n');
+        }
+
         socket.emit('update-tts-credentials', credentials);
     });
 };

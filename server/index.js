@@ -38,17 +38,14 @@ app.use(express.json());
 // Serve static files in production with cache control
 if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.join(__dirname, 'client/build'), {
-        etag: true, // Enable ETag
-        lastModified: true, // Enable Last-Modified
+        etag: true,
+        lastModified: true,
         setHeaders: (res, path) => {
-            // For HTML files - no cache
             if (path.endsWith('.html')) {
                 res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
                 res.setHeader('Pragma', 'no-cache');
                 res.setHeader('Expires', '0');
-            }
-            // For JS, CSS, and other static assets - cache for 1 hour but validate
-            else {
+            } else {
                 res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
             }
         }
@@ -58,6 +55,39 @@ if (process.env.NODE_ENV === 'production') {
 // Initialize TTS client
 let ttsClient = null;
 
+async function testTTSCredentials(credentials) {
+    try {
+        if (!credentials.projectId || !credentials.privateKey || !credentials.clientEmail) {
+            throw new Error('Missing required credentials');
+        }
+
+        // Create credentials object for Google Cloud
+        const googleCredentials = {
+            type: "service_account",
+            project_id: credentials.projectId,
+            private_key: credentials.privateKey,
+            client_email: credentials.clientEmail,
+            private_key_id: "unused",
+            client_id: "unused",
+            auth_uri: "https://accounts.google.com/o/oauth2/auth",
+            token_uri: "https://oauth2.googleapis.com/token",
+            auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+            client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${encodeURIComponent(credentials.clientEmail)}`
+        };
+
+        // Test the credentials by trying to list voices
+        const testClient = new textToSpeech.TextToSpeechClient({
+            credentials: googleCredentials
+        });
+
+        await testClient.listVoices({});
+        return true;
+    } catch (error) {
+        console.error('Error testing TTS credentials:', error);
+        throw new Error(error.message || 'Failed to verify credentials');
+    }
+}
+
 function initializeClients(credentials) {
     try {
         if (!credentials.projectId || !credentials.privateKey || !credentials.clientEmail) {
@@ -66,14 +96,14 @@ function initializeClients(credentials) {
                 hasPrivateKey: !!credentials.privateKey,
                 hasClientEmail: !!credentials.clientEmail
             });
-            return null;
+            throw new Error('Missing required credentials');
         }
 
         // Create credentials object for Google Cloud
         const googleCredentials = {
             type: "service_account",
             project_id: credentials.projectId,
-            private_key: credentials.privateKey.replace(/\\n/g, '\n'),
+            private_key: credentials.privateKey,
             client_email: credentials.clientEmail,
             private_key_id: "unused",
             client_id: "unused",
@@ -92,7 +122,7 @@ function initializeClients(credentials) {
         return { ttsClient };
     } catch (error) {
         console.error('Error initializing TTS client:', error);
-        return null;
+        throw error;
     }
 }
 
@@ -167,26 +197,25 @@ io.on('connection', (socket) => {
     console.log('Client connected');
 
     // Handle TTS credentials update
-    socket.on('update-tts-credentials', (credentials) => {
+    socket.on('update-tts-credentials', async (credentials) => {
         try {
-            console.log('Received credentials update request');
-            const clients = initializeClients(credentials);
+            console.log('Testing credentials...');
+            await testTTSCredentials(credentials.googleCloud);
+            
+            console.log('Credentials valid, initializing client...');
+            const clients = initializeClients(credentials.googleCloud);
             if (clients) {
                 ttsClient = clients.ttsClient;
                 console.log('TTS client initialized successfully');
                 socket.emit('tts-credentials-updated', { success: true });
             } else {
-                console.error('Failed to initialize TTS client');
-                socket.emit('tts-credentials-updated', { 
-                    success: false, 
-                    error: 'Failed to initialize client with provided credentials' 
-                });
+                throw new Error('Failed to initialize client');
             }
         } catch (error) {
             console.error('Error updating credentials:', error);
             socket.emit('tts-credentials-updated', { 
                 success: false, 
-                error: error.message 
+                error: error.message || 'Failed to verify credentials'
             });
         }
     });
@@ -218,7 +247,6 @@ app.get('/api/test', (req, res) => {
 // Handle all other routes in production - serve React app
 if (process.env.NODE_ENV === 'production') {
     app.get('*', (req, res) => {
-        // Add cache control headers for index.html
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         res.setHeader('Pragma', 'no-cache');
         res.setHeader('Expires', '0');
