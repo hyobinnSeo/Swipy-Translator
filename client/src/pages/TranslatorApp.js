@@ -370,8 +370,6 @@ const TranslatorApp = () => {
                                 const model = AVAILABLE_MODELS.find(m => m.name === e.target.value);
                                 setSelectedModel(model.id);
                                 setSelectedModelName(model.name);
-                                setTranslations([]);
-                                setCurrentIndex(0);
                             }}
                             className={`w-[200px] p-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${darkMode
                                 ? 'bg-navy-900 border-navy-800/50 text-slate-400 hover:bg-navy-800'
