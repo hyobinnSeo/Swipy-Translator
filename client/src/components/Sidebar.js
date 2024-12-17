@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, History, BookmarkIcon, Volume2, Settings } from 'lucide-react';
+import { X, History, BookmarkIcon, Volume2, Settings, HelpCircle } from 'lucide-react';
 
 const Sidebar = ({
     isOpen,
@@ -140,7 +140,7 @@ const Sidebar = ({
                                     ? 'hover:bg-slate-700' 
                                     : 'hover:bg-gray-100'}`}
                         >
-                            <Settings className="h-4 w-4 mr-2" />
+                            <HelpCircle className="h-4 w-4 mr-2" />
                             Instructions
                         </button>
 
