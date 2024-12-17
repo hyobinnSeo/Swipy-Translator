@@ -1,18 +1,80 @@
 # Swify Translator
 
-A full-stack web application that provides translation services with additional features like text-to-speech and speech-to-text capabilities.
+A cutting-edge AI-powered translation platform that goes beyond simple text conversion. Swify Translator leverages multiple AI models to provide context-aware translations while preserving the original tone and cultural nuances of your content.
 
-## Features
+## Key Features
 
-- Text translation between multiple languages
-- Text-to-speech (TTS) functionality
-- Speech-to-text (STT) capabilities
-- Tone selection for translations
-- Translation history management
-- Customizable settings
-- Voice settings configuration
-- Responsive design with mobile support
-- Password protection option
+- **Multi-Model AI Translation**
+  - Powered by leading AI models:
+    - Google's Gemini 1.5
+    - Cohere Command R
+    - Claude 3 Haiku
+    - GPT-4o mini
+  - Smart model selection for optimal results
+  - Context-aware translations
+
+- **Advanced Language Support**
+  - 10 major languages including:
+    - English (US, UK, AU variants)
+    - French (France, Canada variants)
+    - Spanish (Spain, US variants)
+    - Italian
+    - German
+    - Brazilian Portuguese
+    - Japanese
+    - Korean
+    - Simplified Chinese
+    - Arabic
+  - Auto language detection
+  - Native script support for all languages
+
+- **Intelligent Tone Control**
+  - Multiple tone options:
+    - Standard (neutral and clear)
+    - Casual (friendly and relaxed)
+    - Formal (professional and polite)
+    - Business (industry-specific terminology)
+    - Literary (elegant and artistic)
+    - Humorous (witty and playful)
+    - Kid-friendly (simple and fun)
+    - Unique "Cardi B" style (bold and unfiltered)
+  - Tone preservation across languages
+  - Cultural context adaptation
+
+- **Voice Capabilities**
+  - Text-to-Speech with multiple voice options per language
+  - Gender selection for voices (male/female variants)
+  - Regional accent options (e.g., US, UK, AU for English)
+  - Speech-to-Text for hands-free input
+  - Real-time voice processing
+
+- **Smart Features**
+  - Translation history management (up to 10 items)
+  - Saved translations storage (up to 50 items)
+  - Password protection option
+  - Mobile-friendly responsive design
+  - Swipe gesture support
+  - Safety warnings for sensitive content
+
+## Technology Stack
+
+### Frontend
+- React.js for UI components
+- Tailwind CSS for styling
+- Custom React Hooks for state management
+- Browser Speech API integration
+- Local storage for data persistence
+- Socket.IO for real-time communication
+
+### Backend
+- Node.js with Express
+- Google Cloud Platform integration:
+  - Cloud Text-to-Speech API
+  - Cloud Speech-to-Text API
+  - App Engine hosting
+- Real-time WebSocket communication
+- Session management
+- CORS security
 
 ## Project Structure
 
@@ -20,31 +82,21 @@ A full-stack web application that provides translation services with additional 
 ├── client/                 # Frontend React application
 │   ├── src/
 │   │   ├── components/    # React components
+│   │   ├── constants/     # Application constants
+│   │   ├── core/         # Core application logic
 │   │   ├── hooks/        # Custom React hooks
-│   │   ├── services/     # API and utility services
-│   │   └── pages/        # Page components
+│   │   ├── pages/        # Page components
+│   │   └── services/     # API and utility services
 │   └── public/           # Static assets
 └── server/               # Backend Node.js server
+    ├── client/          # Production build files
     └── index.js         # Server entry point
 ```
-
-## Technology Stack
-
-### Frontend
-- React.js
-- Tailwind CSS
-- Custom React Hooks
-- Browser Speech API integration
-
-### Backend
-- Node.js
-- Google Cloud Platform services
-- Text-to-Speech API
-- Speech-to-Text API
 
 ## Getting Started
 
 1. Clone the repository
+
 2. Install dependencies:
    ```bash
    # Install root dependencies
@@ -61,7 +113,8 @@ A full-stack web application that provides translation services with additional 
 
 3. Set up environment variables:
    - Create a `.env` file in the server directory
-   - Configure necessary API keys and credentials
+   - Add required Google Cloud credentials
+   - Configure API keys and environment-specific variables
 
 4. Start the development servers:
    ```bash
@@ -74,19 +127,22 @@ A full-stack web application that provides translation services with additional 
 
 ## Deployment
 
-The application is configured for deployment to Google Cloud Platform using the provided deployment scripts and configuration files:
+The application is configured for deployment to Google Cloud Platform:
 
-- `deploy.bat` - Deployment automation script
-- `app.yaml` - Google Cloud App Engine configuration
-- `env_variables.yaml` - Environment variables for cloud deployment
+- Uses Google App Engine for hosting
+- Includes deployment automation via `deploy.bat`
+- Configuration files:
+  - `app.yaml` - App Engine configuration
+  - `env_variables.yaml` - Environment variables
+  - `.gcloudignore` - Deployment exclusions
 
-## Contributing
+## Development Guidelines
 
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+- Use consistent code formatting
+- Follow React best practices and hooks guidelines
+- Maintain responsive design principles
+- Write clean, documented code
+- Test thoroughly before deployment
 
 ## License
 

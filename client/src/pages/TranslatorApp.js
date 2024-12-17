@@ -16,6 +16,7 @@ import SettingsDialog from '../components/dialogs/SettingsDialog';
 import HistoryPanel from '../components/dialogs/HistoryPanel';
 import SavedTranslationsDialog from '../components/dialogs/SavedTranslationsDialog';
 import SafetyWarningDialog from '../components/dialogs/SafetyWarningDialog';
+import Copyright from '../components/Copyright';
 
 // Import hooks
 import useTranslation from '../hooks/useTranslation';
@@ -527,6 +528,9 @@ const TranslatorApp = () => {
                         )}
                     </div>
                 </div>
+
+                {/* Copyright notice */}
+                <Copyright darkMode={darkMode} />
             </div>
         </div>
     );
