@@ -1,5 +1,5 @@
 // Translation service for different models
-const translateWithGemini = async (text, previousTranslations = [], signal, apiKey, modelInstructions, selectedModel, selectedTone, sourceLang, targetLang, LANGUAGE_NAMES, isParaphrase = false) => {
+const translateWithGemini = async (text, previousTranslations = [], signal, apiKey, modelInstructions, selectedModel, selectedTone, sourceLang, targetLang, LANGUAGE_NAMES, isParaphrase = false, modelName = 'Gemini 1.5 Flash') => {
     if (!apiKey) {
         throw new Error('Please enter your Gemini API key in settings');
     }
@@ -47,8 +47,11 @@ const translateWithGemini = async (text, previousTranslations = [], signal, apiK
         // Add post instructions
         prompt += postInstruction;
 
+        // Determine model based on name
+        const modelEndpoint = modelName === 'Gemini 1.5 Pro' ? 'gemini-1.5-pro' : 'gemini-1.5-flash';
+
         const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/${modelEndpoint}:generateContent?key=${apiKey}`,
             {
                 method: 'POST',
                 signal,
@@ -82,13 +85,22 @@ const translateWithGemini = async (text, previousTranslations = [], signal, apiK
     }
 };
 
-const translateWithOpenRouter = async (text, modelId, previousTranslations = [], signal, apiKey, modelInstructions, selectedModel, selectedTone, sourceLang, targetLang, LANGUAGE_NAMES, isParaphrase = false) => {
+const translateWithOpenRouter = async (text, modelId, previousTranslations = [], signal, apiKey, modelInstructions, selectedModel, selectedTone, sourceLang, targetLang, LANGUAGE_NAMES, isParaphrase = false, modelName = '') => {
     if (!apiKey) {
         throw new Error('Please enter your OpenRouter API key in settings');
     }
-    const modelUrl = modelId === 'claude'
-        ? 'anthropic/claude-3-haiku'
-        : 'cohere/command-r-08-2024';
+    
+    // Determine the model URL based on the model name
+    let modelUrl;
+    if (modelId === 'claude') {
+        modelUrl = modelName === 'Claude 3.5 Sonnet' 
+            ? 'anthropic/claude-3.5-sonnet'
+            : 'anthropic/claude-3-haiku';
+    } else {
+        modelUrl = modelName === 'Cohere Command R+'
+            ? 'cohere/command-r-plus-08-2024'
+            : 'cohere/command-r-08-2024';
+    }
 
     // Get base instructions
     const basePreInstruction = isParaphrase 
@@ -162,7 +174,7 @@ const translateWithOpenRouter = async (text, modelId, previousTranslations = [],
     }
 };
 
-const translateWithOpenAI = async (text, previousTranslations = [], signal, apiKey, modelInstructions, selectedModel, selectedTone, sourceLang, targetLang, LANGUAGE_NAMES, isParaphrase = false) => {
+const translateWithOpenAI = async (text, previousTranslations = [], signal, apiKey, modelInstructions, selectedModel, selectedTone, sourceLang, targetLang, LANGUAGE_NAMES, isParaphrase = false, modelName = 'GPT-4o mini') => {
     if (!apiKey) {
         throw new Error('Please enter your OpenAI API key in settings');
     }
@@ -210,6 +222,9 @@ const translateWithOpenAI = async (text, previousTranslations = [], signal, apiK
         // Add post instructions
         prompt += postInstruction;
 
+        // Determine model based on name
+        const modelId = modelName === 'GPT-4o mini' ? 'gpt-4o-mini' : 'gpt-4o';
+
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             signal,
@@ -218,7 +233,7 @@ const translateWithOpenAI = async (text, previousTranslations = [], signal, apiK
                 'Authorization': `Bearer ${apiKey}`
             },
             body: JSON.stringify({
-                model: "gpt-4o-mini-2024-07-18",
+                model: modelId,
                 messages: [
                     { role: "system", content: "You are a professional translator." },
                     { role: "user", content: prompt }

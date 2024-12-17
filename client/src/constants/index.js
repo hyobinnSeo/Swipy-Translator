@@ -464,10 +464,14 @@ export const DEFAULT_INSTRUCTIONS = {
 
 // Available models for translation
 export const AVAILABLE_MODELS = [
-    { id: MODELS.GEMINI, name: 'Gemini 1.5', api: 'google' },
+    { id: MODELS.GEMINI, name: 'Gemini 1.5 Flash', api: 'google' },
+    { id: MODELS.GEMINI, name: 'Gemini 1.5 Pro', api: 'google' },
     { id: MODELS.COMMAND, name: 'Cohere Command R', api: 'openrouter' },
+    { id: MODELS.COMMAND, name: 'Cohere Command R+', api: 'openrouter' },
     { id: MODELS.ANTHROPIC, name: 'Claude 3 Haiku', api: 'openrouter' },
-    { id: MODELS.OPENAI, name: 'GPT-4o mini', api: 'openai' }
+    { id: MODELS.ANTHROPIC, name: 'Claude 3.5 Sonnet', api: 'openrouter' },
+    { id: MODELS.OPENAI, name: 'GPT-4o mini', api: 'openai' },
+    { id: MODELS.OPENAI, name: 'GPT-4o', api: 'openai' }
 ];
 
 // Maximum number of items in history

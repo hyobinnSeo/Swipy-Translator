@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { translateWithGemini, translateWithOpenRouter, translateWithOpenAI } from '../services/translationService';
-import { MODELS } from '../constants';
+import { MODELS, AVAILABLE_MODELS } from '../constants';
 
 const useTranslation = (saveHistory, onUpdateHistory) => {
     const [inputText, setInputText] = useState('');
@@ -32,7 +32,8 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
         selectedTone,
         sourceLang,
         targetLang,
-        LANGUAGE_NAMES
+        LANGUAGE_NAMES,
+        modelName
     ) => {
         try {
             setIsLoading(true);
@@ -56,6 +57,9 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
                     }
                 };
 
+                // Get the model name from AVAILABLE_MODELS if not provided
+                const actualModelName = modelName || AVAILABLE_MODELS.find(m => m.id === selectedModel)?.name || '';
+
                 switch (selectedModel) {
                     case MODELS.GEMINI:
                         translatedResult = await translateWithGemini(
@@ -68,7 +72,9 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
                             selectedTone,
                             sourceLang,
                             isParaphraserMode ? sourceLang : targetLang,
-                            LANGUAGE_NAMES
+                            LANGUAGE_NAMES,
+                            isParaphraserMode,
+                            actualModelName
                         );
                         break;
                     case MODELS.COMMAND:
@@ -84,7 +90,9 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
                             selectedTone,
                             sourceLang,
                             isParaphraserMode ? sourceLang : targetLang,
-                            LANGUAGE_NAMES
+                            LANGUAGE_NAMES,
+                            isParaphraserMode,
+                            actualModelName
                         );
                         break;
                     case MODELS.OPENAI:
@@ -98,7 +106,9 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
                             selectedTone,
                             sourceLang,
                             isParaphraserMode ? sourceLang : targetLang,
-                            LANGUAGE_NAMES
+                            LANGUAGE_NAMES,
+                            isParaphraserMode,
+                            actualModelName
                         );
                         break;
                     default:
@@ -121,6 +131,7 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
                         inputText,
                         translatedText: translatedResult,
                         model: selectedModel,
+                        modelName: actualModelName,
                         timestamp: new Date().toISOString()
                     };
                     onUpdateHistory(historyItem);
@@ -171,7 +182,8 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
         selectedTone,
         sourceLang,
         targetLang,
-        LANGUAGE_NAMES
+        LANGUAGE_NAMES,
+        modelName
     ) => {
         if (currentIndex < translations.length - 1) {
             // If we have more translations in history, just move to the next one
@@ -186,7 +198,8 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
                 selectedTone,
                 sourceLang,
                 targetLang,
-                LANGUAGE_NAMES
+                LANGUAGE_NAMES,
+                modelName
             );
         }
     }, [currentIndex, translations.length, inputText, handleTranslate]);

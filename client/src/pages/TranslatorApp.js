@@ -40,6 +40,7 @@ import { updateTTSCredentials } from '../services/ttsService';
 const TranslatorApp = () => {
     // Settings and configuration state
     const [selectedModel, setSelectedModel] = useState(MODELS.GEMINI);
+    const [selectedModelName, setSelectedModelName] = useState(AVAILABLE_MODELS[0].name);
     const [modelInstructions, setModelInstructions] = useState(DEFAULT_INSTRUCTIONS);
     const [sourceLang, setSourceLang] = useState('auto');
     const [targetLang, setTargetLang] = useState('en');
@@ -149,7 +150,8 @@ const TranslatorApp = () => {
         selectedTone,
         sourceLang,
         targetLang,
-        LANGUAGE_NAMES
+        LANGUAGE_NAMES,
+        selectedModelName
     ), handlePrevious);
 
     // Effects
@@ -363,9 +365,11 @@ const TranslatorApp = () => {
                     {/* Model selector */}
                     <div className="w-full">
                         <select
-                            value={selectedModel}
+                            value={selectedModelName}
                             onChange={(e) => {
-                                setSelectedModel(e.target.value);
+                                const model = AVAILABLE_MODELS.find(m => m.name === e.target.value);
+                                setSelectedModel(model.id);
+                                setSelectedModelName(model.name);
                                 setTranslations([]);
                                 setCurrentIndex(0);
                             }}
@@ -375,7 +379,7 @@ const TranslatorApp = () => {
                                 } transition-colors`}
                         >
                             {AVAILABLE_MODELS.map((model) => (
-                                <option key={model.id} value={model.id}
+                                <option key={model.name} value={model.name}
                                     className={darkMode ? 'bg-slate-800' : 'bg-white'}
                                 >
                                     {model.name}
@@ -459,7 +463,8 @@ const TranslatorApp = () => {
                                 selectedTone,
                                 sourceLang,
                                 targetLang,
-                                LANGUAGE_NAMES
+                                LANGUAGE_NAMES,
+                                selectedModelName
                             )}
                             onClear={() => {
                                 setTranslations([]);
@@ -493,7 +498,8 @@ const TranslatorApp = () => {
                                 selectedTone,
                                 sourceLang,
                                 targetLang,
-                                LANGUAGE_NAMES
+                                LANGUAGE_NAMES,
+                                selectedModelName
                             )}
                             disabled={!inputText}
                             isLoading={isLoading}
