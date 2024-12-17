@@ -118,10 +118,18 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
                 if (!translatedResult) throw new Error('No translation result.');
 
                 if (isAdditional) {
-                    setTranslations(prev => [...prev, { text: translatedResult, timestamp: new Date() }]);
+                    setTranslations(prev => [...prev, { 
+                        text: translatedResult, 
+                        timestamp: new Date(),
+                        modelName: actualModelName 
+                    }]);
                     setCurrentIndex(translations.length);
                 } else {
-                    setTranslations([{ text: translatedResult, timestamp: new Date() }]);
+                    setTranslations([{ 
+                        text: translatedResult, 
+                        timestamp: new Date(),
+                        modelName: actualModelName 
+                    }]);
                     setCurrentIndex(0);
                 }
 
@@ -221,6 +229,7 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
         handlePrevious,
         handleNext,
         translatedText: translations[currentIndex]?.text || '',
+        currentTranslation: translations[currentIndex],
         isParaphraserMode,
         setIsParaphraserMode
     };

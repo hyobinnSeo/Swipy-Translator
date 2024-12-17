@@ -106,6 +106,7 @@ const TranslatorApp = () => {
         handlePrevious,
         handleNext,
         translatedText,
+        currentTranslation,
         isParaphraserMode,
         setIsParaphraserMode
     } = useTranslation(saveHistory, (historyItem) => addToHistory(historyItem));
@@ -262,7 +263,11 @@ const TranslatorApp = () => {
                 history={history}
                 onSelectHistory={(item) => {
                     setInputText(item.inputText);
-                    setTranslations([{ text: item.translatedText, timestamp: new Date() }]);
+                    setTranslations([{ 
+                        text: item.translatedText, 
+                        timestamp: new Date(),
+                        modelName: item.modelName 
+                    }]);
                     setCurrentIndex(0);
                     closeHistory();
                 }}
@@ -277,7 +282,11 @@ const TranslatorApp = () => {
                 savedTranslations={savedTranslations}
                 onSelectSaved={(item) => {
                     setInputText(item.inputText);
-                    setTranslations([{ text: item.translatedText, timestamp: new Date() }]);
+                    setTranslations([{ 
+                        text: item.translatedText, 
+                        timestamp: new Date(),
+                        modelName: item.modelName 
+                    }]);
                     setCurrentIndex(0);
                 }}
                 onDeleteSaved={deleteSavedTranslation}
@@ -397,7 +406,11 @@ const TranslatorApp = () => {
                             translatedText={translatedText}
                             onInputTextChange={setInputText}
                             onTranslatedTextChange={(text) => {
-                                setTranslations([{ text, timestamp: new Date() }]);
+                                setTranslations([{ 
+                                    text, 
+                                    timestamp: new Date(),
+                                    modelName: selectedModelName 
+                                }]);
                                 setCurrentIndex(0);
                             }}
                             onResetTranslations={() => {

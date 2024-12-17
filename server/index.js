@@ -56,8 +56,16 @@ if (process.env.NODE_ENV === 'production') {
 let ttsClient = null;
 
 async function testTTSCredentials(credentials) {
+    console.log('Received credentials:', JSON.stringify(credentials, null, 2));
+    
     try {
-        if (!credentials.projectId || !credentials.privateKey || !credentials.clientEmail) {
+        if (!credentials || !credentials.projectId || !credentials.privateKey || !credentials.clientEmail) {
+            console.log('Missing required credentials:', {
+                hasCredentials: !!credentials,
+                hasProjectId: credentials?.projectId,
+                hasPrivateKey: credentials?.privateKey,
+                hasClientEmail: credentials?.clientEmail
+            });
             throw new Error('Missing required credentials');
         }
 
@@ -90,11 +98,12 @@ async function testTTSCredentials(credentials) {
 
 function initializeClients(credentials) {
     try {
-        if (!credentials.projectId || !credentials.privateKey || !credentials.clientEmail) {
+        if (!credentials || !credentials.projectId || !credentials.privateKey || !credentials.clientEmail) {
             console.log('Missing required credentials:', {
-                hasProjectId: !!credentials.projectId,
-                hasPrivateKey: !!credentials.privateKey,
-                hasClientEmail: !!credentials.clientEmail
+                hasCredentials: !!credentials,
+                hasProjectId: credentials?.projectId,
+                hasPrivateKey: credentials?.privateKey,
+                hasClientEmail: credentials?.clientEmail
             });
             throw new Error('Missing required credentials');
         }
@@ -198,12 +207,14 @@ io.on('connection', (socket) => {
 
     // Handle TTS credentials update
     socket.on('update-tts-credentials', async (credentials) => {
+        console.log('Received update-tts-credentials event with data:', JSON.stringify(credentials, null, 2));
+        
         try {
             console.log('Testing credentials...');
-            await testTTSCredentials(credentials.googleCloud);
+            await testTTSCredentials(credentials);
             
             console.log('Credentials valid, initializing client...');
-            const clients = initializeClients(credentials.googleCloud);
+            const clients = initializeClients(credentials);
             if (clients) {
                 ttsClient = clients.ttsClient;
                 console.log('TTS client initialized successfully');

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Settings as SettingsIcon, Eye, EyeOff, Moon } from 'lucide-react';
+import { X, Settings as SettingsIcon, Eye, EyeOff, Moon, Volume2 } from 'lucide-react';
 import DialogWrapper from './DialogWrapper';
 import { updateTTSCredentials } from '../../services/ttsService';
 
@@ -13,7 +13,8 @@ const APIKeyField = ({
   onVerify,
   verificationStatus,
   verificationMessage,
-  verifying
+  verifying,
+  disabled = false
 }) => {
   const [showKey, setShowKey] = useState(false);
 
@@ -29,20 +30,22 @@ const APIKeyField = ({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
+            disabled={disabled}
             className={`w-full px-3 py-2 rounded-lg focus:ring-3 pr-10 ${
               darkMode
                 ? 'bg-slate-700 border-slate-600 text-slate-100 focus:ring-blue-500/30 placeholder-slate-400'
                 : 'bg-white border focus:ring-blue-500'
-            }`}
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           />
           <button
             type="button"
             onClick={() => setShowKey(!showKey)}
+            disabled={disabled}
             className={`absolute inset-y-0 right-0 pr-3 flex items-center ${
               darkMode
                 ? 'text-slate-400 hover:text-slate-300'
                 : 'text-gray-400 hover:text-gray-600'
-            }`}
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
@@ -50,12 +53,12 @@ const APIKeyField = ({
         {showVerify && onVerify && (
           <button
             onClick={onVerify}
-            disabled={!value || verifying}
+            disabled={!value || verifying || disabled}
             className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
               darkMode
                 ? 'bg-slate-600 hover:bg-slate-500 text-slate-200'
                 : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-            } ${(!value || verifying) && 'opacity-50 cursor-not-allowed'}`}
+            } ${(!value || verifying || disabled) && 'opacity-50 cursor-not-allowed'}`}
           >
             {verifying ? 'Verifying...' : 'Verify'}
           </button>
@@ -100,6 +103,7 @@ const SettingsDialog = ({
   const [localSaveHistory, setLocalSaveHistory] = useState(saveHistory);
   const [localDarkMode, setLocalDarkMode] = useState(darkMode);
   const [previewDarkMode, setPreviewDarkMode] = useState(darkMode);
+  const [useGoogleTTS, setUseGoogleTTS] = useState(localStorage.getItem('useGoogleCloudTTS') === 'true');
   const [verifying, setVerifying] = useState({
     googleCloud: false,
     gemini: false,
@@ -129,7 +133,7 @@ const SettingsDialog = ({
     }
   });
 
-const verifyApiKey = async (service) => {
+  const verifyApiKey = async (service) => {
     setVerifying(prev => ({ ...prev, [service]: true }));
     setVerificationStatus(prev => ({ ...prev, [service]: null }));
     setVerificationMessage(prev => ({ ...prev, [service]: null }));
@@ -204,12 +208,10 @@ const verifyApiKey = async (service) => {
     setVerificationMessage(prev => ({ ...prev, googleCloud: null }));
     
     try {
-      const formattedPrivateKey = privateKey.replace(/\\n/g, '\n');
-      
       await updateTTSCredentials({
         googleCloud: {
           projectId,
-          privateKey: formattedPrivateKey,
+          privateKey: privateKey.replace(/\\n/g, '\n'),
           clientEmail
         }
       });
@@ -259,15 +261,12 @@ const verifyApiKey = async (service) => {
     onSaveHistoryChange(localSaveHistory);
     onDarkModeChange(previewDarkMode);
     
-    const formattedApiKeys = {
-      ...localApiKeys,
-      googleCloud: {
-        ...localApiKeys.googleCloud,
-        privateKey: localApiKeys.googleCloud.privateKey.replace(/\\n/g, '\n')
-      }
-    };
+    // Save API keys to localStorage
+    localStorage.setItem('apiKeys', JSON.stringify(localApiKeys));
+    localStorage.setItem('useGoogleCloudTTS', useGoogleTTS.toString());
     
-    onApiKeysChange(formattedApiKeys);
+    // Call the parent's onApiKeysChange
+    onApiKeysChange(localApiKeys);
     onClose();
   };
 
@@ -425,8 +424,30 @@ const verifyApiKey = async (service) => {
           <div>
             <SectionTitle darkMode={previewDarkMode}>Google Cloud Services</SectionTitle>
             <div className={`space-y-4 p-4 rounded-lg ${previewDarkMode ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <Volume2 className={`h-4 w-4 ${previewDarkMode ? 'text-slate-400' : 'text-gray-600'}`} />
+                  <label className={`text-sm font-medium ${previewDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
+                    Use Google Cloud TTS
+                  </label>
+                </div>
+                <button
+                  onClick={() => setUseGoogleTTS(!useGoogleTTS)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    useGoogleTTS ? (previewDarkMode ? 'bg-navy-900' : 'bg-navy-400') : (previewDarkMode ? 'bg-slate-600' : 'bg-gray-300')
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      useGoogleTTS ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
               <p className={`text-sm mb-4 ${previewDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-                These credentials are used for Google Cloud Services
+                {useGoogleTTS 
+                  ? "Using Google Cloud Text-to-Speech for higher quality voice output"
+                  : "Using browser's built-in Text-to-Speech"}
               </p>
               <APIKeyField
                 label="Project ID"
@@ -442,6 +463,7 @@ const verifyApiKey = async (service) => {
                 verificationStatus={verificationStatus.googleCloud}
                 verificationMessage={verificationMessage.googleCloud}
                 verifying={verifying.googleCloud}
+                disabled={!useGoogleTTS}
               />
               <APIKeyField
                 label="Client Email"
@@ -452,6 +474,7 @@ const verifyApiKey = async (service) => {
                 }))}
                 placeholder="Enter your service account client email"
                 darkMode={previewDarkMode}
+                disabled={!useGoogleTTS}
               />
               <APIKeyField
                 label="Private Key"
@@ -462,6 +485,7 @@ const verifyApiKey = async (service) => {
                 }))}
                 placeholder="Enter your service account private key"
                 darkMode={previewDarkMode}
+                disabled={!useGoogleTTS}
               />
               <p className={`text-sm ${previewDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
                 These credentials can be found in your Google Cloud service account key file. Make sure to paste the private key exactly as it appears in the JSON file, including newlines.

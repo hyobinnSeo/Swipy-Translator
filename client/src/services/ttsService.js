@@ -36,6 +36,13 @@ export const stopTTS = () => {
 // Function to update TTS credentials
 export const updateTTSCredentials = (credentials) => {
     return new Promise((resolve, reject) => {
+        const { googleCloud } = credentials;
+        
+        if (!googleCloud?.projectId || !googleCloud?.privateKey || !googleCloud?.clientEmail) {
+            reject(new Error('Missing required credentials'));
+            return;
+        }
+
         const socket = initializeSocket();
 
         const onCredentialsUpdated = (response) => {
@@ -58,12 +65,15 @@ export const updateTTSCredentials = (credentials) => {
             onCredentialsUpdated(response);
         });
 
-        // Format private key before sending
-        if (credentials.googleCloud?.privateKey) {
-            credentials.googleCloud.privateKey = credentials.googleCloud.privateKey.replace(/\\n/g, '\n');
-        }
+        // Format and send credentials
+        const formattedCredentials = {
+            projectId: googleCloud.projectId,
+            privateKey: googleCloud.privateKey.replace(/\\n/g, '\n'),
+            clientEmail: googleCloud.clientEmail
+        };
 
-        socket.emit('update-tts-credentials', credentials);
+        console.log('Sending credentials to server:', formattedCredentials);
+        socket.emit('update-tts-credentials', formattedCredentials);
     });
 };
 
@@ -106,6 +116,19 @@ const playTTSAudio = async (base64Audio) => {
     }
 };
 
+// Browser's native TTS implementation
+const playBrowserTTS = (text, targetLang) => {
+    return new Promise((resolve, reject) => {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = targetLang;
+        
+        utterance.onend = () => resolve();
+        utterance.onerror = (error) => reject(error);
+        
+        window.speechSynthesis.speak(utterance);
+    });
+};
+
 // Get the stored voice preference or default voice for a language
 const getVoiceForLanguage = (targetLang) => {
     // Try to get stored voice preference
@@ -121,7 +144,28 @@ const getVoiceForLanguage = (targetLang) => {
 };
 
 // Function to request speech synthesis
-export const synthesizeSpeech = (text, targetLang) => {
+export const synthesizeSpeech = async (text, targetLang) => {
+    // Check if Google Cloud TTS is enabled
+    const useGoogleTTS = localStorage.getItem('useGoogleCloudTTS') === 'true';
+    
+    if (!useGoogleTTS) {
+        // Use browser's native TTS
+        return playBrowserTTS(text, targetLang);
+    }
+
+    // Get stored API keys
+    const apiKeysStr = localStorage.getItem('apiKeys');
+    if (!apiKeysStr) {
+        throw new Error('Please configure Google Cloud credentials in settings to use Google Cloud TTS');
+    }
+
+    const apiKeys = JSON.parse(apiKeysStr);
+    const { googleCloud } = apiKeys;
+    
+    if (!googleCloud?.projectId || !googleCloud?.privateKey || !googleCloud?.clientEmail) {
+        throw new Error('Please configure Google Cloud credentials in settings to use Google Cloud TTS');
+    }
+
     return new Promise((resolve, reject) => {
         const socket = initializeSocket();
 

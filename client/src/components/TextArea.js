@@ -266,7 +266,7 @@ const TextArea = ({
                             </button>
 
                             <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                                {currentIndex + 1}/{translations.length}
+                                {currentIndex + 1}/{translations.length} • {translations[currentIndex]?.modelName || ''}
                             </div>
 
                             <button
