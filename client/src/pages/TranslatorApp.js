@@ -302,6 +302,7 @@ const TranslatorApp = () => {
                 setModelInstructions={setModelInstructions}
                 selectedTone={selectedTone}
                 darkMode={darkMode}
+                isParaphraserMode={isParaphraserMode}
             />
 
             <VoiceSettingsModal

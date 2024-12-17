@@ -10,7 +10,8 @@ const InstructionsModal = ({
     selectedModel, 
     setModelInstructions, 
     selectedTone,
-    darkMode
+    darkMode,
+    isParaphraserMode
 }) => {
     const [showToneDropdown, setShowToneDropdown] = useState(false);
     const [selectedModelForInstructions, setSelectedModelForInstructions] = useState(selectedModel);
@@ -58,7 +59,7 @@ const InstructionsModal = ({
                         }`}>Instructions Settings</h2>
                         <p className={`text-sm mt-1 ${
                             darkMode ? 'text-slate-400' : 'text-gray-500'
-                        }`}>Configure translation instructions</p>
+                        }`}>Configure {isParaphraserMode ? 'paraphrasing' : 'translation'} instructions</p>
                     </div>
                     <button 
                         onClick={onClose} 
@@ -108,7 +109,7 @@ const InstructionsModal = ({
                         <label className={`block text-sm font-medium ${
                             darkMode ? 'text-slate-300' : 'text-gray-700'
                         }`}>
-                            Translation Tone:
+                            {isParaphraserMode ? 'Paraphrasing' : 'Translation'} Tone:
                         </label>
                         <div className="relative">
                             <button
@@ -160,15 +161,15 @@ const InstructionsModal = ({
                         <label className={`block text-sm font-medium mb-1 ${
                             darkMode ? 'text-slate-300' : 'text-gray-700'
                         }`}>
-                            Pre-translation Instructions:
+                            Pre-{isParaphraserMode ? 'paraphrasing' : 'translation'} Instructions:
                         </label>
                         <textarea
-                            value={modelInstructions[selectedModelForInstructions]['pre-instruction']}
+                            value={modelInstructions[selectedModelForInstructions][isParaphraserMode ? 'pre-instruction-paraphrase' : 'pre-instruction']}
                             onChange={(e) => setModelInstructions({
                                 ...modelInstructions,
                                 [selectedModelForInstructions]: {
                                     ...modelInstructions[selectedModelForInstructions],
-                                    'pre-instruction': e.target.value
+                                    [isParaphraserMode ? 'pre-instruction-paraphrase' : 'pre-instruction']: e.target.value
                                 }
                             })}
                             className={`w-full h-32 p-2 rounded-lg focus:ring-2 resize-none ${
@@ -211,15 +212,15 @@ const InstructionsModal = ({
                         <label className={`block text-sm font-medium mb-1 ${
                             darkMode ? 'text-slate-300' : 'text-gray-700'
                         }`}>
-                            Post-translation Instructions:
+                            Post-{isParaphraserMode ? 'paraphrasing' : 'translation'} Instructions:
                         </label>
                         <textarea
-                            value={modelInstructions[selectedModelForInstructions]['post-instruction']}
+                            value={modelInstructions[selectedModelForInstructions][isParaphraserMode ? 'post-instruction-paraphrase' : 'post-instruction']}
                             onChange={(e) => setModelInstructions({
                                 ...modelInstructions,
                                 [selectedModelForInstructions]: {
                                     ...modelInstructions[selectedModelForInstructions],
-                                    'post-instruction': e.target.value
+                                    [isParaphraserMode ? 'post-instruction-paraphrase' : 'post-instruction']: e.target.value
                                 }
                             })}
                             className={`w-full h-32 p-2 rounded-lg focus:ring-2 resize-none ${
