@@ -4,6 +4,13 @@ let retryCount = 0;
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000;
 
+// Store event handlers
+let eventHandlers = {
+    result: null,
+    end: null,
+    error: null
+};
+
 // Initialize speech recognition
 const initializeSpeechRecognition = (sourceLanguage = null) => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -21,12 +28,17 @@ const initializeSpeechRecognition = (sourceLanguage = null) => {
     }
 
     recognition = new SpeechRecognition();
-    recognition.continuous = true;
+    recognition.continuous = false;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     if (sourceLanguage) {
         recognition.lang = sourceLanguage;
     }
+
+    // Attach any registered event handlers
+    if (eventHandlers.result) recognition.addEventListener('result', eventHandlers.result);
+    if (eventHandlers.end) recognition.addEventListener('end', eventHandlers.end);
+    if (eventHandlers.error) recognition.addEventListener('error', eventHandlers.error);
 
     return recognition;
 };
@@ -45,6 +57,23 @@ const handleRetry = (error, retryFn) => {
     return false;
 };
 
+// Helper to register event handlers
+const registerEventHandler = (eventName, handler) => {
+    eventHandlers[eventName] = handler;
+    // If recognition is active, attach the handler immediately
+    if (recognition) {
+        recognition.addEventListener(eventName, handler);
+    }
+    return () => {
+        if (eventHandlers[eventName] === handler) {
+            if (recognition) {
+                recognition.removeEventListener(eventName, handler);
+            }
+            eventHandlers[eventName] = null;
+        }
+    };
+};
+
 // Start recording audio
 export const startRecording = (sourceLanguage = null) => {
     return new Promise((resolve, reject) => {
@@ -56,11 +85,9 @@ export const startRecording = (sourceLanguage = null) => {
 
             recognition = initializeSpeechRecognition(sourceLanguage);
             
-            // Setup auto-restart for continuous recording
+            // Simple end handler since we don't auto-restart
             recognition.onend = () => {
-                if (isRecording) {
-                    recognition.start();
-                }
+                isRecording = false;
             };
 
             recognition.start();
@@ -99,46 +126,30 @@ export const stopRecording = () => {
 };
 
 // Subscribe to transcription updates
-// Helper to safely add event listener
-const safeAddEventListener = (eventName, handler) => {
-    if (!recognition) {
-        throw new Error('Speech recognition not initialized. Call startRecording() first.');
-    }
-    recognition.addEventListener(eventName, handler);
-    return () => {
-        if (recognition) {
-            recognition.removeEventListener(eventName, handler);
-        }
-    };
-};
-
 export const onTranscription = (callback) => {
     const handleResult = (event) => {
         if (!recognition) return;
         
         try {
-            const results = Array.from(event.results);
-            const finalTranscripts = results
-                .filter(result => result.isFinal)
-                .map(result => result[0].transcript);
-            
-            const interimTranscripts = results
-                .filter(result => !result.isFinal)
-                .map(result => result[0].transcript);
-
-            const transcript = finalTranscripts.join(' ').trim() + 
-                (interimTranscripts.length ? ' ' + interimTranscripts.join(' ').trim() : '');
+            // Get only the latest result
+            const currentResult = event.results[event.results.length - 1];
+            const transcript = currentResult[0].transcript.trim();
 
             callback({
                 transcript,
-                isFinal: results[results.length - 1].isFinal
+                isFinal: currentResult.isFinal
             });
+
+            // Automatically stop recording when we get a final result
+            if (currentResult.isFinal) {
+                stopRecording().catch(console.error);
+            }
         } catch (error) {
             console.error('Error processing transcription:', error);
         }
     };
 
-    return safeAddEventListener('result', handleResult);
+    return registerEventHandler('result', handleResult);
 };
 
 // Subscribe to recording stopped events
@@ -149,7 +160,7 @@ export const onRecordingStopped = (callback) => {
         }
     };
 
-    return safeAddEventListener('end', handleEnd);
+    return registerEventHandler('end', handleEnd);
 };
 
 // Subscribe to error events
@@ -179,5 +190,5 @@ export const onError = (callback) => {
         }
     };
 
-    return safeAddEventListener('error', handleError);
+    return registerEventHandler('error', handleError);
 };
