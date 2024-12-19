@@ -32,7 +32,20 @@ const initializeSpeechRecognition = (sourceLanguage = null) => {
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     if (sourceLanguage) {
-        recognition.lang = sourceLanguage;
+        // Convert language codes to BCP 47 format
+        const langMap = {
+            'ko': 'ko-KR',
+            'ja': 'ja-JP',
+            'zh': 'zh-CN',
+            'en': 'en-US',
+            'es': 'es-ES',
+            'fr': 'fr-FR',
+            'de': 'de-DE',
+            'it': 'it-IT',
+            'pt': 'pt-BR',
+            'ar': 'ar-SA'
+        };
+        recognition.lang = langMap[sourceLanguage] || sourceLanguage;
     }
 
     // Attach any registered event handlers

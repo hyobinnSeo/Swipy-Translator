@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { X, Clipboard, ChevronLeft, ChevronRight, Volume2, Mic } from 'lucide-react';
 import { synthesizeSpeech, stopTTS } from '../services/ttsService';
-import { startRecording, stopRecording, onTranscription } from '../services/sttService';
+import { startRecording, stopRecording, onTranscription, onRecordingStopped } from '../services/sttService';
 
 const TextArea = ({
     value = '',
@@ -32,18 +32,24 @@ const TextArea = ({
     const [isRecording, setIsRecording] = useState(false);
     const [currentTranscript, setCurrentTranscript] = useState('');
 
-    // Subscribe to transcription updates
+    // Subscribe to transcription updates and recording stopped events
     useEffect(() => {
         if (isRecording) {
-            const unsubscribe = onTranscription((data) => {
+            const unsubscribeTranscription = onTranscription((data) => {
                 if (data && data.transcript) {
                     // Update the current transcript and trigger onChange
                     setCurrentTranscript(data.transcript);
                     onChange({ target: { value: data.transcript } });
                 }
             });
+
+            const unsubscribeRecordingStopped = onRecordingStopped(() => {
+                setIsRecording(false);
+            });
+
             return () => {
-                unsubscribe();
+                unsubscribeTranscription();
+                unsubscribeRecordingStopped();
             };
         }
     }, [isRecording, onChange]);
