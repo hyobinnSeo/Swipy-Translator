@@ -16,17 +16,17 @@ const translateWithGemini = async (text, previousTranslations = [], signal, apiK
         // Construct the prompt
         let prompt = `Instructions:\n${basePreInstruction}\n\n`;
 
-        // Add Language settings if not in paraphrase mode
-        if (!isParaphrase) {
-            const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
-            const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
-            
-            prompt += `Language:\n`;
-            if (sourceLang === 'auto') {
-                prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
-            } else {
-                prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
-            }
+        // Add Language settings
+        const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
+        const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
+        
+        prompt += `Language:\n`;
+        if (isParaphrase) {
+            prompt += `- Paraphrase in: ${targetLanguage}\n\n`;
+        } else if (sourceLang === 'auto') {
+            prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
+        } else {
+            prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
         }
 
         // Add Tone settings
@@ -114,17 +114,17 @@ const translateWithOpenRouter = async (text, modelId, previousTranslations = [],
     // Construct the prompt for system message
     let prompt = `Instructions:\n${basePreInstruction}\n\n`;
 
-    // Add Language settings if not in paraphrase mode
-    if (!isParaphrase) {
-        const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
-        const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
-        
-        prompt += `Language:\n`;
-        if (sourceLang === 'auto') {
-            prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
-        } else {
-            prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
-        }
+    // Add Language settings
+    const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
+    const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
+    
+    prompt += `Language:\n`;
+    if (isParaphrase) {
+        prompt += `- Paraphrase in: ${targetLanguage}\n\n`;
+    } else if (sourceLang === 'auto') {
+        prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
+    } else {
+        prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
     }
 
     // Add Tone settings
@@ -191,17 +191,17 @@ const translateWithOpenAI = async (text, previousTranslations = [], signal, apiK
         // Construct the prompt
         let prompt = `Instructions:\n${basePreInstruction}\n\n`;
 
-        // Add Language settings if not in paraphrase mode
-        if (!isParaphrase) {
-            const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
-            const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
-            
-            prompt += `Language:\n`;
-            if (sourceLang === 'auto') {
-                prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
-            } else {
-                prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
-            }
+        // Add Language settings
+        const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
+        const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
+        
+        prompt += `Language:\n`;
+        if (isParaphrase) {
+            prompt += `- Paraphrase in: ${targetLanguage}\n\n`;
+        } else if (sourceLang === 'auto') {
+            prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
+        } else {
+            prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
         }
 
         // Add Tone settings
@@ -261,9 +261,8 @@ const translateWithOpenAI = async (text, previousTranslations = [], signal, apiK
 
 // Helper function for getting tone instructions
 const getToneInstructions = (tone, modelInstructions, selectedModel, isParaphrase = false) => {
-    const toneInstructions = isParaphrase 
-        ? modelInstructions[selectedModel]['tone-instructions-paraphrase']
-        : modelInstructions[selectedModel]['tone-instructions'];
+    // Always use tone-instructions regardless of paraphrase mode
+    const toneInstructions = modelInstructions[selectedModel]['tone-instructions'];
     return {
         instruction: toneInstructions[tone] || toneInstructions['standard']
     };
