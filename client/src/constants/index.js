@@ -464,8 +464,8 @@ export const DEFAULT_INSTRUCTIONS = {
 
 // Available models for translation
 export const AVAILABLE_MODELS = [
-    { id: MODELS.GEMINI, name: 'Gemini 1.5 Flash', api: 'google' },
-    { id: MODELS.GEMINI, name: 'Gemini 1.5 Pro', api: 'google' },
+    { id: MODELS.GEMINI, name: 'Gemini 2.0 Flash', api: 'google' },
+    { id: MODELS.GEMINI, name: 'Gemini 2.0 Flash Lite', api: 'google' },
     { id: MODELS.COMMAND, name: 'Cohere Command R', api: 'openrouter' },
     { id: MODELS.COMMAND, name: 'Cohere Command R+', api: 'openrouter' },
     { id: MODELS.ANTHROPIC, name: 'Claude 3 Haiku', api: 'openrouter' },

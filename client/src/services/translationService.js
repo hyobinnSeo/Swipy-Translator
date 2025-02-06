@@ -1,5 +1,18 @@
 // Translation service for different models
-const translateWithGemini = async (text, previousTranslations = [], signal, apiKey, modelInstructions, selectedModel, selectedTone, sourceLang, targetLang, LANGUAGE_NAMES, isParaphrase = false, modelName = 'Gemini 1.5 Flash') => {
+const translateWithGemini = async (
+    text,
+    previousTranslations = [],
+    signal,
+    apiKey,
+    modelInstructions,
+    selectedModel,
+    selectedTone,
+    sourceLang,
+    targetLang,
+    LANGUAGE_NAMES,
+    isParaphrase = false,
+    modelName = 'Gemini 2.0 Flash'  // Updated default model name
+) => {
     if (!apiKey) {
         throw new Error('Please enter your Gemini API key in settings');
     }
@@ -47,8 +60,12 @@ const translateWithGemini = async (text, previousTranslations = [], signal, apiK
         // Add post instructions
         prompt += postInstruction;
 
-        // Determine model based on name
-        const modelEndpoint = modelName === 'Gemini 1.5 Pro' ? 'gemini-1.5-pro' : 'gemini-1.5-flash';
+        // Determine model based on name for Gemini 2.0
+        // If modelName is 'Gemini 2.0 Flash Lite', use the flash lite preview endpoint;
+        // otherwise, use the standard Gemini 2.0 Flash endpoint.
+        const modelEndpoint = modelName === 'Gemini 2.0 Flash Lite'
+            ? 'gemini-2.0-flash-lite-preview-02-05'
+            : 'gemini-2.0-flash-001';
 
         const response = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/${modelEndpoint}:generateContent?key=${apiKey}`,
@@ -84,6 +101,7 @@ const translateWithGemini = async (text, previousTranslations = [], signal, apiK
         throw error;
     }
 };
+
 
 const translateWithOpenRouter = async (text, modelId, previousTranslations = [], signal, apiKey, modelInstructions, selectedModel, selectedTone, sourceLang, targetLang, LANGUAGE_NAMES, isParaphrase = false, modelName = '') => {
     if (!apiKey) {
