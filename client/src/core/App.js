@@ -1,11 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import TranslatorApp from '../pages/TranslatorApp';
-import PasswordProtection from '../pages/PasswordProtection';
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
   return (
     <Router>
       <div className="App">
@@ -13,11 +10,7 @@ function App() {
           <Route
             path="/"
             element={
-              isAuthenticated ? (
-                <TranslatorApp />
-              ) : (
-                <PasswordProtection onAuthenticated={setIsAuthenticated} />
-              )
+              <TranslatorApp />
             }
           />
           {/* Redirect any other paths to the root */}
