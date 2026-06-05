@@ -1,3 +1,61 @@
+// Helper function for getting tone instructions
+const getToneInstructions = (tone, modelInstructions, selectedModel) => {
+    const toneInstructions = modelInstructions[selectedModel]['tone-instructions'];
+    return {
+        instruction: toneInstructions[tone] || toneInstructions['standard']
+    };
+};
+
+// Build the shared prompt body used by every model.
+// Returns { preInstruction, body, postInstruction } so each provider can
+// arrange them into its own message format.
+const buildPrompt = ({
+    text,
+    previousTranslations = [],
+    modelInstructions,
+    selectedModel,
+    selectedTone,
+    sourceLang,
+    targetLang,
+    LANGUAGE_NAMES,
+    isParaphrase = false
+}) => {
+    const preInstruction = isParaphrase
+        ? modelInstructions[selectedModel]['pre-instruction-paraphrase']
+        : modelInstructions[selectedModel]['pre-instruction'];
+    const postInstruction = isParaphrase
+        ? modelInstructions[selectedModel]['post-instruction-paraphrase']
+        : modelInstructions[selectedModel]['post-instruction'];
+    const toneInstructions = getToneInstructions(selectedTone, modelInstructions, selectedModel);
+
+    const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
+    const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
+
+    let body = `Instructions:\n${preInstruction}\n\n`;
+
+    body += `Language:\n`;
+    if (isParaphrase) {
+        body += `- Paraphrase in: ${targetLanguage}\n\n`;
+    } else if (sourceLang === 'auto') {
+        body += `- Detect source language and translate to ${targetLanguage}\n\n`;
+    } else {
+        body += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
+    }
+
+    body += `${isParaphrase ? 'Paraphrasing Style' : 'Tone'}:\n${toneInstructions.instruction}\n\n`;
+    body += `${isParaphrase ? 'Text to paraphrase' : 'Text to be translated'}:\n${text}\n\n`;
+
+    if (previousTranslations.length > 0) {
+        body += `Previous ${isParaphrase ? 'paraphrases' : 'translations'} to avoid repeating:\n`;
+        previousTranslations.forEach((trans, index) => {
+            body += `${index + 1}: ${trans.text}\n`;
+        });
+        body += `\nNote: Provide a fresh ${isParaphrase ? 'paraphrase' : 'translation'} different from the above versions.\n\n`;
+    }
+
+    return { preInstruction, body, postInstruction };
+};
+
 // Translation service for different models
 const translateWithGemini = async (
     text,
@@ -17,48 +75,19 @@ const translateWithGemini = async (
         throw new Error('Please enter your Gemini API key in settings');
     }
     try {
-        // Get base instructions
-        const basePreInstruction = isParaphrase 
-            ? modelInstructions[selectedModel]['pre-instruction-paraphrase']
-            : modelInstructions[selectedModel]['pre-instruction'];
-        const postInstruction = isParaphrase
-            ? modelInstructions[selectedModel]['post-instruction-paraphrase']
-            : modelInstructions[selectedModel]['post-instruction'];
-        const toneInstructions = getToneInstructions(selectedTone, modelInstructions, selectedModel, isParaphrase);
+        const { body, postInstruction } = buildPrompt({
+            text,
+            previousTranslations,
+            modelInstructions,
+            selectedModel,
+            selectedTone,
+            sourceLang,
+            targetLang,
+            LANGUAGE_NAMES,
+            isParaphrase
+        });
 
-        // Construct the prompt
-        let prompt = `Instructions:\n${basePreInstruction}\n\n`;
-
-        // Add Language settings
-        const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
-        const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
-        
-        prompt += `Language:\n`;
-        if (isParaphrase) {
-            prompt += `- Paraphrase in: ${targetLanguage}\n\n`;
-        } else if (sourceLang === 'auto') {
-            prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
-        } else {
-            prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
-        }
-
-        // Add Tone settings
-        prompt += `${isParaphrase ? 'Paraphrasing Style' : 'Tone'}:\n${toneInstructions.instruction}\n\n`;
-
-        // Add text to process
-        prompt += `${isParaphrase ? 'Text to paraphrase' : 'Text to be translated'}:\n${text}\n\n`;
-
-        // Add previous translations/paraphrases if any
-        if (previousTranslations.length > 0) {
-            prompt += `Previous ${isParaphrase ? 'paraphrases' : 'translations'} to avoid repeating:\n`;
-            previousTranslations.forEach((trans, index) => {
-                prompt += `${index + 1}: ${trans.text}\n`;
-            });
-            prompt += `\nNote: Provide a fresh ${isParaphrase ? 'paraphrase' : 'translation'} different from the above versions.\n\n`;
-        }
-
-        // Add post instructions
-        prompt += postInstruction;
+        const prompt = `${body}${postInstruction}`;
 
         // Determine model based on name for Gemini 2.0
         // If modelName is 'Gemini 2.0 Flash Lite', use the flash lite preview endpoint;
@@ -120,45 +149,17 @@ const translateWithOpenRouter = async (text, modelId, previousTranslations = [],
             : 'cohere/command-r-08-2024';
     }
 
-    // Get base instructions
-    const basePreInstruction = isParaphrase 
-        ? modelInstructions[selectedModel]['pre-instruction-paraphrase']
-        : modelInstructions[selectedModel]['pre-instruction'];
-    const postInstruction = isParaphrase
-        ? modelInstructions[selectedModel]['post-instruction-paraphrase']
-        : modelInstructions[selectedModel]['post-instruction'];
-    const toneInstructions = getToneInstructions(selectedTone, modelInstructions, selectedModel, isParaphrase);
-
-    // Construct the prompt for system message
-    let prompt = `Instructions:\n${basePreInstruction}\n\n`;
-
-    // Add Language settings
-    const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
-    const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
-    
-    prompt += `Language:\n`;
-    if (isParaphrase) {
-        prompt += `- Paraphrase in: ${targetLanguage}\n\n`;
-    } else if (sourceLang === 'auto') {
-        prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
-    } else {
-        prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
-    }
-
-    // Add Tone settings
-    prompt += `${isParaphrase ? 'Paraphrasing Style' : 'Tone'}:\n${toneInstructions.instruction}\n\n`;
-
-    // Add text to process
-    prompt += `${isParaphrase ? 'Text to paraphrase' : 'Text to be translated'}:\n${text}\n\n`;
-
-    // Add previous translations/paraphrases if any
-    if (previousTranslations.length > 0) {
-        prompt += `Previous ${isParaphrase ? 'paraphrases' : 'translations'} to avoid repeating:\n`;
-        previousTranslations.forEach((trans, index) => {
-            prompt += `${index + 1}: ${trans.text}\n`;
-        });
-        prompt += `\nNote: Provide a fresh ${isParaphrase ? 'paraphrase' : 'translation'} different from the above versions.\n\n`;
-    }
+    const { body: prompt, postInstruction } = buildPrompt({
+        text,
+        previousTranslations,
+        modelInstructions,
+        selectedModel,
+        selectedTone,
+        sourceLang,
+        targetLang,
+        LANGUAGE_NAMES,
+        isParaphrase
+    });
 
     try {
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -197,48 +198,19 @@ const translateWithOpenAI = async (text, previousTranslations = [], signal, apiK
         throw new Error('Please enter your OpenAI API key in settings');
     }
     try {
-        // Get base instructions
-        const basePreInstruction = isParaphrase 
-            ? modelInstructions[selectedModel]['pre-instruction-paraphrase']
-            : modelInstructions[selectedModel]['pre-instruction'];
-        const postInstruction = isParaphrase
-            ? modelInstructions[selectedModel]['post-instruction-paraphrase']
-            : modelInstructions[selectedModel]['post-instruction'];
-        const toneInstructions = getToneInstructions(selectedTone, modelInstructions, selectedModel, isParaphrase);
+        const { body, postInstruction } = buildPrompt({
+            text,
+            previousTranslations,
+            modelInstructions,
+            selectedModel,
+            selectedTone,
+            sourceLang,
+            targetLang,
+            LANGUAGE_NAMES,
+            isParaphrase
+        });
 
-        // Construct the prompt
-        let prompt = `Instructions:\n${basePreInstruction}\n\n`;
-
-        // Add Language settings
-        const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
-        const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
-        
-        prompt += `Language:\n`;
-        if (isParaphrase) {
-            prompt += `- Paraphrase in: ${targetLanguage}\n\n`;
-        } else if (sourceLang === 'auto') {
-            prompt += `- Detect source language and translate to ${targetLanguage}\n\n`;
-        } else {
-            prompt += `- From: ${sourceLanguage}\n- To: ${targetLanguage}\n\n`;
-        }
-
-        // Add Tone settings
-        prompt += `${isParaphrase ? 'Paraphrasing Style' : 'Tone'}:\n${toneInstructions.instruction}\n\n`;
-
-        // Add text to process
-        prompt += `${isParaphrase ? 'Text to paraphrase' : 'Text to be translated'}:\n${text}\n\n`;
-
-        // Add previous translations/paraphrases if any
-        if (previousTranslations.length > 0) {
-            prompt += `Previous ${isParaphrase ? 'paraphrases' : 'translations'} to avoid repeating:\n`;
-            previousTranslations.forEach((trans, index) => {
-                prompt += `${index + 1}: ${trans.text}\n`;
-            });
-            prompt += `\nNote: Provide a fresh ${isParaphrase ? 'paraphrase' : 'translation'} different from the above versions.\n\n`;
-        }
-
-        // Add post instructions
-        prompt += postInstruction;
+        const prompt = `${body}${postInstruction}`;
 
         // Determine model based on name
         const modelId = modelName === 'GPT-4o mini' ? 'gpt-4o-mini' : 'gpt-4o';
@@ -275,15 +247,6 @@ const translateWithOpenAI = async (text, previousTranslations = [], signal, apiK
             ? 'Invalid OpenAI API key. Please check your environment variables.'
             : `Translation error: ${error.message}`);
     }
-};
-
-// Helper function for getting tone instructions
-const getToneInstructions = (tone, modelInstructions, selectedModel, isParaphrase = false) => {
-    // Always use tone-instructions regardless of paraphrase mode
-    const toneInstructions = modelInstructions[selectedModel]['tone-instructions'];
-    return {
-        instruction: toneInstructions[tone] || toneInstructions['standard']
-    };
 };
 
 export {

@@ -1,7 +1,5 @@
 import { useState, useCallback } from 'react';
-
-const MAX_HISTORY_ITEMS = 100;
-const MAX_SAVED_TRANSLATIONS = 100;
+import { MAX_HISTORY_ITEMS, MAX_SAVED_TRANSLATIONS } from '../constants';
 
 // History loading function - should respect the saveHistory setting
 const loadHistory = (saveHistoryEnabled) => {

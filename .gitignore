@@ -7,12 +7,16 @@ node_modules/
 # Environment variables & secrets
 .env
 .env.*
-!.env.example
 **/.env
 **/.env.*
 server/tts-credentials.json
 **/tts-credentials.json
 *-credentials.json
+
+# ...but keep example/template files (no real secrets)
+!.env.example
+!**/.env.example
+!**/*.example.json
 
 # Production build artifacts
 client/build/

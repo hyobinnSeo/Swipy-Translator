@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { MenuIcon } from 'lucide-react';
 
@@ -29,8 +28,6 @@ import {
     MODELS,
     TONES,
     DEFAULT_INSTRUCTIONS,
-    APP_VERSION,
-    MIN_SECURE_VERSION,
     AVAILABLE_MODELS,
     LANGUAGE_NAMES
 } from '../constants';
@@ -210,23 +207,6 @@ const TranslatorApp = () => {
         setMaxLength(newMaxLength);
         localStorage.setItem('maxInputLength', newMaxLength.toString());
     };
-
-    // Version security check
-    const isVersionSecure = (currentVersion, minVersion) => {
-        const current = currentVersion.split('.').map(Number);
-        const min = minVersion.split('.').map(Number);
-
-        for (let i = 0; i < 3; i++) {
-            if (current[i] > min[i]) return true;
-            if (current[i] < min[i]) return false;
-        }
-        return true;
-    };
-
-    if (!isVersionSecure(APP_VERSION, MIN_SECURE_VERSION)) {
-        localStorage.removeItem('translator_auth');
-        return <Navigate to="/" replace />;
-    }
 
     const baseUrl = process.env.PUBLIC_URL || '/';
 

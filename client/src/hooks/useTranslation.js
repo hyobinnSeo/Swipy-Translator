@@ -44,109 +44,104 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
             const controller = new AbortController();
             setTranslationController(controller);
 
+            // Modify the instructions based on paraphraser mode
+            const modifiedInstructions = {
+                ...modelInstructions,
+                [selectedModel]: {
+                    ...modelInstructions[selectedModel],
+                    'pre-instruction': isParaphraserMode
+                        ? 'You are a professional paraphraser. Rewrite the text in a different way while maintaining its original meaning and tone.'
+                        : modelInstructions[selectedModel]['pre-instruction']
+                }
+            };
+
+            // Get the model name from AVAILABLE_MODELS if not provided
+            const actualModelName = modelName || AVAILABLE_MODELS.find(m => m.id === selectedModel)?.name || '';
+
             let translatedResult;
-            try {
-                // Modify the instructions based on paraphraser mode
-                const modifiedInstructions = {
-                    ...modelInstructions,
-                    [selectedModel]: {
-                        ...modelInstructions[selectedModel],
-                        'pre-instruction': isParaphraserMode 
-                            ? 'You are a professional paraphraser. Rewrite the text in a different way while maintaining its original meaning and tone.'
-                            : modelInstructions[selectedModel]['pre-instruction']
-                    }
-                };
-
-                // Get the model name from AVAILABLE_MODELS if not provided
-                const actualModelName = modelName || AVAILABLE_MODELS.find(m => m.id === selectedModel)?.name || '';
-
-                switch (selectedModel) {
-                    case MODELS.GEMINI:
-                        translatedResult = await translateWithGemini(
-                            inputText,
-                            isAdditional ? translations : [],
-                            controller.signal,
-                            apiKeys.gemini,
-                            modifiedInstructions,
-                            selectedModel,
-                            selectedTone,
-                            sourceLang,
-                            isParaphraserMode ? sourceLang : targetLang,
-                            LANGUAGE_NAMES,
-                            isParaphraserMode,
-                            actualModelName
-                        );
-                        break;
-                    case MODELS.COMMAND:
-                    case MODELS.ANTHROPIC:
-                        translatedResult = await translateWithOpenRouter(
-                            inputText,
-                            selectedModel,
-                            isAdditional ? translations : [],
-                            controller.signal,
-                            apiKeys.openrouter,
-                            modifiedInstructions,
-                            selectedModel,
-                            selectedTone,
-                            sourceLang,
-                            isParaphraserMode ? sourceLang : targetLang,
-                            LANGUAGE_NAMES,
-                            isParaphraserMode,
-                            actualModelName
-                        );
-                        break;
-                    case MODELS.OPENAI:
-                        translatedResult = await translateWithOpenAI(
-                            inputText,
-                            isAdditional ? translations : [],
-                            controller.signal,
-                            apiKeys.openai,
-                            modifiedInstructions,
-                            selectedModel,
-                            selectedTone,
-                            sourceLang,
-                            isParaphraserMode ? sourceLang : targetLang,
-                            LANGUAGE_NAMES,
-                            isParaphraserMode,
-                            actualModelName
-                        );
-                        break;
-                    default:
-                        throw new Error('Invalid model selected');
-                }
-
-                if (!translatedResult) throw new Error('No translation result.');
-
-                if (isAdditional) {
-                    setTranslations(prev => [...prev, { 
-                        text: translatedResult, 
-                        timestamp: new Date(),
-                        modelName: actualModelName 
-                    }]);
-                    setCurrentIndex(translations.length);
-                } else {
-                    setTranslations([{ 
-                        text: translatedResult, 
-                        timestamp: new Date(),
-                        modelName: actualModelName 
-                    }]);
-                    setCurrentIndex(0);
-                }
-
-                // Update history if enabled
-                if (saveHistory) {
-                    const historyItem = {
+            switch (selectedModel) {
+                case MODELS.GEMINI:
+                    translatedResult = await translateWithGemini(
                         inputText,
-                        translatedText: translatedResult,
-                        model: selectedModel,
-                        modelName: actualModelName,
-                        timestamp: new Date().toISOString()
-                    };
-                    onUpdateHistory(historyItem);
-                }
+                        isAdditional ? translations : [],
+                        controller.signal,
+                        apiKeys.gemini,
+                        modifiedInstructions,
+                        selectedModel,
+                        selectedTone,
+                        sourceLang,
+                        isParaphraserMode ? sourceLang : targetLang,
+                        LANGUAGE_NAMES,
+                        isParaphraserMode,
+                        actualModelName
+                    );
+                    break;
+                case MODELS.COMMAND:
+                case MODELS.ANTHROPIC:
+                    translatedResult = await translateWithOpenRouter(
+                        inputText,
+                        selectedModel,
+                        isAdditional ? translations : [],
+                        controller.signal,
+                        apiKeys.openrouter,
+                        modifiedInstructions,
+                        selectedModel,
+                        selectedTone,
+                        sourceLang,
+                        isParaphraserMode ? sourceLang : targetLang,
+                        LANGUAGE_NAMES,
+                        isParaphraserMode,
+                        actualModelName
+                    );
+                    break;
+                case MODELS.OPENAI:
+                    translatedResult = await translateWithOpenAI(
+                        inputText,
+                        isAdditional ? translations : [],
+                        controller.signal,
+                        apiKeys.openai,
+                        modifiedInstructions,
+                        selectedModel,
+                        selectedTone,
+                        sourceLang,
+                        isParaphraserMode ? sourceLang : targetLang,
+                        LANGUAGE_NAMES,
+                        isParaphraserMode,
+                        actualModelName
+                    );
+                    break;
+                default:
+                    throw new Error('Invalid model selected');
+            }
 
-            } catch (err) {
-                throw err;
+            if (!translatedResult) throw new Error('No translation result.');
+
+            if (isAdditional) {
+                setTranslations(prev => [...prev, {
+                    text: translatedResult,
+                    timestamp: new Date(),
+                    modelName: actualModelName
+                }]);
+                setCurrentIndex(translations.length);
+            } else {
+                setTranslations([{
+                    text: translatedResult,
+                    timestamp: new Date(),
+                    modelName: actualModelName
+                }]);
+                setCurrentIndex(0);
+            }
+
+            // Update history if enabled
+            if (saveHistory) {
+                const historyItem = {
+                    inputText,
+                    translatedText: translatedResult,
+                    model: selectedModel,
+                    modelName: actualModelName,
+                    timestamp: new Date().toISOString()
+                };
+                onUpdateHistory(historyItem);
             }
 
         } catch (err) {

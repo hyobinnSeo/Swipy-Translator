@@ -72,7 +72,6 @@ export const updateTTSCredentials = (credentials) => {
             clientEmail: googleCloud.clientEmail
         };
 
-        console.log('Sending credentials to server:', formattedCredentials);
         socket.emit('update-tts-credentials', formattedCredentials);
     });
 };
@@ -131,13 +130,17 @@ const playBrowserTTS = (text, targetLang) => {
 
 // Get the stored voice preference or default voice for a language
 const getVoiceForLanguage = (targetLang) => {
-    // Try to get stored voice preference
-    const storedVoices = localStorage.getItem('selectedVoices');
-    if (storedVoices) {
-        const voices = JSON.parse(storedVoices);
-        if (voices[targetLang]) {
-            return voices[targetLang];
+    // Try to get stored voice preference (saved by the app under 'voiceSettings')
+    try {
+        const storedVoices = localStorage.getItem('voiceSettings');
+        if (storedVoices) {
+            const voices = JSON.parse(storedVoices);
+            if (voices[targetLang]) {
+                return voices[targetLang];
+            }
         }
+    } catch {
+        // Ignore malformed stored value and fall back to default
     }
     // Return default voice if no stored preference
     return LANGUAGE_VOICE_MAPPING[targetLang];
