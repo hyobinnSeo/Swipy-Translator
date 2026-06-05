@@ -190,6 +190,8 @@ const SettingsDialog = ({
             throw new Error(errorData.error?.message || 'Invalid API key');
           }
           break;
+        default:
+          return;
       }
 
       if (!response.ok) {

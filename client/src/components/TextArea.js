@@ -30,15 +30,13 @@ const TextArea = ({
     const adjustmentTimeoutRef = useRef(null);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
-    const [currentTranscript, setCurrentTranscript] = useState('');
 
     // Subscribe to transcription updates and recording stopped events
     useEffect(() => {
         if (isRecording) {
             const unsubscribeTranscription = onTranscription((data) => {
                 if (data && data.transcript) {
-                    // Update the current transcript and trigger onChange
-                    setCurrentTranscript(data.transcript);
+                    // Forward the transcript to the parent via onChange
                     onChange({ target: { value: data.transcript } });
                 }
             });
@@ -84,7 +82,6 @@ const TextArea = ({
         } else {
             try {
                 const sourceLanguage = language === 'auto' ? null : language;
-                setCurrentTranscript('');
                 onChange({ target: { value: '' } });
                 await startRecording(sourceLanguage);
                 setIsRecording(true);

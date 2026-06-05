@@ -90,7 +90,6 @@ const TranslatorApp = () => {
         handlePrevious,
         handleNext,
         translatedText,
-        currentTranslation,
         isParaphraserMode,
         setIsParaphraserMode
     } = useTranslation(saveHistory, (historyItem) => addToHistory(historyItem));

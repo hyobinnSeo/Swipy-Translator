@@ -24,8 +24,8 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
         }
     };
 
-    // model: { name, api: 'google'|'openrouter'|'openai', modelSlug }
-    const handleTranslate = async (
+    // model: { name, api: 'google'|'openrouter'|'openai'|'anthropic', modelSlug }
+    const handleTranslate = useCallback(async (
         isAdditional = false,
         model,
         apiKeys,
@@ -170,7 +170,7 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
             setIsLoading(false);
             setTranslationController(null);
         }
-    };
+    }, [inputText, translations, isParaphraserMode, saveHistory, onUpdateHistory]);
 
     const handleCancelTranslation = useCallback(() => {
         if (translationController) {
