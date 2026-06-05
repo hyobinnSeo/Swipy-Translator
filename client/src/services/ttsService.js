@@ -33,49 +33,6 @@ export const stopTTS = () => {
     }
 };
 
-// Function to update TTS credentials
-export const updateTTSCredentials = (credentials) => {
-    return new Promise((resolve, reject) => {
-        const { googleCloud } = credentials;
-        
-        if (!googleCloud?.projectId || !googleCloud?.privateKey || !googleCloud?.clientEmail) {
-            reject(new Error('Missing required credentials'));
-            return;
-        }
-
-        const socket = initializeSocket();
-
-        const onCredentialsUpdated = (response) => {
-            socket.off('tts-credentials-updated', onCredentialsUpdated);
-            if (response.success) {
-                resolve();
-            } else {
-                reject(new Error(response.error || 'Failed to update TTS credentials'));
-            }
-        };
-
-        // Add timeout to prevent hanging
-        const timeout = setTimeout(() => {
-            socket.off('tts-credentials-updated', onCredentialsUpdated);
-            reject(new Error('Verification timeout - no response from server'));
-        }, 10000);
-
-        socket.on('tts-credentials-updated', (response) => {
-            clearTimeout(timeout);
-            onCredentialsUpdated(response);
-        });
-
-        // Format and send credentials
-        const formattedCredentials = {
-            projectId: googleCloud.projectId,
-            privateKey: googleCloud.privateKey.replace(/\\n/g, '\n'),
-            clientEmail: googleCloud.clientEmail
-        };
-
-        socket.emit('update-tts-credentials', formattedCredentials);
-    });
-};
-
 // Function to play TTS audio
 const playTTSAudio = async (base64Audio) => {
     try {
@@ -146,6 +103,15 @@ const getVoiceForLanguage = (targetLang) => {
     return LANGUAGE_VOICE_MAPPING[targetLang];
 };
 
+// Get the saved Gemini-TTS speaking style prompt (optional)
+const getStylePrompt = () => {
+    try {
+        return localStorage.getItem('ttsStylePrompt') || '';
+    } catch {
+        return '';
+    }
+};
+
 // Function to request speech synthesis
 export const synthesizeSpeech = async (text, targetLang) => {
     // Check if Google Cloud TTS is enabled
@@ -156,24 +122,16 @@ export const synthesizeSpeech = async (text, targetLang) => {
         return playBrowserTTS(text, targetLang);
     }
 
-    // Get stored API keys
-    const apiKeysStr = localStorage.getItem('apiKeys');
-    if (!apiKeysStr) {
-        throw new Error('Please configure Google Cloud credentials in settings to use Google Cloud TTS');
-    }
-
-    const apiKeys = JSON.parse(apiKeysStr);
-    const { googleCloud } = apiKeys;
-    
-    if (!googleCloud?.projectId || !googleCloud?.privateKey || !googleCloud?.clientEmail) {
-        throw new Error('Please configure Google Cloud credentials in settings to use Google Cloud TTS');
-    }
-
+    // Gemini-TTS credentials are configured on the server (service-account.json),
+    // so no client-side credentials are required here.
     return new Promise((resolve, reject) => {
         const socket = initializeSocket();
 
         // Get the appropriate voice for the target language
         const voiceId = getVoiceForLanguage(targetLang);
+
+        // Optional style prompt controlling tone, emotion, speed, whisper, etc.
+        const prompt = getStylePrompt();
 
         // Set up event listeners
         const onTTSAudio = (base64Audio) => {
@@ -202,11 +160,12 @@ export const synthesizeSpeech = async (text, targetLang) => {
         socket.on('tts-audio', onTTSAudio);
         socket.on('tts-error', onTTSError);
 
-        // Send synthesis request with voice ID
+        // Send synthesis request with voice ID and optional style prompt
         socket.emit('synthesize-speech', { 
             text, 
             targetLang,
-            voiceId
+            voiceId,
+            prompt
         });
     });
 };

@@ -7,6 +7,7 @@ const useDialogs = () => {
     const [isSavedOpen, setIsSavedOpen] = useState(false);
     const [isVoiceSettingsOpen, setIsVoiceSettingsOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
     const [showSafetyWarning, setShowSafetyWarning] = useState(false);
 
     const openSidebar = useCallback(() => setIsSidebarOpen(true), []);
@@ -27,6 +28,9 @@ const useDialogs = () => {
     const openSettings = useCallback(() => setIsSettingsOpen(true), []);
     const closeSettings = useCallback(() => setIsSettingsOpen(false), []);
 
+    const openCustomize = useCallback(() => setIsCustomizeOpen(true), []);
+    const closeCustomize = useCallback(() => setIsCustomizeOpen(false), []);
+
     const openSafetyWarning = useCallback(() => setShowSafetyWarning(true), []);
     const closeSafetyWarning = useCallback(() => setShowSafetyWarning(false), []);
 
@@ -38,6 +42,7 @@ const useDialogs = () => {
         setIsSavedOpen(false);
         setIsVoiceSettingsOpen(false);
         setIsSettingsOpen(false);
+        setIsCustomizeOpen(false);
         setShowSafetyWarning(false);
     }, []);
 
@@ -49,6 +54,7 @@ const useDialogs = () => {
         isSavedOpen,
         isVoiceSettingsOpen,
         isSettingsOpen,
+        isCustomizeOpen,
         showSafetyWarning,
 
         // Open functions
@@ -58,6 +64,7 @@ const useDialogs = () => {
         openSaved,
         openVoiceSettings,
         openSettings,
+        openCustomize,
         openSafetyWarning,
 
         // Close functions
@@ -67,6 +74,7 @@ const useDialogs = () => {
         closeSaved,
         closeVoiceSettings,
         closeSettings,
+        closeCustomize,
         closeSafetyWarning,
 
         // Utility functions

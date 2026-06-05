@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
-import { translateWithGemini, translateWithOpenRouter, translateWithOpenAI } from '../services/translationService';
-import { MODELS, AVAILABLE_MODELS } from '../constants';
+import { translateWithGemini, translateWithOpenRouter, translateWithOpenAI, translateWithAnthropic } from '../services/translationService';
 
 const useTranslation = (saveHistory, onUpdateHistory) => {
     const [inputText, setInputText] = useState('');
@@ -12,8 +11,9 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
     const [showSafetyWarning, setShowSafetyWarning] = useState(false);
     const [isParaphraserMode, setIsParaphraserMode] = useState(false);
 
-    const validateLanguageSupport = (sourceLang, targetLang) => {
-        const supportedLanguages = ['auto', 'en', 'fr', 'es', 'it', 'de', 'pt', 'ja', 'ko', 'zh', 'ar'];
+    // Languages are valid as long as they exist in the (merged) language map.
+    const validateLanguageSupport = (sourceLang, targetLang, LANGUAGE_NAMES) => {
+        const supportedLanguages = Object.keys(LANGUAGE_NAMES || {});
 
         if (sourceLang !== 'auto' && !supportedLanguages.includes(sourceLang)) {
             throw new Error(`Unsupported source language: ${sourceLang}`);
@@ -24,21 +24,22 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
         }
     };
 
+    // model: { name, api: 'google'|'openrouter'|'openai', modelSlug }
     const handleTranslate = async (
         isAdditional = false,
-        selectedModel,
+        model,
         apiKeys,
         modelInstructions,
         selectedTone,
         sourceLang,
         targetLang,
         LANGUAGE_NAMES,
-        modelName
+        additionalInstruction = ''
     ) => {
         try {
             setIsLoading(true);
             setError('');
-            validateLanguageSupport(sourceLang, targetLang);
+            validateLanguageSupport(sourceLang, targetLang, LANGUAGE_NAMES);
 
             // Create AbortController for cancellation
             const controller = new AbortController();
@@ -47,67 +48,79 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
             // Modify the instructions based on paraphraser mode
             const modifiedInstructions = {
                 ...modelInstructions,
-                [selectedModel]: {
-                    ...modelInstructions[selectedModel],
-                    'pre-instruction': isParaphraserMode
-                        ? 'You are a professional paraphraser. Rewrite the text in a different way while maintaining its original meaning and tone.'
-                        : modelInstructions[selectedModel]['pre-instruction']
-                }
+                'pre-instruction': isParaphraserMode
+                    ? 'You are a professional paraphraser. Rewrite the text in a different way while maintaining its original meaning and tone.'
+                    : modelInstructions['pre-instruction']
             };
 
-            // Get the model name from AVAILABLE_MODELS if not provided
-            const actualModelName = modelName || AVAILABLE_MODELS.find(m => m.id === selectedModel)?.name || '';
+            const actualModelName = model?.name || '';
+            const effectiveTargetLang = isParaphraserMode ? sourceLang : targetLang;
+            const previous = isAdditional ? translations : [];
 
             let translatedResult;
-            switch (selectedModel) {
-                case MODELS.GEMINI:
+            switch (model?.api) {
+                case 'google':
                     translatedResult = await translateWithGemini(
                         inputText,
-                        isAdditional ? translations : [],
+                        previous,
                         controller.signal,
                         apiKeys.gemini,
                         modifiedInstructions,
-                        selectedModel,
                         selectedTone,
                         sourceLang,
-                        isParaphraserMode ? sourceLang : targetLang,
+                        effectiveTargetLang,
                         LANGUAGE_NAMES,
                         isParaphraserMode,
-                        actualModelName
+                        model.modelSlug,
+                        additionalInstruction
                     );
                     break;
-                case MODELS.COMMAND:
-                case MODELS.ANTHROPIC:
+                case 'openrouter':
                     translatedResult = await translateWithOpenRouter(
                         inputText,
-                        selectedModel,
-                        isAdditional ? translations : [],
+                        previous,
                         controller.signal,
                         apiKeys.openrouter,
                         modifiedInstructions,
-                        selectedModel,
                         selectedTone,
                         sourceLang,
-                        isParaphraserMode ? sourceLang : targetLang,
+                        effectiveTargetLang,
                         LANGUAGE_NAMES,
                         isParaphraserMode,
-                        actualModelName
+                        model.modelSlug,
+                        additionalInstruction
                     );
                     break;
-                case MODELS.OPENAI:
+                case 'openai':
                     translatedResult = await translateWithOpenAI(
                         inputText,
-                        isAdditional ? translations : [],
+                        previous,
                         controller.signal,
                         apiKeys.openai,
                         modifiedInstructions,
-                        selectedModel,
                         selectedTone,
                         sourceLang,
-                        isParaphraserMode ? sourceLang : targetLang,
+                        effectiveTargetLang,
                         LANGUAGE_NAMES,
                         isParaphraserMode,
-                        actualModelName
+                        model.modelSlug,
+                        additionalInstruction
+                    );
+                    break;
+                case 'anthropic':
+                    translatedResult = await translateWithAnthropic(
+                        inputText,
+                        previous,
+                        controller.signal,
+                        apiKeys.anthropic,
+                        modifiedInstructions,
+                        selectedTone,
+                        sourceLang,
+                        effectiveTargetLang,
+                        LANGUAGE_NAMES,
+                        isParaphraserMode,
+                        model.modelSlug,
+                        additionalInstruction
                     );
                     break;
                 default:
@@ -137,7 +150,7 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
                 const historyItem = {
                     inputText,
                     translatedText: translatedResult,
-                    model: selectedModel,
+                    model: model?.api,
                     modelName: actualModelName,
                     timestamp: new Date().toISOString()
                 };
@@ -179,14 +192,14 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
     }, [currentIndex]);
 
     const handleNext = useCallback(async (
-        selectedModel,
+        model,
         apiKeys,
         modelInstructions,
         selectedTone,
         sourceLang,
         targetLang,
         LANGUAGE_NAMES,
-        modelName
+        additionalInstruction = ''
     ) => {
         if (currentIndex < translations.length - 1) {
             // If we have more translations in history, just move to the next one
@@ -195,14 +208,14 @@ const useTranslation = (saveHistory, onUpdateHistory) => {
             // If we're at the last translation and have input text, request a new alternative translation
             await handleTranslate(
                 true, // isAdditional = true to keep previous translations
-                selectedModel,
+                model,
                 apiKeys,
                 modelInstructions,
                 selectedTone,
                 sourceLang,
                 targetLang,
                 LANGUAGE_NAMES,
-                modelName
+                additionalInstruction
             );
         }
     }, [currentIndex, translations.length, inputText, handleTranslate]);

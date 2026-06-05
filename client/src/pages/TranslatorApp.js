@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
-import { MenuIcon } from 'lucide-react';
+import { MenuIcon, Wand2, X } from 'lucide-react';
 
 // Import components
 import Alert from '../components/common/Alert';
@@ -11,6 +11,7 @@ import TextArea from '../components/TextArea';
 import Sidebar from '../components/Sidebar';
 import VoiceSettingsModal from '../components/dialogs/VoiceSettingsModal';
 import InstructionsModal from '../components/dialogs/InstructionsModal';
+import CustomizeModal from '../components/dialogs/CustomizeModal';
 import SettingsDialog from '../components/dialogs/SettingsDialog';
 import HistoryPanel from '../components/dialogs/HistoryPanel';
 import SavedTranslationsDialog from '../components/dialogs/SavedTranslationsDialog';
@@ -22,26 +23,27 @@ import useTranslation from '../hooks/useTranslation';
 import useTranslationStorage from '../hooks/useTranslationStorage';
 import useDialogs from '../hooks/useDialogs';
 import useSwipe from '../hooks/useSwipe';
+import useCustomConfig from '../hooks/useCustomConfig';
 
 // Import constants
 import {
-    MODELS,
     TONES,
     DEFAULT_INSTRUCTIONS,
     AVAILABLE_MODELS,
-    LANGUAGE_NAMES
+    LANGUAGE_NAMES,
+    LANGUAGE_VOICE_MAPPING
 } from '../constants';
-
-import { updateTTSCredentials } from '../services/ttsService';
 
 const TranslatorApp = () => {
     // Settings and configuration state
-    const [selectedModel, setSelectedModel] = useState(MODELS.GEMINI);
     const [selectedModelName, setSelectedModelName] = useState(AVAILABLE_MODELS[0].name);
     const [modelInstructions, setModelInstructions] = useState(DEFAULT_INSTRUCTIONS);
     const [sourceLang, setSourceLang] = useState('auto');
     const [targetLang, setTargetLang] = useState('en');
     const [selectedTone, setSelectedTone] = useState('standard');
+    // Ad-hoc, per-translation extra instruction. Hidden by default; only shown when needed.
+    const [additionalInstruction, setAdditionalInstruction] = useState('');
+    const [showAdditionalInstruction, setShowAdditionalInstruction] = useState(false);
     const [maxLength, setMaxLength] = useState(parseInt(localStorage.getItem('maxInputLength')) || 5000);
     const [isFixedSize, setIsFixedSize] = useState(JSON.parse(localStorage.getItem('isFixedSize') || 'false'));
     const [saveHistory, setSaveHistory] = useState(JSON.parse(localStorage.getItem('saveHistory') ?? 'true'));
@@ -49,31 +51,16 @@ const TranslatorApp = () => {
     const [copySuccess, setCopySuccess] = useState(false);
     const [selectedVoices, setSelectedVoices] = useState(() => {
         try {
-            return JSON.parse(localStorage.getItem('voiceSettings')) || {
-                'en': 'en-US-Journey-F',
-                'ko': 'ko-KR-Neural2-A',
-                'ja': 'ja-JP-Neural2-B',
-                'zh': 'cmn-TW-Wavenet-A',
-                'fr': 'fr-FR-Journey-F',
-                'es': 'es-ES-Journey-F',
-                'de': 'de-DE-Journey-F',
-                'it': 'it-IT-Journey-F',
-                'pt': 'pt-BR-Neural2-A',
-                'ar': 'ar-XA-Wavenet-A'
-            };
+            return JSON.parse(localStorage.getItem('voiceSettings')) || { ...LANGUAGE_VOICE_MAPPING };
         } catch {
-            return {};
+            return { ...LANGUAGE_VOICE_MAPPING };
         }
     });
     const [apiKeys, setApiKeys] = useState(() => ({
         gemini: localStorage.getItem('gemini_api_key') || '',
         openrouter: localStorage.getItem('openrouter_api_key') || '',
         openai: localStorage.getItem('openai_api_key') || '',
-        googleCloud: {
-            projectId: localStorage.getItem('google_cloud_project_id') || '',
-            privateKey: localStorage.getItem('google_cloud_private_key') || '',
-            clientEmail: localStorage.getItem('google_cloud_client_email') || ''
-        }
+        anthropic: localStorage.getItem('anthropic_api_key') || ''
     }));
 
     // Apply dark mode class to root element
@@ -138,51 +125,87 @@ const TranslatorApp = () => {
         openVoiceSettings,
         closeVoiceSettings,
         openSettings,
-        closeSettings
+        closeSettings,
+        isCustomizeOpen,
+        openCustomize,
+        closeCustomize
     } = useDialogs();
 
+    // User-defined config (stored on the server via Firestore)
+    const customTones = useCustomConfig('tones');
+    const customModels = useCustomConfig('models');
+    const customLanguages = useCustomConfig('languages');
+
+    // Built-in + custom, merged
+    const allTones = [
+        ...TONES,
+        ...customTones.items.map(({ id, name, description }) => ({ id, name, description }))
+    ];
+
+    const allModels = [...AVAILABLE_MODELS, ...customModels.items];
+
+    const allLanguageNames = {
+        ...LANGUAGE_NAMES,
+        ...customLanguages.items.reduce((acc, lang) => {
+            acc[lang.code] = lang.name;
+            return acc;
+        }, {})
+    };
+    const allLanguages = Object.entries(allLanguageNames).map(([code, name]) => ({ code, name }));
+
+    // The model currently selected for translation
+    const selectedModelEntry = allModels.find(m => m.name === selectedModelName) || allModels[0];
+
+    // Inject custom tone instructions so the translation service can use them
+    const effectiveInstructions = {
+        ...modelInstructions,
+        'tone-instructions': {
+            ...modelInstructions['tone-instructions'],
+            ...customTones.items.reduce((acc, tone) => {
+                acc[tone.id] = tone.instruction || '';
+                return acc;
+            }, {})
+        }
+    };
+
     const swipeHandlers = useSwipe(() => handleNext(
-        selectedModel,
+        selectedModelEntry,
         apiKeys,
-        modelInstructions,
+        effectiveInstructions,
         selectedTone,
         sourceLang,
         targetLang,
-        LANGUAGE_NAMES,
-        selectedModelName
+        allLanguageNames,
+        additionalInstruction
     ), handlePrevious);
 
     // Effects
     useEffect(() => {
-        // Reset tone to standard when changing models if current tone isn't available
-        const modelTones = TONES[selectedModel] || TONES[MODELS.GEMINI];
-        if (!modelTones.find(tone => tone.id === selectedTone)) {
+        // Reset tone to standard if the current tone isn't in the available tone list
+        if (!allTones.find(tone => tone.id === selectedTone)) {
             setSelectedTone('standard');
         }
-    }, [selectedModel, selectedTone]);
+    }, [selectedTone, customTones.items]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        // Reset language selection if a chosen (custom) language was removed
+        if (sourceLang !== 'auto' && !allLanguageNames[sourceLang]) {
+            setSourceLang('auto');
+        }
+        if (!allLanguageNames[targetLang]) {
+            setTargetLang('en');
+        }
+    }, [customLanguages.items]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Settings handlers
-    const handleApiKeysChange = async (newApiKeys) => {
+    const handleApiKeysChange = (newApiKeys) => {
         setApiKeys(newApiKeys);
 
         // Store API keys in localStorage
         localStorage.setItem('gemini_api_key', newApiKeys.gemini);
         localStorage.setItem('openrouter_api_key', newApiKeys.openrouter);
         localStorage.setItem('openai_api_key', newApiKeys.openai);
-
-        // Store Google Cloud credentials
-        if (newApiKeys.googleCloud) {
-            localStorage.setItem('google_cloud_project_id', newApiKeys.googleCloud.projectId);
-            localStorage.setItem('google_cloud_private_key', newApiKeys.googleCloud.privateKey);
-            localStorage.setItem('google_cloud_client_email', newApiKeys.googleCloud.clientEmail);
-
-            // Update TTS credentials on the server
-            try {
-                await updateTTSCredentials(newApiKeys.googleCloud);
-            } catch (error) {
-                console.error('Failed to update Google Cloud credentials:', error);
-            }
-        }
+        localStorage.setItem('anthropic_api_key', newApiKeys.anthropic || '');
     };
 
     const handleDarkModeChange = (newValue) => {
@@ -226,6 +249,7 @@ const TranslatorApp = () => {
                 onOpenSaved={openSaved}
                 onOpenVoiceSettings={openVoiceSettings}
                 onOpenSettings={openSettings}
+                onOpenCustomize={openCustomize}
                 isFixedSize={isFixedSize}
                 onToggleFixedSize={handleToggleFixedSize}
                 isParaphraserMode={isParaphraserMode}
@@ -278,7 +302,6 @@ const TranslatorApp = () => {
                 isOpen={isInstructionsOpen}
                 onClose={closeInstructions}
                 modelInstructions={modelInstructions}
-                selectedModel={selectedModel}
                 setModelInstructions={setModelInstructions}
                 selectedTone={selectedTone}
                 darkMode={darkMode}
@@ -291,6 +314,36 @@ const TranslatorApp = () => {
                 selectedVoices={selectedVoices}
                 onVoiceChange={handleVoiceChange}
                 darkMode={darkMode}
+            />
+
+            <CustomizeModal
+                isOpen={isCustomizeOpen}
+                onClose={closeCustomize}
+                darkMode={darkMode}
+                tones={{
+                    builtIn: TONES,
+                    custom: customTones.items,
+                    isLoading: customTones.isLoading,
+                    error: customTones.error,
+                    add: customTones.addItem,
+                    remove: customTones.removeItem
+                }}
+                models={{
+                    builtIn: AVAILABLE_MODELS,
+                    custom: customModels.items,
+                    isLoading: customModels.isLoading,
+                    error: customModels.error,
+                    add: customModels.addItem,
+                    remove: customModels.removeItem
+                }}
+                languages={{
+                    builtIn: Object.entries(LANGUAGE_NAMES).map(([code, name]) => ({ code, name })),
+                    custom: customLanguages.items,
+                    isLoading: customLanguages.isLoading,
+                    error: customLanguages.error,
+                    add: customLanguages.addItem,
+                    remove: customLanguages.removeItem
+                }}
             />
 
             <SafetyWarningDialog
@@ -314,6 +367,7 @@ const TranslatorApp = () => {
                 }}
                 darkMode={darkMode}
                 onDarkModeChange={handleDarkModeChange}
+                onPreviewDarkModeChange={setDarkMode}
                 apiKeys={apiKeys}
                 onApiKeysChange={handleApiKeysChange}
             />
@@ -356,18 +410,14 @@ const TranslatorApp = () => {
                     <div className="w-full">
                         <select
                             value={selectedModelName}
-                            onChange={(e) => {
-                                const model = AVAILABLE_MODELS.find(m => m.name === e.target.value);
-                                setSelectedModel(model.id);
-                                setSelectedModelName(model.name);
-                            }}
+                            onChange={(e) => setSelectedModelName(e.target.value)}
                             className={`w-[200px] p-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${darkMode
                                 ? 'bg-navy-900 border-navy-800/50 text-slate-400 hover:bg-navy-800'
                                 : 'bg-white'
                                 } transition-colors`}
                         >
-                            {AVAILABLE_MODELS.map((model) => (
-                                <option key={model.name} value={model.name}
+                            {allModels.map((model) => (
+                                <option key={model.id || model.name} value={model.name}
                                     className={darkMode ? 'bg-slate-800' : 'bg-white'}
                                 >
                                     {model.name}
@@ -399,18 +449,60 @@ const TranslatorApp = () => {
                                 setCurrentIndex(0);
                             }}
                             hideTargetLanguage={isParaphraserMode}
+                            languages={allLanguages}
                             darkMode={darkMode}
                         />
                     </div>
 
-                    {/* Tone selector */}
+                    {/* Tone selector + additional instruction toggle */}
                     <div className="mt-2 mb-2">
-                        <ToneSelector
-                            selectedTone={selectedTone}
-                            onToneChange={setSelectedTone}
-                            selectedModel={selectedModel}
-                            darkMode={darkMode}
-                        />
+                        <div className="flex items-center justify-between">
+                            <ToneSelector
+                                selectedTone={selectedTone}
+                                onToneChange={setSelectedTone}
+                                tones={allTones}
+                                darkMode={darkMode}
+                            />
+
+                            <button
+                                type="button"
+                                onClick={() => setShowAdditionalInstruction(prev => !prev)}
+                                className={`p-2 rounded-lg transition-colors ${
+                                    showAdditionalInstruction || additionalInstruction.trim()
+                                        ? (darkMode ? 'text-blue-400 hover:bg-gray-700' : 'text-blue-600 hover:bg-gray-50')
+                                        : (darkMode ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50')
+                                }`}
+                                title="Add a one-off instruction for this translation"
+                            >
+                                <Wand2 className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {showAdditionalInstruction && (
+                            <div className="relative mt-1">
+                                <textarea
+                                    value={additionalInstruction}
+                                    onChange={(e) => setAdditionalInstruction(e.target.value)}
+                                    placeholder="e.g. Keep technical terms in English, use a formal tone..."
+                                    rows={2}
+                                    className={`w-full p-2 pr-8 border rounded-md text-sm resize-y focus:ring-2 focus:ring-blue-500 ${
+                                        darkMode
+                                            ? 'bg-navy-900/80 text-slate-100 border-slate-600 focus:border-blue-500 placeholder-slate-400'
+                                            : 'bg-white border-gray-300 placeholder-gray-400'
+                                    }`}
+                                />
+                                {additionalInstruction && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setAdditionalInstruction('')}
+                                        className={`absolute top-2 right-2 ${darkMode ? 'text-slate-400 hover:text-slate-200' : 'text-gray-400 hover:text-gray-600'}`}
+                                        title="Clear"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* Text areas */}
@@ -449,14 +541,14 @@ const TranslatorApp = () => {
                             currentIndex={currentIndex}
                             onPrevious={handlePrevious}
                             onNext={() => handleNext(
-                                selectedModel,
+                                selectedModelEntry,
                                 apiKeys,
-                                modelInstructions,
+                                effectiveInstructions,
                                 selectedTone,
                                 sourceLang,
                                 targetLang,
-                                LANGUAGE_NAMES,
-                                selectedModelName
+                                allLanguageNames,
+                                additionalInstruction
                             )}
                             onClear={() => {
                                 setTranslations([]);
@@ -484,14 +576,14 @@ const TranslatorApp = () => {
                             type={isParaphraserMode ? "paraphrase" : "translate"}
                             onClick={() => handleTranslate(
                                 false,
-                                selectedModel,
+                                selectedModelEntry,
                                 apiKeys,
-                                modelInstructions,
+                                effectiveInstructions,
                                 selectedTone,
                                 sourceLang,
                                 targetLang,
-                                LANGUAGE_NAMES,
-                                selectedModelName
+                                allLanguageNames,
+                                additionalInstruction
                             )}
                             disabled={!inputText}
                             isLoading={isLoading}
@@ -518,7 +610,7 @@ const TranslatorApp = () => {
 
                                 <ActionButton
                                     type="save"
-                                    onClick={() => saveTranslation(inputText, translatedText, selectedModel)}
+                                    onClick={() => saveTranslation(inputText, translatedText, selectedModelEntry?.api)}
                                     isActive={saveSuccess}
                                     darkMode={darkMode}
                                 />

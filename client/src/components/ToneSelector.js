@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Settings, ChevronDown } from 'lucide-react';
-import { TONES, MODELS } from '../constants';
 
-const ToneSelector = ({ selectedTone, onToneChange, selectedModel, darkMode }) => {
+const ToneSelector = ({ selectedTone, onToneChange, tones = [], darkMode }) => {
     const [showToneSelector, setShowToneSelector] = useState(false);
     const containerRef = useRef(null);
 
@@ -17,8 +16,8 @@ const ToneSelector = ({ selectedTone, onToneChange, selectedModel, darkMode }) =
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Get the tone list for the selected model
-    const modelTones = TONES[selectedModel] || TONES[MODELS.GEMINI];
+    // Unified tone list (built-in defaults + user-defined custom tones)
+    const modelTones = tones;
 
     return (
         <div className="relative" ref={containerRef}>

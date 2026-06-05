@@ -1,21 +1,30 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import DialogWrapper from './DialogWrapper';
-import { LANGUAGE_NAMES, VOICE_OPTIONS, LANGUAGE_VOICE_MAPPING } from '../../constants';
+import { LANGUAGE_NAMES, GEMINI_VOICES, LANGUAGE_VOICE_MAPPING } from '../../constants';
 
 const VoiceSettingsModal = ({ isOpen, onClose, selectedVoices, onVoiceChange, darkMode }) => {
     const [localVoices, setLocalVoices] = useState(selectedVoices);
+    const [stylePrompt, setStylePrompt] = useState(() => {
+        try {
+            return localStorage.getItem('ttsStylePrompt') || '';
+        } catch {
+            return '';
+        }
+    });
 
     // Reset to defaults
     const handleReset = () => {
         // Use the default voice mappings from constants
         setLocalVoices(LANGUAGE_VOICE_MAPPING);
+        setStylePrompt('');
     };
 
     // Save changes
     const handleSave = () => {
         // Save to localStorage for persistence
         localStorage.setItem('selectedVoices', JSON.stringify(localVoices));
+        localStorage.setItem('ttsStylePrompt', stylePrompt);
         onVoiceChange(localVoices);
         onClose();
     };
@@ -37,7 +46,7 @@ const VoiceSettingsModal = ({ isOpen, onClose, selectedVoices, onVoiceChange, da
                         }`}>Voice Settings</h2>
                         <p className={`text-sm mt-1 ${
                             darkMode ? 'text-slate-400' : 'text-gray-500'
-                        }`}>Select preferred voices for each language</p>
+                        }`}>Select a Gemini-TTS voice for each language</p>
                     </div>
                     <button 
                         onClick={onClose} 
@@ -54,7 +63,39 @@ const VoiceSettingsModal = ({ isOpen, onClose, selectedVoices, onVoiceChange, da
 
             <div className="flex-1 overflow-y-auto p-6">
                 <div className="space-y-6">
-                    {Object.entries(VOICE_OPTIONS).map(([lang, voices]) => (
+                    {/* Speaking style (Gemini-TTS prompt) */}
+                    <div className="space-y-2">
+                        <label className={`block text-sm font-medium ${
+                            darkMode ? 'text-slate-300' : 'text-gray-700'
+                        }`}>
+                            말하기 스타일 (선택):
+                        </label>
+                        <textarea
+                            value={stylePrompt}
+                            onChange={(e) => setStylePrompt(e.target.value)}
+                            placeholder="예: 차분하고 전문적인 다큐멘터리 내레이터 톤으로 읽어줘"
+                            rows={2}
+                            className={`w-full p-2 rounded-lg text-sm resize-y focus:ring-2 ${
+                                darkMode
+                                    ? 'bg-slate-700 border-slate-600 text-slate-100 focus:ring-blue-500/30 placeholder-slate-400'
+                                    : 'border focus:ring-gray-500 placeholder-gray-400'
+                            }`}
+                        />
+                        <div className={`text-xs leading-relaxed ${
+                            darkMode ? 'text-slate-400' : 'text-gray-500'
+                        }`}>
+                            <p>자연어로 어조·감정·속도를 지정할 수 있습니다. 예시:</p>
+                            <ul className="list-disc list-inside space-y-0.5 mt-1">
+                                <li>속삭임: <code>아주 조용히 속삭이듯이 말해줘</code> 또는 <code>[whispering]</code></li>
+                                <li>감정: <code>신나고 밝은 톤으로</code> / <code>겁에 질린 목소리로</code></li>
+                                <li>속도: <code>천천히 또박또박</code> / 빠르게는 <code>[extremely fast]</code></li>
+                                <li>일시중지: <code>[short pause]</code>, <code>[long pause]</code></li>
+                            </ul>
+                            <p className="mt-1">모든 언어·보이스에 공통 적용됩니다. 비워두면 기본 톤으로 재생됩니다.</p>
+                        </div>
+                    </div>
+
+                    {Object.keys(LANGUAGE_VOICE_MAPPING).map((lang) => (
                         <div key={lang} className="space-y-2">
                             <label className={`block text-sm font-medium ${
                                 darkMode ? 'text-slate-300' : 'text-gray-700'
@@ -73,7 +114,7 @@ const VoiceSettingsModal = ({ isOpen, onClose, selectedVoices, onVoiceChange, da
                                         : 'border focus:ring-gray-500'
                                 }`}
                             >
-                                {voices.map((voice) => (
+                                {GEMINI_VOICES.map((voice) => (
                                     <option 
                                         key={voice.id} 
                                         value={voice.id}

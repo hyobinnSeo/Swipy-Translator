@@ -1,47 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronDown } from 'lucide-react';
-import { MODELS, TONES, AVAILABLE_MODELS } from '../../constants';
+import { TONES, DEFAULT_INSTRUCTIONS } from '../../constants';
 import DialogWrapper from './DialogWrapper';
 
 const InstructionsModal = ({ 
     isOpen, 
     onClose, 
     modelInstructions, 
-    selectedModel, 
     setModelInstructions, 
     selectedTone,
     darkMode,
     isParaphraserMode
 }) => {
     const [showToneDropdown, setShowToneDropdown] = useState(false);
-    const [selectedModelForInstructions, setSelectedModelForInstructions] = useState(selectedModel);
     const [selectedToneInstructions, setSelectedToneInstructions] = useState(selectedTone);
     
     useEffect(() => {
-        setSelectedModelForInstructions(selectedModel);
-        const modelTones = TONES[selectedModel] || TONES[MODELS.GEMINI];
-        const isCurrentToneValid = modelTones.find(t => t.id === selectedTone);
+        const isCurrentToneValid = TONES.find(t => t.id === selectedTone);
         if (!isCurrentToneValid) {
-            setSelectedToneInstructions(modelTones[0]?.id || 'standard');
+            setSelectedToneInstructions(TONES[0]?.id || 'standard');
         } else {
             setSelectedToneInstructions(selectedTone);
         }
-    }, [selectedModel, selectedTone, isOpen]);
-
-    const handleModelChange = (newModel) => {
-        setSelectedModelForInstructions(newModel);
-        const modelTones = TONES[newModel] || TONES[MODELS.GEMINI];
-        setSelectedToneInstructions(modelTones[0]?.id || 'standard');
-    };
+    }, [selectedTone, isOpen]);
 
     const handleReset = () => {
-        setModelInstructions({
-            ...modelInstructions,
-            [selectedModelForInstructions]: modelInstructions[selectedModelForInstructions]
-        });
+        setModelInstructions(DEFAULT_INSTRUCTIONS);
     };
-
-    const currentModelTones = TONES[selectedModelForInstructions] || TONES[MODELS.GEMINI];
 
     return (
         <DialogWrapper 
@@ -76,34 +61,6 @@ const InstructionsModal = ({
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6">
                 <div className="space-y-6">
-                    {/* Model Selection */}
-                    <div className="space-y-2">
-                        <label className={`block text-sm font-medium ${
-                            darkMode ? 'text-slate-300' : 'text-gray-700'
-                        }`}>
-                            AI Model:
-                        </label>
-                        <select
-                            value={selectedModelForInstructions}
-                            onChange={(e) => handleModelChange(e.target.value)}
-                            className={`w-full p-2 rounded-lg focus:ring-2 ${
-                                darkMode 
-                                    ? 'bg-slate-700 border-slate-600 text-slate-100 focus:ring-blue-500/30' 
-                                    : 'border focus:ring-gray-500'
-                            }`}
-                        >
-                            {AVAILABLE_MODELS.map((model) => (
-                                <option 
-                                    key={model.id} 
-                                    value={model.id}
-                                    className={darkMode ? 'bg-slate-700' : ''}
-                                >
-                                    {model.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
                     {/* Tone Selection */}
                     <div className="space-y-2">
                         <label className={`block text-sm font-medium ${
@@ -121,7 +78,7 @@ const InstructionsModal = ({
                                 }`}
                             >
                                 <span>
-                                    {currentModelTones.find(t => t.id === selectedToneInstructions)?.name || 'Standard'}
+                                    {TONES.find(t => t.id === selectedToneInstructions)?.name || 'Standard'}
                                 </span>
                                 <ChevronDown className="h-4 w-4" />
                             </button>
@@ -132,7 +89,7 @@ const InstructionsModal = ({
                                         ? 'bg-slate-700 border-slate-600' 
                                         : 'bg-white border'
                                 }`}>
-                                    {currentModelTones.map((tone) => (
+                                    {TONES.map((tone) => (
                                         <button
                                             key={tone.id}
                                             onClick={() => {
@@ -164,13 +121,10 @@ const InstructionsModal = ({
                             Pre-{isParaphraserMode ? 'paraphrasing' : 'translation'} Instructions:
                         </label>
                         <textarea
-                            value={modelInstructions[selectedModelForInstructions][isParaphraserMode ? 'pre-instruction-paraphrase' : 'pre-instruction']}
+                            value={modelInstructions[isParaphraserMode ? 'pre-instruction-paraphrase' : 'pre-instruction']}
                             onChange={(e) => setModelInstructions({
                                 ...modelInstructions,
-                                [selectedModelForInstructions]: {
-                                    ...modelInstructions[selectedModelForInstructions],
-                                    [isParaphraserMode ? 'pre-instruction-paraphrase' : 'pre-instruction']: e.target.value
-                                }
+                                [isParaphraserMode ? 'pre-instruction-paraphrase' : 'pre-instruction']: e.target.value
                             })}
                             className={`w-full h-32 p-2 rounded-lg focus:ring-2 resize-none ${
                                 darkMode 
@@ -188,15 +142,12 @@ const InstructionsModal = ({
                             Tone-specific Instructions:
                         </label>
                         <textarea
-                            value={modelInstructions[selectedModelForInstructions]['tone-instructions'][selectedToneInstructions]}
+                            value={modelInstructions['tone-instructions'][selectedToneInstructions]}
                             onChange={(e) => setModelInstructions({
                                 ...modelInstructions,
-                                [selectedModelForInstructions]: {
-                                    ...modelInstructions[selectedModelForInstructions],
-                                    'tone-instructions': {
-                                        ...modelInstructions[selectedModelForInstructions]['tone-instructions'],
-                                        [selectedToneInstructions]: e.target.value
-                                    }
+                                'tone-instructions': {
+                                    ...modelInstructions['tone-instructions'],
+                                    [selectedToneInstructions]: e.target.value
                                 }
                             })}
                             className={`w-full h-32 p-2 rounded-lg focus:ring-2 resize-none ${
@@ -215,13 +166,10 @@ const InstructionsModal = ({
                             Post-{isParaphraserMode ? 'paraphrasing' : 'translation'} Instructions:
                         </label>
                         <textarea
-                            value={modelInstructions[selectedModelForInstructions][isParaphraserMode ? 'post-instruction-paraphrase' : 'post-instruction']}
+                            value={modelInstructions[isParaphraserMode ? 'post-instruction-paraphrase' : 'post-instruction']}
                             onChange={(e) => setModelInstructions({
                                 ...modelInstructions,
-                                [selectedModelForInstructions]: {
-                                    ...modelInstructions[selectedModelForInstructions],
-                                    [isParaphraserMode ? 'post-instruction-paraphrase' : 'post-instruction']: e.target.value
-                                }
+                                [isParaphraserMode ? 'post-instruction-paraphrase' : 'post-instruction']: e.target.value
                             })}
                             className={`w-full h-32 p-2 rounded-lg focus:ring-2 resize-none ${
                                 darkMode 

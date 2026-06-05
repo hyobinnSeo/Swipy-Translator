@@ -1,6 +1,20 @@
 import React from 'react';
 import { ArrowLeftRight } from 'lucide-react';
 
+const DEFAULT_LANGUAGES = [
+    { code: 'auto', name: 'Auto Detect' },
+    { code: 'en', name: 'English' },
+    { code: 'fr', name: 'French / Français' },
+    { code: 'es', name: 'Spanish / Español' },
+    { code: 'it', name: 'Italian / Italiano' },
+    { code: 'de', name: 'German / Deutsch' },
+    { code: 'pt', name: 'Brazilian Portuguese / Português' },
+    { code: 'ja', name: 'Japanese / 日本語' },
+    { code: 'ko', name: 'Korean / 한국어' },
+    { code: 'zh', name: 'Simplified Chinese / 简体中文' },
+    { code: 'ar', name: 'Arabic / العربية' }
+];
+
 const LanguageSelector = ({
     sourceLang,
     targetLang,
@@ -12,21 +26,9 @@ const LanguageSelector = ({
     onTranslatedTextChange,
     onResetTranslations,
     hideTargetLanguage,
+    languages = DEFAULT_LANGUAGES,
     darkMode
 }) => {
-    const languages = [
-        { code: 'auto', name: 'Auto Detect' },
-        { code: 'en', name: 'English' },
-        { code: 'fr', name: 'French / Français' },
-        { code: 'es', name: 'Spanish / Español' },
-        { code: 'it', name: 'Italian / Italiano' },
-        { code: 'de', name: 'German / Deutsch' },
-        { code: 'pt', name: 'Brazilian Portuguese / Português' },
-        { code: 'ja', name: 'Japanese / 日本語' },
-        { code: 'ko', name: 'Korean / 한국어' },
-        { code: 'zh', name: 'Simplified Chinese / 简体中文' },
-        { code: 'ar', name: 'Arabic / العربية' }
-    ];
 
     const switchLanguages = () => {
         // Basic language swap

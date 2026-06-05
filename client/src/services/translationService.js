@@ -1,6 +1,6 @@
 // Helper function for getting tone instructions
-const getToneInstructions = (tone, modelInstructions, selectedModel) => {
-    const toneInstructions = modelInstructions[selectedModel]['tone-instructions'];
+const getToneInstructions = (tone, modelInstructions) => {
+    const toneInstructions = modelInstructions['tone-instructions'];
     return {
         instruction: toneInstructions[tone] || toneInstructions['standard']
     };
@@ -13,20 +13,20 @@ const buildPrompt = ({
     text,
     previousTranslations = [],
     modelInstructions,
-    selectedModel,
     selectedTone,
     sourceLang,
     targetLang,
     LANGUAGE_NAMES,
-    isParaphrase = false
+    isParaphrase = false,
+    additionalInstruction = ''
 }) => {
     const preInstruction = isParaphrase
-        ? modelInstructions[selectedModel]['pre-instruction-paraphrase']
-        : modelInstructions[selectedModel]['pre-instruction'];
+        ? modelInstructions['pre-instruction-paraphrase']
+        : modelInstructions['pre-instruction'];
     const postInstruction = isParaphrase
-        ? modelInstructions[selectedModel]['post-instruction-paraphrase']
-        : modelInstructions[selectedModel]['post-instruction'];
-    const toneInstructions = getToneInstructions(selectedTone, modelInstructions, selectedModel);
+        ? modelInstructions['post-instruction-paraphrase']
+        : modelInstructions['post-instruction'];
+    const toneInstructions = getToneInstructions(selectedTone, modelInstructions);
 
     const sourceLanguage = LANGUAGE_NAMES[sourceLang] || sourceLang;
     const targetLanguage = LANGUAGE_NAMES[targetLang] || targetLang;
@@ -43,6 +43,11 @@ const buildPrompt = ({
     }
 
     body += `${isParaphrase ? 'Paraphrasing Style' : 'Tone'}:\n${toneInstructions.instruction}\n\n`;
+
+    if (additionalInstruction && additionalInstruction.trim()) {
+        body += `Additional Instructions (apply these with high priority):\n${additionalInstruction.trim()}\n\n`;
+    }
+
     body += `${isParaphrase ? 'Text to paraphrase' : 'Text to be translated'}:\n${text}\n\n`;
 
     if (previousTranslations.length > 0) {
@@ -56,20 +61,21 @@ const buildPrompt = ({
     return { preInstruction, body, postInstruction };
 };
 
-// Translation service for different models
+// Translation service for different models.
+// modelSlug is the provider-specific model id (e.g. 'gemini-2.0-flash-001').
 const translateWithGemini = async (
     text,
     previousTranslations = [],
     signal,
     apiKey,
     modelInstructions,
-    selectedModel,
     selectedTone,
     sourceLang,
     targetLang,
     LANGUAGE_NAMES,
     isParaphrase = false,
-    modelName = 'Gemini 2.0 Flash'  // Updated default model name
+    modelSlug = 'gemini-2.0-flash-001',
+    additionalInstruction = ''
 ) => {
     if (!apiKey) {
         throw new Error('Please enter your Gemini API key in settings');
@@ -79,22 +85,17 @@ const translateWithGemini = async (
             text,
             previousTranslations,
             modelInstructions,
-            selectedModel,
             selectedTone,
             sourceLang,
             targetLang,
             LANGUAGE_NAMES,
-            isParaphrase
+            isParaphrase,
+            additionalInstruction
         });
 
         const prompt = `${body}${postInstruction}`;
 
-        // Determine model based on name for Gemini 2.0
-        // If modelName is 'Gemini 2.0 Flash Lite', use the flash lite preview endpoint;
-        // otherwise, use the standard Gemini 2.0 Flash endpoint.
-        const modelEndpoint = modelName === 'Gemini 2.0 Flash Lite'
-            ? 'gemini-2.0-flash-lite-preview-02-05'
-            : 'gemini-2.0-flash-001';
+        const modelEndpoint = modelSlug || 'gemini-2.0-flash-001';
 
         const response = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/${modelEndpoint}:generateContent?key=${apiKey}`,
@@ -132,33 +133,23 @@ const translateWithGemini = async (
 };
 
 
-const translateWithOpenRouter = async (text, modelId, previousTranslations = [], signal, apiKey, modelInstructions, selectedModel, selectedTone, sourceLang, targetLang, LANGUAGE_NAMES, isParaphrase = false, modelName = '') => {
+const translateWithOpenRouter = async (text, previousTranslations = [], signal, apiKey, modelInstructions, selectedTone, sourceLang, targetLang, LANGUAGE_NAMES, isParaphrase = false, modelSlug = 'cohere/command-r-08-2024', additionalInstruction = '') => {
     if (!apiKey) {
         throw new Error('Please enter your OpenRouter API key in settings');
     }
-    
-    // Determine the model URL based on the model name
-    let modelUrl;
-    if (modelId === 'claude') {
-        modelUrl = modelName === 'Claude 3.5 Sonnet' 
-            ? 'anthropic/claude-3.5-sonnet'
-            : 'anthropic/claude-3-haiku';
-    } else {
-        modelUrl = modelName === 'Cohere Command R+'
-            ? 'cohere/command-r-plus-08-2024'
-            : 'cohere/command-r-08-2024';
-    }
+
+    const modelUrl = modelSlug || 'cohere/command-r-08-2024';
 
     const { body: prompt, postInstruction } = buildPrompt({
         text,
         previousTranslations,
         modelInstructions,
-        selectedModel,
         selectedTone,
         sourceLang,
         targetLang,
         LANGUAGE_NAMES,
-        isParaphrase
+        isParaphrase,
+        additionalInstruction
     });
 
     try {
@@ -193,7 +184,7 @@ const translateWithOpenRouter = async (text, modelId, previousTranslations = [],
     }
 };
 
-const translateWithOpenAI = async (text, previousTranslations = [], signal, apiKey, modelInstructions, selectedModel, selectedTone, sourceLang, targetLang, LANGUAGE_NAMES, isParaphrase = false, modelName = 'GPT-4o mini') => {
+const translateWithOpenAI = async (text, previousTranslations = [], signal, apiKey, modelInstructions, selectedTone, sourceLang, targetLang, LANGUAGE_NAMES, isParaphrase = false, modelSlug = 'gpt-4o-mini', additionalInstruction = '') => {
     if (!apiKey) {
         throw new Error('Please enter your OpenAI API key in settings');
     }
@@ -202,18 +193,17 @@ const translateWithOpenAI = async (text, previousTranslations = [], signal, apiK
             text,
             previousTranslations,
             modelInstructions,
-            selectedModel,
             selectedTone,
             sourceLang,
             targetLang,
             LANGUAGE_NAMES,
-            isParaphrase
+            isParaphrase,
+            additionalInstruction
         });
 
         const prompt = `${body}${postInstruction}`;
 
-        // Determine model based on name
-        const modelId = modelName === 'GPT-4o mini' ? 'gpt-4o-mini' : 'gpt-4o';
+        const modelId = modelSlug || 'gpt-4o-mini';
 
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
@@ -249,8 +239,74 @@ const translateWithOpenAI = async (text, previousTranslations = [], signal, apiK
     }
 };
 
+// Direct Anthropic Messages API (no OpenRouter).
+const translateWithAnthropic = async (text, previousTranslations = [], signal, apiKey, modelInstructions, selectedTone, sourceLang, targetLang, LANGUAGE_NAMES, isParaphrase = false, modelSlug = 'claude-sonnet-4-6', additionalInstruction = '') => {
+    if (!apiKey) {
+        throw new Error('Please enter your Anthropic API key in settings');
+    }
+
+    const modelId = modelSlug || 'claude-sonnet-4-6';
+
+    const { body: prompt, postInstruction } = buildPrompt({
+        text,
+        previousTranslations,
+        modelInstructions,
+        selectedTone,
+        sourceLang,
+        targetLang,
+        LANGUAGE_NAMES,
+        isParaphrase,
+        additionalInstruction
+    });
+
+    try {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            signal,
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+                // Required to allow calling the Anthropic API directly from a browser.
+                'anthropic-dangerous-direct-browser-access': 'true'
+            },
+            body: JSON.stringify({
+                model: modelId,
+                max_tokens: 2000,
+                system: postInstruction,
+                messages: [
+                    { role: 'user', content: prompt }
+                ]
+            })
+        });
+
+        if (!response.ok) {
+            let message = `HTTP error! status: ${response.status}`;
+            try {
+                const errorData = await response.json();
+                message = errorData.error?.message || message;
+            } catch (e) { /* ignore parse error */ }
+            throw new Error(message);
+        }
+
+        const data = await response.json();
+        const result = data.content?.find(part => part.type === 'text')?.text
+            || data.content?.[0]?.text;
+        if (!result) {
+            throw new Error('Invalid response structure from Anthropic API');
+        }
+        return result;
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            throw error;
+        }
+        throw new Error(`Translation error: ${error.message}`);
+    }
+};
+
 export {
     translateWithGemini,
     translateWithOpenRouter,
-    translateWithOpenAI
+    translateWithOpenAI,
+    translateWithAnthropic
 };

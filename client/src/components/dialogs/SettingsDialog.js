@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Settings as SettingsIcon, Eye, EyeOff, Moon, Volume2 } from 'lucide-react';
 import DialogWrapper from './DialogWrapper';
-import { updateTTSCredentials } from '../../services/ttsService';
 
 const APIKeyField = ({ 
   label, 
@@ -96,41 +95,39 @@ const SettingsDialog = ({
   onSaveHistoryChange,
   darkMode,
   onDarkModeChange,
+  onPreviewDarkModeChange,
   apiKeys = {},
   onApiKeysChange
 }) => {
   const [localMaxLength, setLocalMaxLength] = useState(maxLength);
   const [localSaveHistory, setLocalSaveHistory] = useState(saveHistory);
-  const [localDarkMode, setLocalDarkMode] = useState(darkMode);
   const [previewDarkMode, setPreviewDarkMode] = useState(darkMode);
+  // Saved value captured when the dialog opens, used to revert a cancelled preview
+  const [originalDarkMode, setOriginalDarkMode] = useState(darkMode);
   const [useGoogleTTS, setUseGoogleTTS] = useState(localStorage.getItem('useGoogleCloudTTS') === 'true');
   const [verifying, setVerifying] = useState({
-    googleCloud: false,
     gemini: false,
     openrouter: false,
-    openai: false
+    openai: false,
+    anthropic: false
   });
   const [verificationStatus, setVerificationStatus] = useState({
-    googleCloud: null,
     gemini: null,
     openrouter: null,
-    openai: null
+    openai: null,
+    anthropic: null
   });
   const [verificationMessage, setVerificationMessage] = useState({
-    googleCloud: null,
     gemini: null,
     openrouter: null,
-    openai: null
+    openai: null,
+    anthropic: null
   });
   const [localApiKeys, setLocalApiKeys] = useState({
     gemini: apiKeys.gemini || '',
     openrouter: apiKeys.openrouter || '',
     openai: apiKeys.openai || '',
-    googleCloud: {
-      projectId: apiKeys.googleCloud?.projectId || '',
-      privateKey: apiKeys.googleCloud?.privateKey || '',
-      clientEmail: apiKeys.googleCloud?.clientEmail || ''
-    }
+    anthropic: apiKeys.anthropic || ''
   });
 
   const verifyApiKey = async (service) => {
@@ -172,6 +169,27 @@ const SettingsDialog = ({
             }
           });
           break;
+        case 'anthropic':
+          response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': localApiKeys.anthropic,
+              'anthropic-version': '2023-06-01',
+              'anthropic-dangerous-direct-browser-access': 'true'
+            },
+            body: JSON.stringify({
+              model: 'claude-sonnet-4-6',
+              max_tokens: 1,
+              messages: [{ role: 'user', content: 'test' }]
+            })
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || 'Invalid API key');
+          }
+          break;
       }
 
       if (!response.ok) {
@@ -189,71 +207,34 @@ const SettingsDialog = ({
     }
   };
 
-  const handleVerifyGoogleCredentials = async () => {
-    const { projectId, privateKey, clientEmail } = localApiKeys.googleCloud;
-    if (!projectId || !privateKey || !clientEmail) {
-      setVerificationMessage(prev => ({
-        ...prev,
-        googleCloud: 'All Google Cloud fields are required'
-      }));
-      setVerificationStatus(prev => ({
-        ...prev,
-        googleCloud: 'invalid'
-      }));
-      return;
-    }
-    
-    setVerifying(prev => ({ ...prev, googleCloud: true }));
-    setVerificationStatus(prev => ({ ...prev, googleCloud: null }));
-    setVerificationMessage(prev => ({ ...prev, googleCloud: null }));
-    
-    try {
-      await updateTTSCredentials({
-        googleCloud: {
-          projectId,
-          privateKey: privateKey.replace(/\\n/g, '\n'),
-          clientEmail
-        }
-      });
-      setVerificationStatus(prev => ({ ...prev, googleCloud: 'valid' }));
-      setVerificationMessage(prev => ({ ...prev, googleCloud: 'Credentials verified successfully' }));
-    } catch (error) {
-      console.error('Verification error:', error);
-      setVerificationStatus(prev => ({ ...prev, googleCloud: 'invalid' }));
-      setVerificationMessage(prev => ({ ...prev, googleCloud: error.message || 'Failed to verify credentials' }));
-    } finally {
-      setVerifying(prev => ({ ...prev, googleCloud: false }));
-    }
-  };
-
   useEffect(() => {
     if (isOpen) {
-      setLocalDarkMode(darkMode);
       setPreviewDarkMode(darkMode);
+      setOriginalDarkMode(darkMode);
       setVerificationStatus({
-        googleCloud: null,
         gemini: null,
         openrouter: null,
-        openai: null
+        openai: null,
+        anthropic: null
       });
       setVerificationMessage({
-        googleCloud: null,
         gemini: null,
         openrouter: null,
-        openai: null
+        openai: null,
+        anthropic: null
       });
     }
-  }, [isOpen, darkMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
-  useEffect(() => {
-    if (isOpen) {
-      if (previewDarkMode) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
+  // Live-preview dark mode across the whole app while the dialog is open
+  const handleToggleDarkMode = () => {
+    const next = !previewDarkMode;
+    setPreviewDarkMode(next);
+    if (onPreviewDarkModeChange) {
+      onPreviewDarkModeChange(next);
     }
-  }, [previewDarkMode, isOpen]);
+  };
 
   const handleSave = () => {
     const newMaxLength = Math.max(1000, parseInt(localMaxLength) || 1000);
@@ -271,10 +252,9 @@ const SettingsDialog = ({
   };
 
   const handleCancel = () => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    // Revert any live dark-mode preview back to the saved value
+    if (onPreviewDarkModeChange) {
+      onPreviewDarkModeChange(originalDarkMode);
     }
     onClose();
   };
@@ -311,9 +291,9 @@ const SettingsDialog = ({
                     </label>
                   </div>
                   <button
-                    onClick={() => setPreviewDarkMode(!previewDarkMode)}
+                    onClick={handleToggleDarkMode}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      previewDarkMode ? (previewDarkMode ? 'bg-navy-900' : 'bg-navy-400') : (previewDarkMode ? 'bg-slate-600' : 'bg-gray-300')
+                      previewDarkMode ? 'bg-navy-900' : 'bg-gray-300'
                     }`}
                   >
                     <span
@@ -417,18 +397,30 @@ const SettingsDialog = ({
                 verificationMessage={verificationMessage.openai}
                 verifying={verifying.openai}
               />
+              <APIKeyField
+                label="Anthropic API Key"
+                value={localApiKeys.anthropic}
+                onChange={(value) => setLocalApiKeys(prev => ({ ...prev, anthropic: value }))}
+                placeholder="Enter your Anthropic API key"
+                darkMode={previewDarkMode}
+                showVerify={true}
+                onVerify={() => verifyApiKey('anthropic')}
+                verificationStatus={verificationStatus.anthropic}
+                verificationMessage={verificationMessage.anthropic}
+                verifying={verifying.anthropic}
+              />
             </div>
           </div>
 
-          {/* Google Cloud Section */}
+          {/* Text-to-Speech Section */}
           <div>
-            <SectionTitle darkMode={previewDarkMode}>Google Cloud Services</SectionTitle>
+            <SectionTitle darkMode={previewDarkMode}>Text-to-Speech</SectionTitle>
             <div className={`space-y-4 p-4 rounded-lg ${previewDarkMode ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
                   <Volume2 className={`h-4 w-4 ${previewDarkMode ? 'text-slate-400' : 'text-gray-600'}`} />
                   <label className={`text-sm font-medium ${previewDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
-                    Use Google Cloud TTS
+                    Use Gemini TTS
                   </label>
                 </div>
                 <button
@@ -444,51 +436,10 @@ const SettingsDialog = ({
                   />
                 </button>
               </div>
-              <p className={`text-sm mb-4 ${previewDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-                {useGoogleTTS 
-                  ? "Using Google Cloud Text-to-Speech for higher quality voice output"
-                  : "Using browser's built-in Text-to-Speech"}
-              </p>
-              <APIKeyField
-                label="Project ID"
-                value={localApiKeys.googleCloud.projectId}
-                onChange={(value) => setLocalApiKeys(prev => ({
-                  ...prev,
-                  googleCloud: { ...prev.googleCloud, projectId: value }
-                }))}
-                placeholder="Enter your Google Cloud Project ID"
-                darkMode={previewDarkMode}
-                showVerify={true}
-                onVerify={handleVerifyGoogleCredentials}
-                verificationStatus={verificationStatus.googleCloud}
-                verificationMessage={verificationMessage.googleCloud}
-                verifying={verifying.googleCloud}
-                disabled={!useGoogleTTS}
-              />
-              <APIKeyField
-                label="Client Email"
-                value={localApiKeys.googleCloud.clientEmail}
-                onChange={(value) => setLocalApiKeys(prev => ({
-                  ...prev,
-                  googleCloud: { ...prev.googleCloud, clientEmail: value }
-                }))}
-                placeholder="Enter your service account client email"
-                darkMode={previewDarkMode}
-                disabled={!useGoogleTTS}
-              />
-              <APIKeyField
-                label="Private Key"
-                value={localApiKeys.googleCloud.privateKey}
-                onChange={(value) => setLocalApiKeys(prev => ({
-                  ...prev,
-                  googleCloud: { ...prev.googleCloud, privateKey: value }
-                }))}
-                placeholder="Enter your service account private key"
-                darkMode={previewDarkMode}
-                disabled={!useGoogleTTS}
-              />
               <p className={`text-sm ${previewDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-                These credentials can be found in your Google Cloud service account key file. Make sure to paste the private key exactly as it appears in the JSON file, including newlines.
+                {useGoogleTTS
+                  ? "Using Gemini-TTS for higher quality voice output (credentials are configured on the server)"
+                  : "Using browser's built-in Text-to-Speech"}
               </p>
             </div>
           </div>

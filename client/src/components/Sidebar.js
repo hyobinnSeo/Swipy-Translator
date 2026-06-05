@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, History, BookmarkIcon, Volume2, Settings, HelpCircle } from 'lucide-react';
+import { X, History, BookmarkIcon, Volume2, Settings, HelpCircle, SlidersHorizontal } from 'lucide-react';
 
 const Sidebar = ({
     isOpen,
@@ -9,6 +9,7 @@ const Sidebar = ({
     onOpenHistory,
     onOpenVoiceSettings,
     onOpenSettings,
+    onOpenCustomize,
     isFixedSize,
     onToggleFixedSize,
     isParaphraserMode,
@@ -142,6 +143,20 @@ const Sidebar = ({
                         >
                             <HelpCircle className="h-4 w-4 mr-2" />
                             Instructions
+                        </button>
+
+                        <button
+                            onClick={() => {
+                                onOpenCustomize();
+                                onClose();
+                            }}
+                            className={`w-full text-left px-4 py-2 rounded-lg flex items-center transition-colors
+                                ${darkMode 
+                                    ? 'hover:bg-slate-700' 
+                                    : 'hover:bg-gray-100'}`}
+                        >
+                            <SlidersHorizontal className="h-4 w-4 mr-2" />
+                            Customize
                         </button>
 
                         <button

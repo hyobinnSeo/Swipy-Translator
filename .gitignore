@@ -12,6 +12,9 @@ node_modules/
 server/tts-credentials.json
 **/tts-credentials.json
 *-credentials.json
+service-account.json
+**/service-account.json
+**/*service-account*.json
 
 # ...but keep example/template files (no real secrets)
 !.env.example
