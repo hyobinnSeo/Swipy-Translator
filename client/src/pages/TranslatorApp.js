@@ -377,7 +377,7 @@ const TranslatorApp = () => {
                 : 'bg-white'
                 }`}>
                 <div className="max-w-7xl mx-auto">
-                    <div className="flex items-center p-4 space-x-4">
+                    <div className="flex items-center px-4 py-2.5 space-x-4">
                         <button
                             onClick={openSidebar}
                             className={`${darkMode
@@ -403,7 +403,7 @@ const TranslatorApp = () => {
             </div>
 
             {/* Main content */}
-            <div className="max-w-7xl mx-auto p-4">
+            <div className="max-w-7xl mx-auto px-4 py-2">
                 <div className="space-y-1">
                     {/* Model selector */}
                     <div className="w-full">
@@ -426,7 +426,7 @@ const TranslatorApp = () => {
                     </div>
 
                     {/* Language selector */}
-                    <div className="mt-2">
+                    <div className="mt-1">
                         <LanguageSelector
                             sourceLang={sourceLang}
                             targetLang={targetLang}
@@ -454,7 +454,7 @@ const TranslatorApp = () => {
                     </div>
 
                     {/* Tone selector + additional instruction toggle */}
-                    <div className="mt-2 mb-2">
+                    <div className="mt-1 mb-1">
                         <div className="flex items-center justify-between">
                             <ToneSelector
                                 selectedTone={selectedTone}
@@ -505,7 +505,7 @@ const TranslatorApp = () => {
                     </div>
 
                     {/* Text areas */}
-                    <div className="flex flex-col md:flex-row gap-2 md:gap-6 mb-6">
+                    <div className="flex flex-col md:flex-row gap-2 md:gap-6 mb-3">
                         <TextArea
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
